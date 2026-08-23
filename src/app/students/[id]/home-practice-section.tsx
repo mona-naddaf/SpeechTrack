@@ -1,0 +1,230 @@
+"use client";
+
+import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { formatDate } from "@/lib/date";
+import type { HomePracticeItem } from "@/lib/types";
+import HomePracticeItemFormModal from "./home-practice-item-form-modal";
+import DeleteHomePracticeItemModal from "./delete-home-practice-item-modal";
+import CopyCodeButton from "./copy-code-button";
+
+type Props = {
+  studentId: string;
+  parentAccessCode: string;
+  initialItems: HomePracticeItem[];
+  initialError: string | null;
+};
+
+export default function HomePracticeSection({
+  studentId,
+  parentAccessCode,
+  initialItems,
+  initialError,
+}: Props) {
+  const [items, setItems] = useState<HomePracticeItem[]>(initialItems);
+  const [listError] = useState<string | null>(initialError);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<HomePracticeItem | null>(
+    null
+  );
+  const [deletingItem, setDeletingItem] = useState<HomePracticeItem | null>(
+    null
+  );
+
+  function sortByNewest(list: HomePracticeItem[]) {
+    return [...list].sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  }
+
+  async function handleAdd(values: {
+    whatToPractice: string;
+    howToPractice: string;
+    lastWorkedDate: string;
+  }) {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return "You need to be signed in.";
+
+    const { data, error } = await supabase
+      .from("home_practice_items")
+      .insert({
+        slp_id: user.id,
+        student_id: studentId,
+        what_to_practice: values.whatToPractice,
+        how_to_practice: values.howToPractice || null,
+        last_worked_date: values.lastWorkedDate || null,
+      })
+      .select(
+        "id, what_to_practice, how_to_practice, last_worked_date, created_at"
+      )
+      .single();
+
+    if (error || !data) {
+      return error?.message ?? "Something went wrong. Please try again.";
+    }
+
+    setItems((prev) => sortByNewest([...prev, data]));
+    setShowAddModal(false);
+    return null;
+  }
+
+  async function handleEdit(values: {
+    whatToPractice: string;
+    howToPractice: string;
+    lastWorkedDate: string;
+  }) {
+    if (!editingItem) return null;
+
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("home_practice_items")
+      .update({
+        what_to_practice: values.whatToPractice,
+        how_to_practice: values.howToPractice || null,
+        last_worked_date: values.lastWorkedDate || null,
+      })
+      .eq("id", editingItem.id)
+      .select(
+        "id, what_to_practice, how_to_practice, last_worked_date, created_at"
+      )
+      .single();
+
+    if (error || !data) {
+      return error?.message ?? "Something went wrong. Please try again.";
+    }
+
+    setItems((prev) => prev.map((i) => (i.id === data.id ? data : i)));
+    setEditingItem(null);
+    return null;
+  }
+
+  async function handleDelete() {
+    if (!deletingItem) return null;
+
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("home_practice_items")
+      .delete()
+      .eq("id", deletingItem.id);
+
+    if (error) return error.message;
+
+    setItems((prev) => prev.filter((i) => i.id !== deletingItem.id));
+    setDeletingItem(null);
+    return null;
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="text-lg font-semibold text-slate-900">
+          Home practice
+        </h2>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-700"
+        >
+          Add item
+        </button>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+            Parent access code
+          </p>
+          <p className="mt-1 font-mono text-2xl font-bold tracking-[0.2em] text-slate-900">
+            {parentAccessCode}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            Share this with a parent so they can log in at /parent to see
+            practice items and log what they did at home.
+          </p>
+        </div>
+        <CopyCodeButton code={parentAccessCode} />
+      </div>
+
+      {listError && (
+        <p className="mt-4 text-sm text-red-600">
+          Couldn&apos;t load home practice items: {listError}
+        </p>
+      )}
+
+      {!listError && items.length === 0 && (
+        <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
+          No home practice items yet. Add one so the parent has something to
+          work on.
+        </div>
+      )}
+
+      {items.length > 0 && (
+        <ul className="mt-4 divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
+          {items.map((item) => (
+            <li key={item.id} className="px-4 py-3 sm:px-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-slate-900">
+                    {item.what_to_practice}
+                  </p>
+                  {item.how_to_practice && (
+                    <p className="mt-1 text-sm text-slate-600">
+                      {item.how_to_practice}
+                    </p>
+                  )}
+                  {item.last_worked_date && (
+                    <p className="mt-1 text-xs text-slate-400">
+                      Last worked: {formatDate(item.last_worked_date)}
+                    </p>
+                  )}
+                </div>
+                <div className="flex shrink-0 gap-1">
+                  <button
+                    onClick={() => setEditingItem(item)}
+                    className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => setDeletingItem(item)}
+                    className="rounded-md px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {showAddModal && (
+        <HomePracticeItemFormModal
+          mode="add"
+          onCancel={() => setShowAddModal(false)}
+          onSubmit={handleAdd}
+        />
+      )}
+
+      {editingItem && (
+        <HomePracticeItemFormModal
+          mode="edit"
+          initialItem={editingItem}
+          onCancel={() => setEditingItem(null)}
+          onSubmit={handleEdit}
+        />
+      )}
+
+      {deletingItem && (
+        <DeleteHomePracticeItemModal
+          item={deletingItem}
+          onCancel={() => setDeletingItem(null)}
+          onConfirm={handleDelete}
+        />
+      )}
+    </div>
+  );
+}
