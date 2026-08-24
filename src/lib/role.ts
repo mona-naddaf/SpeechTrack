@@ -1,0 +1,10 @@
+export type Role = "slp" | "teacher";
+
+/** Reads the account's role from Supabase auth user_metadata. Accounts
+ *  created before this field existed (or anything malformed) default to
+ *  "slp" — the app's original/only role — so nothing breaks for them. */
+export function getUserRole(
+  user: { user_metadata?: Record<string, unknown> | null } | null | undefined
+): Role {
+  return user?.user_metadata?.role === "teacher" ? "teacher" : "slp";
+}

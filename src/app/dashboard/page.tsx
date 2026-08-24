@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ClipboardList, Sliders, Target } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { getUserRole } from "@/lib/role";
 import SignOutButton from "./sign-out-button";
 import StudentsSection from "./students-section";
 import NamePromptModal from "./name-prompt-modal";
@@ -16,6 +17,12 @@ export default async function DashboardPage() {
   // never trust that alone — check again before rendering anything.
   if (!user) {
     redirect("/login");
+  }
+
+  // This dashboard is SLP-only — a Teacher account (even one that landed
+  // here by mistake, e.g. an old bookmark) belongs on its own dashboard.
+  if (getUserRole(user) === "teacher") {
+    redirect("/teacher/dashboard");
   }
 
   const { data: students, error } = await supabase

@@ -5,8 +5,9 @@ Next.js (App Router) + Supabase + Tailwind starter.
 ## What's here
 
 - **Landing page** (`/`) — app name + "Sign in" button.
-- **Auth** (`/login`) — email/password sign up (plus full name) and sign in via Supabase, toggle between the two modes. Sign out button lives on the dashboard.
-- **Protected dashboard** (`/dashboard`) — redirects to `/login` if not authenticated (enforced in middleware *and* in the page itself). Greets the signed-in SLP by name ("Welcome, Mona") and lists their students with add/edit/delete. Any account without a name yet (pre-dating the full-name field) gets a one-time-per-login prompt to add it.
+- **Auth** (`/login`) — a "Who's signing in today?" chooser (**SLP** / **Teacher** / **Parent**) rather than one generic sign-in. Parent goes straight to `/parent`'s access-code flow. SLP and Teacher both lead to the same email/password sign-in/sign-up form, framed for whichever was picked (icon, subtitle) — sign-up additionally asks "Are you a Speech-Language Pathologist or a Teacher?" as a required field alongside full name/email/password, which sets the account's **role**. After sign-in, routing always follows the account's actual stored role (not just which chooser button was clicked): SLP → `/dashboard`, Teacher → `/teacher/dashboard`.
+- **Protected dashboard** (`/dashboard`) — SLP-only: redirects Teacher accounts to `/teacher/dashboard`, and redirects to `/login` if not authenticated (enforced in middleware *and* in the page itself). Greets the signed-in SLP by name ("Welcome, Mona") and lists their students with add/edit/delete. Any account without a name yet (pre-dating the full-name field) gets a one-time-per-login prompt to add it.
+- **Teacher dashboard** (`/teacher/dashboard`) — placeholder for now ("Welcome, [name]! Your students will appear here."), guarded the same way: redirects SLP accounts to `/dashboard`, redirects to `/login` if not authenticated. No teacher-specific features beyond this yet — SLPs and Teachers are completely separate, never sharing students or data, just this same app shell/auth pattern.
 - **Student detail** (`/students/[id]`) — name, class, and a **Goals** section (add/edit/delete, picking an area, optionally a bank goal — which can also prefill its default response format and target % — baseline, target %, response format, status).
 - **Response formats** (`/toolkit/formats`) — view the SLP's response formats; full editor for the seeded **Cueing hierarchy** (rename, add/remove levels, change colors, toggle "independent"), plus **Correct/Incorrect** (rename, customize the two labels) and **Rating scale** (rename, set a custom min–max range); "+ New custom format" creates any of those three from scratch, and any format can be renamed or deleted (deletion is blocked with a clear message if a goal still uses it). Placeholder cards remain for the other, not-yet-built format types. Every format — built-in or custom — shows up as a selectable option anywhere a response format is picked (e.g. setting a goal), and session logging renders the right widget for its type (level buttons, a numeric rating row, or a Correct/Incorrect toggle with its custom labels).
 - **Goal bank** (`/toolkit/goals`) — add, edit, and delete goals that aren't tied to any student yet (area, goal text, optional default response format, optional target %), grouped by area. These show up as pickable options in the "From goal bank" flow when setting a goal on a student.
@@ -21,6 +22,7 @@ Next.js (App Router) + Supabase + Tailwind starter.
 - **`sessions`, `trials` tables** — see `supabase/migrations/0003_sessions_and_trials.sql`.
 - **`students.parent_access_code`, `home_practice_items`, `practice_logs`, `praise` tables** — see `supabase/migrations/0004_home_practice_and_parent_access.sql`.
 - **SLP full name** — stored in Supabase Auth's `user_metadata.full_name`, not a table column, so this also needed **no migration**. Set at sign-up (`src/app/login/page.tsx`), updatable via `supabase.auth.updateUser({ data: { full_name } })` (`src/app/dashboard/name-prompt-modal.tsx`), read on the dashboard via `user.user_metadata.full_name`.
+- **Account role (SLP/Teacher)** — same pattern again: stored in Supabase Auth's `user_metadata.role`, **no migration needed**. `src/lib/role.ts`'s `getUserRole()` is the single source of truth for reading it — any account without a role set yet (pre-dating this field) defaults to `"slp"`, so no existing account/data breaks. Set at sign-up alongside full name; each protected dashboard route re-derives the role server-side and redirects to the other one if it doesn't match, rather than trusting which chooser button was clicked at `/login`.
 - **`assessments`, `assessment_questions`, `assessment_results`, `assessment_answers` tables** — see `supabase/migrations/0005_assessments.sql`. **This one needs a migration** — these are new tables, unlike the three features above.
 - **`assessments.kind`/`formality`, `assessment_areas` join table** — see `supabase/migrations/0006_assessment_metadata.sql`. **Also needs a migration.** `kind`/`formality` are nullable at the DB level (existing assessments just show "not set" until edited) even though the create form requires them going forward.
 
@@ -30,14 +32,17 @@ Next.js (App Router) + Supabase + Tailwind starter.
 src/
   app/
     page.tsx                        landing page
-    login/page.tsx                   sign in / sign up form (client component)
+    login/page.tsx                   SLP/Teacher/Parent chooser + sign in/sign up form (client component)
     dashboard/
-      page.tsx                        protected dashboard — student list (server component)
+      page.tsx                        protected SLP dashboard — student list (server component)
       students-section.tsx             student list UI + add/edit/delete state (client component)
       student-form-modal.tsx           add/edit student modal
       delete-confirm-modal.tsx         delete student confirmation
       sign-out-button.tsx              sign out button
       name-prompt-modal.tsx            one-time-per-login "add your name" prompt (client component)
+    teacher/dashboard/
+      page.tsx                        protected Teacher dashboard — placeholder (server component)
+      sign-out-button.tsx              sign out button
     students/[id]/
       page.tsx                        student detail (server component) — goals + past sessions
       goals-section.tsx                goal list UI + add/edit/delete state (client component)
@@ -111,6 +116,7 @@ src/
     trial-value.ts                   human-readable rendering of a trial's jsonb value (CSV export)
     progress.ts                     per-goal aggregation: level breakdown, trend, trend direction, summary text
     assessment.ts                   response-type labels, answer formatting, scoring, plain-text report builder
+    role.ts                         getUserRole() — single source of truth for SLP-vs-Teacher, defaults to "slp"
     parent-session.ts                signs/verifies the parent session cookie (HMAC-SHA256, no library)
     supabase/
       client.ts                     Supabase client for Client Components
