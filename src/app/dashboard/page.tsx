@@ -37,6 +37,12 @@ export default async function DashboardPage() {
           </h1>
           <div className="flex items-center gap-3">
             <Link
+              href="/toolkit/assessments"
+              className="text-sm font-medium text-slate-600 hover:text-slate-900"
+            >
+              Assessments
+            </Link>
+            <Link
               href="/toolkit/goals"
               className="text-sm font-medium text-slate-600 hover:text-slate-900"
             >

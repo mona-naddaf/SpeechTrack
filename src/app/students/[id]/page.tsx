@@ -2,15 +2,22 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type {
+  Assessment,
+  AssessmentAnswerValue,
+  AssessmentQuestionResponseType,
   GoalWithRelations,
   HomePracticeItem,
   PracticeLogWithPraise,
 } from "@/lib/types";
 import { formatDate } from "@/lib/date";
+import { computeAssessmentScore } from "@/lib/assessment";
 import GoalsSection from "./goals-section";
 import ExportButtons from "./export-buttons";
 import HomePracticeSection from "./home-practice-section";
 import PracticeLogSection from "./practice-log-section";
+import AssessmentsSection, {
+  type AssessmentResultDisplay,
+} from "./assessments-section";
 
 export default async function StudentDetailPage({
   params,
@@ -47,6 +54,8 @@ export default async function StudentDetailPage({
     sessionsResult,
     homePracticeResult,
     practiceLogsResult,
+    assessmentsResult,
+    assessmentResultsResult,
   ] = await Promise.all([
     supabase
       .from("goals")
@@ -89,7 +98,91 @@ export default async function StudentDetailPage({
       .eq("student_id", id)
       .order("date", { ascending: false })
       .order("created_at", { ascending: false }),
+    supabase
+      .from("assessments")
+      .select("id, name, description, created_at")
+      .order("name", { ascending: true }),
+    supabase
+      .from("assessment_results")
+      .select(
+        "id, student_id, assessment_id, date, status, created_at, completed_at, assessment:assessments(id, name)"
+      )
+      .eq("student_id", id)
+      .order("created_at", { ascending: false }),
   ]);
+
+  // Assessment results need two more batched lookups (question counts per
+  // assessment, and recorded answers per result) to show progress/score —
+  // done here rather than per-row to avoid N+1 queries.
+  const rawAssessmentResults = (assessmentResultsResult.data ?? []) as unknown as Array<{
+    id: string;
+    student_id: string;
+    assessment_id: string;
+    date: string;
+    status: "in_progress" | "completed";
+    created_at: string;
+    completed_at: string | null;
+    assessment: { id: string; name: string } | null;
+  }>;
+
+  const resultIds = rawAssessmentResults.map((r) => r.id);
+  const assessmentIdsInUse = Array.from(
+    new Set(rawAssessmentResults.map((r) => r.assessment_id))
+  );
+
+  const [questionRowsResult, answerRowsResult] =
+    resultIds.length > 0
+      ? await Promise.all([
+          supabase
+            .from("assessment_questions")
+            .select("assessment_id")
+            .in("assessment_id", assessmentIdsInUse),
+          supabase
+            .from("assessment_answers")
+            .select("result_id, question_id, response_type, value")
+            .in("result_id", resultIds),
+        ])
+      : [{ data: [] as { assessment_id: string }[] }, { data: [] as {
+          result_id: string;
+          question_id: string;
+          response_type: AssessmentQuestionResponseType;
+          value: AssessmentAnswerValue;
+        }[] }];
+
+  const totalQuestionsByAssessmentId = new Map<string, number>();
+  for (const row of questionRowsResult.data ?? []) {
+    totalQuestionsByAssessmentId.set(
+      row.assessment_id,
+      (totalQuestionsByAssessmentId.get(row.assessment_id) ?? 0) + 1
+    );
+  }
+
+  const answersByResultId = new Map<
+    string,
+    { response_type: AssessmentQuestionResponseType; value: AssessmentAnswerValue }[]
+  >();
+  for (const row of answerRowsResult.data ?? []) {
+    const list = answersByResultId.get(row.result_id) ?? [];
+    list.push({ response_type: row.response_type, value: row.value });
+    answersByResultId.set(row.result_id, list);
+  }
+
+  const assessmentResultDisplays: AssessmentResultDisplay[] = rawAssessmentResults.map(
+    (r) => {
+      const answers = answersByResultId.get(r.id) ?? [];
+      return {
+        id: r.id,
+        assessmentId: r.assessment_id,
+        assessmentName: r.assessment?.name ?? "Deleted assessment",
+        date: r.date,
+        status: r.status,
+        completedAt: r.completed_at,
+        totalQuestions: totalQuestionsByAssessmentId.get(r.assessment_id) ?? 0,
+        answeredCount: answers.length,
+        score: r.status === "completed" ? computeAssessmentScore(answers) : null,
+      };
+    }
+  );
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 sm:py-10">
@@ -128,6 +221,16 @@ export default async function StudentDetailPage({
             areas={areasResult.data ?? []}
             responseFormats={formatsResult.data ?? []}
             bankGoals={bankGoalsResult.data ?? []}
+          />
+        </div>
+
+        <div className="mt-8">
+          <AssessmentsSection
+            studentId={student.id}
+            assessments={(assessmentsResult.data ?? []) as Assessment[]}
+            initialResults={assessmentResultDisplays}
+            assessmentsError={assessmentsResult.error?.message ?? null}
+            resultsError={assessmentResultsResult.error?.message ?? null}
           />
         </div>
 

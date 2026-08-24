@@ -14,11 +14,14 @@ Next.js (App Router) + Supabase + Tailwind starter.
 - **Progress & reports** (`/students/[id]/progress`, linked from "View progress" on the student page) — one card per goal (any status): for cueing-hierarchy goals, a level-percentage breakdown bar plus a "% independent over time" line chart; for rating-scale goals, a "% of max rating over time" chart; for everything else, a "% correct over time" chart (one point per session date). Each card shows total trial count, date range, and an auto-generated plain-language summary with a "Copy summary" button. Charts are hand-rolled inline SVG/CSS (no charting library) and render server-side — only the copy button ships client JS. "Export JSON backup" and "Export trials CSV" buttons on the student page download the student's full data client-side, no server round trip beyond the Supabase queries.
 - **Home practice** (on the student page) — SLP-managed list of home-practice items (add/edit/delete), plus the student's **parent access code** with a copy button, plus a read-only **practice log** view of everything the parent has logged, where the SLP can leave a short praise note on any entry.
 - **Parent view** (`/parent`, no Supabase login) — a parent types their child's 6-character access code to get in. Once in: the current home-practice items, a big-button form to log today's practice (checklist + 😄/🙂/😕 mood + optional note), and their practice history with any praise attached. Nothing else — no other student, no assessments/sessions/trials/charts. See **Parent access — security approach** below.
+- **Assessment builder** (`/toolkit/assessments`) — build reusable assessments from scratch: name + description, then questions (prompt, response type — Correct/Incorrect, Transcription, or Free text — optional expected answer, optional notes), add/edit/delete/reorder (↑/↓). Always private to the owning SLP — no visibility/sharing option at all, unlike goals/response formats. An assessment can be renamed/deleted like the other toolkit resources, blocked with a clear message if it's already been run against a student.
+- **Running an assessment** (from a student's page, "Run assessment" → `/students/[id]/assessment/[resultId]`) — pick one of her saved assessments to start a result; every question is answerable in any order (not forced sequential), each with the right input for its type (Correct/Incorrect toggle; a transcription text field plus an optional correct/approx/incorrect tag; a plain text field), auto-saving as she goes (immediately for toggles/tags, on blur for text) — matching the auto-save pattern from session logging. Shows a live "X/Y answered" progress bar. In-progress results are resumable from the student page. "Mark complete" locks it into a **read-only report**: every question with its full recorded answer (not just a score), a summary score (right_wrong + tagged-transcription answers only; free_text listed but unscored), and a "Copy report" button for a plain-text version. The student page lists both in-progress (resume) and completed (score + link to report) results.
 - **`students` table** — see `supabase/migrations/0001_students.sql`.
 - **`response_formats`, `areas`, `goals` tables** — see `supabase/migrations/0002_response_formats_and_goals.sql`. A Postgres trigger seeds every new account with a default "Cueing hierarchy" format and 10 default areas. Custom response formats and bank goals (`goals.student_id is null`) reuse these same tables/columns as-is — **no migration needed** for either feature.
 - **`sessions`, `trials` tables** — see `supabase/migrations/0003_sessions_and_trials.sql`.
 - **`students.parent_access_code`, `home_practice_items`, `practice_logs`, `praise` tables** — see `supabase/migrations/0004_home_practice_and_parent_access.sql`.
 - **SLP full name** — stored in Supabase Auth's `user_metadata.full_name`, not a table column, so this also needed **no migration**. Set at sign-up (`src/app/login/page.tsx`), updatable via `supabase.auth.updateUser({ data: { full_name } })` (`src/app/dashboard/name-prompt-modal.tsx`), read on the dashboard via `user.user_metadata.full_name`.
+- **`assessments`, `assessment_questions`, `assessment_results`, `assessment_answers` tables** — see `supabase/migrations/0005_assessments.sql`. **This one needs a migration** — these are new tables, unlike the three features above.
 
 ## Project structure
 
@@ -54,6 +57,13 @@ src/
       delete-home-practice-item-modal.tsx  delete home practice item confirmation
       copy-code-button.tsx                 clipboard button for the parent access code
       practice-log-section.tsx            SLP-side practice log view + leave-praise form (client component)
+      assessments-section.tsx             in-progress/past assessment lists + "Run assessment" state (client component)
+      run-assessment-modal.tsx            pick a saved assessment, creates an assessment_result
+      assessment/[resultId]/
+        page.tsx                        administer/report page (server component) — branches on result status
+        assessment-administer.tsx         per-question inputs by type, auto-save, progress bar, "Mark complete" (client component)
+        assessment-report.tsx             read-only report: every Q&A + summary score (server component)
+        copy-report-button.tsx            clipboard button for the plain-text report
     toolkit/
       formats/
         page.tsx                        response formats settings page (server component)
@@ -68,6 +78,16 @@ src/
         goal-bank-section.tsx            bank goal list UI + add/edit/delete state (client component)
         bank-goal-form-modal.tsx         add/edit bank goal modal (area, text, default format, target %)
         delete-bank-goal-confirm-modal.tsx delete bank goal confirmation
+      assessments/
+        page.tsx                        assessment list page (server component)
+        assessments-list.tsx             saved assessments list + create/delete state (client component)
+        new-assessment-modal.tsx         name + description, creates and opens the editor
+        delete-assessment-confirm-modal.tsx delete assessment confirmation
+        [id]/
+          page.tsx                        question editor page (server component)
+          assessment-editor.tsx            name/description inline edit + question list + reorder state (client component)
+          question-form-modal.tsx          add/edit question modal (prompt, response type, expected answer, notes)
+          delete-question-confirm-modal.tsx delete question confirmation
     parent/
       page.tsx                        reads the signed parent cookie server-side; login screen or dashboard
       parent-login-form.tsx             access-code entry (client component) — posts to /api/parent/login
@@ -81,7 +101,7 @@ src/
     layout.tsx
     globals.css
   lib/
-    types.ts                        shared TypeScript types (Student, Goal, ResponseFormat, Session, Trial, HomePracticeItem, PracticeLog, ...)
+    types.ts                        shared TypeScript types (Student, Goal, ResponseFormat, Session, Trial, HomePracticeItem, PracticeLog, Assessment, AssessmentQuestion, AssessmentResult, AssessmentAnswer, ...)
     colors.ts                       named color palette used by the cueing hierarchy editor
     response-format-types.ts         labels/descriptions for all response format types
     goal-status.ts                   labels/badge colors for goal status
@@ -89,6 +109,7 @@ src/
     date.ts                         today's local date + display formatting for session/chart dates
     trial-value.ts                   human-readable rendering of a trial's jsonb value (CSV export)
     progress.ts                     per-goal aggregation: level breakdown, trend, trend direction, summary text
+    assessment.ts                   response-type labels, answer formatting, scoring, plain-text report builder
     parent-session.ts                signs/verifies the parent session cookie (HMAC-SHA256, no library)
     supabase/
       client.ts                     Supabase client for Client Components
@@ -102,6 +123,7 @@ supabase/
     0002_response_formats_and_goals.sql   response_formats, areas, goals tables + RLS + new-account seeding
     0003_sessions_and_trials.sql     sessions, trials tables + RLS
     0004_home_practice_and_parent_access.sql   parent_access_code + home_practice_items, practice_logs, praise + RLS
+    0005_assessments.sql             assessments, assessment_questions, assessment_results, assessment_answers + RLS
 ```
 
 As you add features, new pages go under `src/app/...` and shared logic under `src/lib/...`.
@@ -151,6 +173,7 @@ In the Supabase dashboard, open **SQL Editor** and run, in order:
 2. `supabase/migrations/0002_response_formats_and_goals.sql`
 3. `supabase/migrations/0003_sessions_and_trials.sql`
 4. `supabase/migrations/0004_home_practice_and_parent_access.sql`
+5. `supabase/migrations/0005_assessments.sql`
 
 (Or apply them with the Supabase CLI if you use one.)
 
@@ -254,6 +277,55 @@ Row Level Security is enabled on every table, scoped to `slp_id = auth.uid()` (d
 | `practice_log_id` | `uuid`        | references `practice_logs`         |
 | `message`         | `text`        | required                           |
 | `created_at`      | `timestamptz` | auto-set on insert                 |
+
+**`assessments`** — a saved assessment template. Deliberately **no visibility/sharing column at all** — always private to the owning SLP, unlike `goals`/`response_formats`.
+
+| column        | type          | notes               |
+|---------------|---------------|-------------------------|
+| `id`          | `uuid`        | primary key              |
+| `slp_id`      | `uuid`        | owner                    |
+| `name`        | `text`        | required                 |
+| `description` | `text`        | optional                 |
+| `created_at`  | `timestamptz` | auto-set on insert       |
+
+**`assessment_questions`** — one row per question in an assessment. No `slp_id` column of its own — RLS checks ownership via `assessments.slp_id` (same pattern as `trials` → `sessions`).
+
+| column             | type          | notes                                                    |
+|--------------------|---------------|--------------------------------------------------------------|
+| `id`               | `uuid`        | primary key                                                    |
+| `assessment_id`    | `uuid`        | references `assessments`, `on delete cascade`                  |
+| `order_index`      | `integer`     | display order; the editor's ↑/↓ swap adjacent values            |
+| `prompt`           | `text`        | the question itself                                             |
+| `response_type`    | `text`        | `right_wrong` \| `transcription` \| `free_text`                 |
+| `expected_answer`  | `text`        | optional                                                         |
+| `notes`            | `text`        | optional — admin notes, materials needed, etc.                  |
+| `created_at`       | `timestamptz` | auto-set on insert                                               |
+
+**`assessment_results`** — one row per time an assessment is run against a student. `assessment_id` has no `on delete cascade`: deleting an assessment template while results exist against it is blocked at the app layer with a clear message, and the DB reference is the backstop for that.
+
+| column          | type          | notes                                     |
+|-----------------|---------------|--------------------------------------------|
+| `id`            | `uuid`        | primary key                                 |
+| `slp_id`        | `uuid`        | owner                                       |
+| `student_id`    | `uuid`        | references `students`, `on delete cascade`  |
+| `assessment_id` | `uuid`        | references `assessments` (no cascade)       |
+| `date`          | `date`        | defaults to today                           |
+| `status`        | `text`        | `in_progress` \| `completed`                |
+| `created_at`    | `timestamptz` | auto-set on insert                          |
+| `completed_at`  | `timestamptz` | set when marked complete                    |
+
+**`assessment_answers`** — one row per question per result, **upserted** as she answers/changes an answer (not appended like `trials`, which logs one row per tap) — a `unique(result_id, question_id)` constraint backs the upsert. No `slp_id` column of its own — RLS checks ownership via `assessment_results.slp_id`.
+
+| column          | type          | notes                                                                 |
+|-----------------|---------------|---------------------------------------------------------------------------|
+| `id`            | `uuid`        | primary key                                                                 |
+| `result_id`     | `uuid`        | references `assessment_results`, `on delete cascade`                       |
+| `question_id`   | `uuid`        | references `assessment_questions`, `on delete cascade`                     |
+| `response_type` | `text`        | copied from the question at answer time (same pattern as `trials.response_format_type`) |
+| `value`         | `jsonb`       | `{"correct": true}` (right_wrong), `{"text": "...", "tag": "approx"}` (transcription), or `{"text": "..."}` (free_text) |
+| `created_at`    | `timestamptz` | auto-set on insert                                                          |
+
+An answer that's cleared back to empty is deleted rather than saved blank, so progress/answered counts stay accurate.
 
 ### Parent access — security approach
 

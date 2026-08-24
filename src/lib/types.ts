@@ -150,3 +150,67 @@ export type PracticeLog = {
 export type PracticeLogWithPraise = PracticeLog & {
   praise: PraiseMessage[];
 };
+
+// ============================================================
+// Assessment builder + administering
+// ============================================================
+
+export type AssessmentQuestionResponseType =
+  | "right_wrong"
+  | "transcription"
+  | "free_text";
+
+export type Assessment = {
+  id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+};
+
+export type AssessmentQuestion = {
+  id: string;
+  assessment_id: string;
+  order_index: number;
+  prompt: string;
+  response_type: AssessmentQuestionResponseType;
+  expected_answer: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
+export type AssessmentStatus = "in_progress" | "completed";
+
+export type AssessmentResult = {
+  id: string;
+  student_id: string;
+  assessment_id: string;
+  date: string;
+  status: AssessmentStatus;
+  created_at: string;
+  completed_at: string | null;
+};
+
+/** A result row joined with its assessment's name — for lists on the
+ *  student page (in-progress / past assessments). */
+export type AssessmentResultWithAssessment = AssessmentResult & {
+  assessment: { id: string; name: string } | null;
+};
+
+/** Answer value shapes, by response type:
+ *  - right_wrong: {correct: boolean}
+ *  - transcription: {text: string, tag?: "correct" | "approx" | "incorrect"}
+ *  - free_text: {text: string} */
+export type AssessmentAnswerValue = {
+  correct?: boolean;
+  text?: string;
+  tag?: "correct" | "approx" | "incorrect";
+};
+
+export type AssessmentAnswer = {
+  id: string;
+  result_id: string;
+  question_id: string;
+  response_type: AssessmentQuestionResponseType;
+  value: AssessmentAnswerValue;
+  created_at: string;
+};
