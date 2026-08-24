@@ -42,7 +42,7 @@ export default function LoginPage() {
     }
 
     // sign-up
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { full_name: fullName.trim() } },
@@ -52,7 +52,32 @@ export default function LoginPage() {
       setLoading(false);
       return;
     }
-    setMessage("Check your email to confirm your account, then sign in.");
+
+    // Email confirmation is disabled for this project, so a successful
+    // signUp already returns an active session — go straight in rather
+    // than claiming a confirmation email was sent (none is).
+    if (data.session) {
+      router.push("/dashboard");
+      router.refresh();
+      return;
+    }
+
+    // Fallback for the unlikely case signUp didn't return a session (e.g.
+    // if email confirmation is ever turned back on for this project) — try
+    // signing in immediately with the same credentials instead of showing
+    // "check your email" messaging that wouldn't be accurate either way.
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (!signInError) {
+      router.push("/dashboard");
+      router.refresh();
+      return;
+    }
+
+    setMessage("Account created! You can sign in now.");
+    setMode("sign-in");
     setLoading(false);
   }
 
