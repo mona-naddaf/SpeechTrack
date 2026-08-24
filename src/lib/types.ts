@@ -20,11 +20,25 @@ export type CueingLevel = {
   is_independent: boolean;
 };
 
+/** Config shape for a "rating_scale" format: a custom inclusive numeric range. */
+export type RatingScaleConfig = {
+  min: number;
+  max: number;
+};
+
+/** Config shape for a "correct_incorrect" format: optionally customized labels. */
+export type CorrectIncorrectConfig = {
+  correctLabel?: string;
+  incorrectLabel?: string;
+};
+
 export type ResponseFormat = {
   id: string;
   name: string;
   type: ResponseFormatType;
-  config: { levels?: CueingLevel[] } & Record<string, unknown>;
+  config: { levels?: CueingLevel[] } & Partial<RatingScaleConfig> &
+    CorrectIncorrectConfig &
+    Record<string, unknown>;
   created_at: string;
 };
 
@@ -59,11 +73,14 @@ export type GoalWithRelations = Goal & {
   response_format: { id: string; name: string } | null;
 };
 
-/** A goal-bank template (student_id is null) — just enough to list/pick from. */
+/** A goal-bank template (student_id is null) — just enough to list/pick from,
+ *  plus the optional defaults it can hand off when picked for a student. */
 export type BankGoal = {
   id: string;
   area_id: string;
   text: string;
+  response_format_id: string | null;
+  target_percent: number | null;
 };
 
 export type SessionRecord = {
@@ -91,7 +108,9 @@ export type SessionGoal = {
     id: string;
     name: string;
     type: ResponseFormatType;
-    config: { levels?: CueingLevel[] } & Record<string, unknown>;
+    config: { levels?: CueingLevel[] } & Partial<RatingScaleConfig> &
+      CorrectIncorrectConfig &
+      Record<string, unknown>;
   } | null;
 };
 

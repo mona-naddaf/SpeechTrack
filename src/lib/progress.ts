@@ -1,5 +1,11 @@
 import { formatDate } from "./date";
-import type { CueingLevel, GoalStatus, ResponseFormatType } from "./types";
+import type {
+  CorrectIncorrectConfig,
+  CueingLevel,
+  GoalStatus,
+  RatingScaleConfig,
+  ResponseFormatType,
+} from "./types";
 
 /** A goal as needed to build its progress report. */
 export type ProgressGoal = {
@@ -11,7 +17,9 @@ export type ProgressGoal = {
     id: string;
     name: string;
     type: ResponseFormatType;
-    config: { levels?: CueingLevel[] } & Record<string, unknown>;
+    config: { levels?: CueingLevel[] } & Partial<RatingScaleConfig> &
+      CorrectIncorrectConfig &
+      Record<string, unknown>;
   } | null;
 };
 
@@ -45,6 +53,9 @@ export type GoalProgressReport = {
   firstSessionDate: string | null;
   lastSessionDate: string | null;
   isCueing: boolean;
+  isRating: boolean;
+  /** What the trend/current-percent numbers represent, for chart/summary labels. */
+  metricLabel: string;
   levelBreakdown: LevelBreakdownEntry[];
   trend: TrendPoint[];
   currentPercent: number | null;
@@ -58,6 +69,7 @@ export function buildGoalReport(
 ): GoalProgressReport {
   const goalTrials = allTrials.filter((t) => t.goal_id === goal.id);
   const isCueing = goal.response_format?.type === "cueing_hierarchy";
+  const isRating = goal.response_format?.type === "rating_scale";
 
   const sessionDates = Array.from(
     new Set(goalTrials.map((t) => t.session_date))
@@ -74,8 +86,10 @@ export function buildGoalReport(
 
   let levelBreakdown: LevelBreakdownEntry[] = [];
   let trend: TrendPoint[] = [];
+  let metricLabel = "% correct";
 
   if (isCueing) {
+    metricLabel = "% independent";
     const levels = goal.response_format?.config.levels ?? [];
     const counts = new Map<string, number>();
     for (const trial of goalTrials) {
@@ -113,6 +127,25 @@ export function buildGoalReport(
             : 0,
       };
     });
+  } else if (isRating) {
+    const min = goal.response_format?.config.min ?? 0;
+    const max = goal.response_format?.config.max ?? 4;
+    const range = max - min || 1;
+    metricLabel = `% of max rating (out of ${max})`;
+    trend = sessionDates.map((date) => {
+      const dayTrials = bySessionDate.get(date) ?? [];
+      const ratings = dayTrials
+        .map((t) => t.value.rating)
+        .filter((r): r is number => typeof r === "number");
+      const avg =
+        ratings.length > 0
+          ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length
+          : null;
+      return {
+        date,
+        percent: avg !== null ? Math.round(((avg - min) / range) * 100) : 0,
+      };
+    });
   } else {
     trend = sessionDates.map((date) => {
       const dayTrials = bySessionDate.get(date) ?? [];
@@ -137,6 +170,7 @@ export function buildGoalReport(
     sessionCount: sessionDates.length,
     trendDirection,
     isCueing,
+    isRating,
   });
 
   return {
@@ -146,6 +180,8 @@ export function buildGoalReport(
     firstSessionDate,
     lastSessionDate,
     isCueing,
+    isRating,
+    metricLabel,
     levelBreakdown,
     trend,
     currentPercent,
@@ -181,6 +217,7 @@ function buildSummary(
     sessionCount: number;
     trendDirection: TrendDirection;
     isCueing: boolean;
+    isRating: boolean;
   }
 ): string {
   if (
@@ -191,9 +228,13 @@ function buildSummary(
     return `No sessions logged yet for "${goal.text}".`;
   }
 
-  const metric = stats.isCueing ? "independent" : "correct";
   const since = formatDate(stats.firstSessionDate);
   const sessionWord = stats.sessionCount === 1 ? "session" : "sessions";
 
+  if (stats.isRating) {
+    return `Working on "${goal.text}" since ${since}. Currently averaging ${stats.currentPercent}% of the max rating across ${stats.sessionCount} ${sessionWord}, trending ${stats.trendDirection}.`;
+  }
+
+  const metric = stats.isCueing ? "independent" : "correct";
   return `Working on "${goal.text}" since ${since}. Currently at ${stats.currentPercent}% ${metric} responses across ${stats.sessionCount} ${sessionWord}, trending ${stats.trendDirection}.`;
 }

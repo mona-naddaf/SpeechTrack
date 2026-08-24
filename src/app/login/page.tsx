@@ -10,6 +10,7 @@ type Mode = "sign-in" | "sign-up";
 export default function LoginPage() {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("sign-in");
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -40,7 +41,11 @@ export default function LoginPage() {
     }
 
     // sign-up
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: fullName.trim() } },
+    });
     if (error) {
       setError(error.message);
       setLoading(false);
@@ -68,6 +73,27 @@ export default function LoginPage() {
         </h1>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          {mode === "sign-up" && (
+            <div>
+              <label
+                htmlFor="full-name"
+                className="block text-sm font-medium text-slate-700"
+              >
+                Full name
+              </label>
+              <input
+                id="full-name"
+                name="full-name"
+                type="text"
+                autoComplete="name"
+                required
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              />
+            </div>
+          )}
+
           <div>
             <label
               htmlFor="email"

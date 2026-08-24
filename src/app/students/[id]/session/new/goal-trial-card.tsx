@@ -33,16 +33,23 @@ export default function GoalTrialCard({
   }
 
   const format = goal.response_format;
-  const isCueing = format?.type === "cueing_hierarchy";
-  const levels = isCueing ? (format?.config.levels ?? []) : [];
+  const formatType = format?.type;
+  const levels = formatType === "cueing_hierarchy" ? (format?.config.levels ?? []) : [];
+  const ratingMin = Number(format?.config.min ?? 0);
+  const ratingMax = Number(format?.config.max ?? 4);
+  const correctLabel = String(format?.config.correctLabel ?? "Correct");
+  const incorrectLabel = String(format?.config.incorrectLabel ?? "Incorrect");
 
   const tally: Record<string, number> = {};
   for (const trial of trials) {
-    const key = isCueing
-      ? String(trial.value?.level ?? "")
-      : trial.value?.correct
-        ? "correct"
-        : "incorrect";
+    let key: string;
+    if (formatType === "cueing_hierarchy") {
+      key = String(trial.value?.level ?? "");
+    } else if (formatType === "rating_scale") {
+      key = String(trial.value?.rating ?? "");
+    } else {
+      key = trial.value?.correct ? "correct" : "incorrect";
+    }
     tally[key] = (tally[key] ?? 0) + 1;
   }
 
@@ -64,7 +71,7 @@ export default function GoalTrialCard({
         </span>
       </div>
 
-      {isCueing ? (
+      {formatType === "cueing_hierarchy" ? (
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
           {levels.map((level, i) => {
             const color = getColorOption(level.color);
@@ -87,6 +94,31 @@ export default function GoalTrialCard({
             );
           })}
         </div>
+      ) : formatType === "rating_scale" ? (
+        <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-5">
+          {Array.from(
+            { length: ratingMax - ratingMin + 1 },
+            (_, i) => ratingMin + i
+          ).map((rating) => {
+            const count = tally[String(rating)] ?? 0;
+            return (
+              <button
+                key={rating}
+                type="button"
+                onClick={() => handleLog({ rating })}
+                disabled={logging}
+                className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg bg-blue-100 px-2 py-3 text-center text-sm font-semibold text-blue-800 transition-transform active:scale-95 disabled:opacity-50"
+              >
+                <span>{rating}</span>
+                {count > 0 && (
+                  <span className="rounded-full bg-white/70 px-2 py-0.5 text-xs font-bold">
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       ) : (
         <div className="mt-4 grid grid-cols-2 gap-2">
           <button
@@ -95,7 +127,7 @@ export default function GoalTrialCard({
             disabled={logging}
             className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg bg-green-100 px-2 py-3 text-center text-sm font-semibold text-green-800 transition-transform active:scale-95 disabled:opacity-50"
           >
-            <span>Correct</span>
+            <span>{correctLabel}</span>
             {(tally.correct ?? 0) > 0 && (
               <span className="rounded-full bg-white/70 px-2 py-0.5 text-xs font-bold">
                 {tally.correct}
@@ -108,7 +140,7 @@ export default function GoalTrialCard({
             disabled={logging}
             className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg bg-red-100 px-2 py-3 text-center text-sm font-semibold text-red-800 transition-transform active:scale-95 disabled:opacity-50"
           >
-            <span>Incorrect</span>
+            <span>{incorrectLabel}</span>
             {(tally.incorrect ?? 0) > 0 && (
               <span className="rounded-full bg-white/70 px-2 py-0.5 text-xs font-bold">
                 {tally.incorrect}

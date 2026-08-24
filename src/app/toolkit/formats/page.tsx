@@ -21,12 +21,20 @@ export default async function ResponseFormatsPage() {
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-3xl">
-        <Link
-          href="/dashboard"
-          className="text-sm text-slate-500 hover:text-slate-700"
-        >
-          &larr; Back to dashboard
-        </Link>
+        <div className="flex items-center justify-between gap-4">
+          <Link
+            href="/dashboard"
+            className="text-sm text-slate-500 hover:text-slate-700"
+          >
+            &larr; Back to dashboard
+          </Link>
+          <Link
+            href="/toolkit/goals"
+            className="text-sm font-medium text-slate-600 hover:text-slate-900"
+          >
+            Goal bank
+          </Link>
+        </div>
 
         <div className="mt-4">
           <h1 className="text-2xl font-bold text-slate-900">
@@ -34,7 +42,7 @@ export default async function ResponseFormatsPage() {
           </h1>
           <p className="mt-1 text-slate-600">
             These are the ways you can score a student&apos;s response during
-            a session.
+            a session. Build your own from scratch, or edit the defaults.
           </p>
         </div>
 

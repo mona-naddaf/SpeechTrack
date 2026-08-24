@@ -5,18 +5,20 @@ Next.js (App Router) + Supabase + Tailwind starter.
 ## What's here
 
 - **Landing page** (`/`) — app name + "Sign in" button.
-- **Auth** (`/login`) — email/password sign up and sign in via Supabase, toggle between the two modes. Sign out button lives on the dashboard.
-- **Protected dashboard** (`/dashboard`) — redirects to `/login` if not authenticated (enforced in middleware *and* in the page itself). Lists the signed-in SLP's students with add/edit/delete.
-- **Student detail** (`/students/[id]`) — name, class, and a **Goals** section (add/edit/delete, picking an area, optionally a bank goal, baseline, target %, response format, status).
-- **Response formats** (`/toolkit/formats`) — view the SLP's response formats; full editor for the seeded **Cueing hierarchy** (rename levels, change colors, toggle "independent"); placeholder cards for the other format types (not editable yet).
-- **Session logging** (`/students/[id]/session/new`) — "Start session" on the student page opens a live-tally logging screen: editable date, one card per active goal (colored level buttons for cueing-hierarchy goals, a Correct/Incorrect toggle for everything else), an "Undo last" per card, and an optional note. Every tap auto-saves a trial immediately; "Save session" just finalizes the note/date and returns to the student page, which now lists past sessions (date + note, most recent first).
-- **Progress & reports** (`/students/[id]/progress`, linked from "View progress" on the student page) — one card per goal (any status): for cueing-hierarchy goals, a level-percentage breakdown bar plus a "% independent over time" line chart (one point per session date); for everything else, a "% correct over time" chart. Each card shows total trial count, date range, and an auto-generated plain-language summary with a "Copy summary" button. Charts are hand-rolled inline SVG/CSS (no charting library) and render server-side — only the copy button ships client JS. "Export JSON backup" and "Export trials CSV" buttons on the student page download the student's full data client-side, no server round trip beyond the Supabase queries.
+- **Auth** (`/login`) — email/password sign up (plus full name) and sign in via Supabase, toggle between the two modes. Sign out button lives on the dashboard.
+- **Protected dashboard** (`/dashboard`) — redirects to `/login` if not authenticated (enforced in middleware *and* in the page itself). Greets the signed-in SLP by name ("Welcome, Mona") and lists their students with add/edit/delete. Any account without a name yet (pre-dating the full-name field) gets a one-time-per-login prompt to add it.
+- **Student detail** (`/students/[id]`) — name, class, and a **Goals** section (add/edit/delete, picking an area, optionally a bank goal — which can also prefill its default response format and target % — baseline, target %, response format, status).
+- **Response formats** (`/toolkit/formats`) — view the SLP's response formats; full editor for the seeded **Cueing hierarchy** (rename, add/remove levels, change colors, toggle "independent"), plus **Correct/Incorrect** (rename, customize the two labels) and **Rating scale** (rename, set a custom min–max range); "+ New custom format" creates any of those three from scratch, and any format can be renamed or deleted (deletion is blocked with a clear message if a goal still uses it). Placeholder cards remain for the other, not-yet-built format types. Every format — built-in or custom — shows up as a selectable option anywhere a response format is picked (e.g. setting a goal), and session logging renders the right widget for its type (level buttons, a numeric rating row, or a Correct/Incorrect toggle with its custom labels).
+- **Goal bank** (`/toolkit/goals`) — add, edit, and delete goals that aren't tied to any student yet (area, goal text, optional default response format, optional target %), grouped by area. These show up as pickable options in the "From goal bank" flow when setting a goal on a student.
+- **Session logging** (`/students/[id]/session/new`) — "Start session" on the student page opens a live-tally logging screen: editable date, one card per active goal (colored level buttons for cueing-hierarchy goals, a numeric row for rating-scale goals, a Correct/Incorrect toggle — with custom labels if set — for everything else), an "Undo last" per card, and an optional note. Every tap auto-saves a trial immediately; "Save session" just finalizes the note/date and returns to the student page, which now lists past sessions (date + note, most recent first).
+- **Progress & reports** (`/students/[id]/progress`, linked from "View progress" on the student page) — one card per goal (any status): for cueing-hierarchy goals, a level-percentage breakdown bar plus a "% independent over time" line chart; for rating-scale goals, a "% of max rating over time" chart; for everything else, a "% correct over time" chart (one point per session date). Each card shows total trial count, date range, and an auto-generated plain-language summary with a "Copy summary" button. Charts are hand-rolled inline SVG/CSS (no charting library) and render server-side — only the copy button ships client JS. "Export JSON backup" and "Export trials CSV" buttons on the student page download the student's full data client-side, no server round trip beyond the Supabase queries.
 - **Home practice** (on the student page) — SLP-managed list of home-practice items (add/edit/delete), plus the student's **parent access code** with a copy button, plus a read-only **practice log** view of everything the parent has logged, where the SLP can leave a short praise note on any entry.
 - **Parent view** (`/parent`, no Supabase login) — a parent types their child's 6-character access code to get in. Once in: the current home-practice items, a big-button form to log today's practice (checklist + 😄/🙂/😕 mood + optional note), and their practice history with any praise attached. Nothing else — no other student, no assessments/sessions/trials/charts. See **Parent access — security approach** below.
 - **`students` table** — see `supabase/migrations/0001_students.sql`.
-- **`response_formats`, `areas`, `goals` tables** — see `supabase/migrations/0002_response_formats_and_goals.sql`. A Postgres trigger seeds every new account with a default "Cueing hierarchy" format and 10 default areas.
+- **`response_formats`, `areas`, `goals` tables** — see `supabase/migrations/0002_response_formats_and_goals.sql`. A Postgres trigger seeds every new account with a default "Cueing hierarchy" format and 10 default areas. Custom response formats and bank goals (`goals.student_id is null`) reuse these same tables/columns as-is — **no migration needed** for either feature.
 - **`sessions`, `trials` tables** — see `supabase/migrations/0003_sessions_and_trials.sql`.
 - **`students.parent_access_code`, `home_practice_items`, `practice_logs`, `praise` tables** — see `supabase/migrations/0004_home_practice_and_parent_access.sql`.
+- **SLP full name** — stored in Supabase Auth's `user_metadata.full_name`, not a table column, so this also needed **no migration**. Set at sign-up (`src/app/login/page.tsx`), updatable via `supabase.auth.updateUser({ data: { full_name } })` (`src/app/dashboard/name-prompt-modal.tsx`), read on the dashboard via `user.user_metadata.full_name`.
 
 ## Project structure
 
@@ -31,6 +33,7 @@ src/
       student-form-modal.tsx           add/edit student modal
       delete-confirm-modal.tsx         delete student confirmation
       sign-out-button.tsx              sign out button
+      name-prompt-modal.tsx            one-time-per-login "add your name" prompt (client component)
     students/[id]/
       page.tsx                        student detail (server component) — goals + past sessions
       goals-section.tsx                goal list UI + add/edit/delete state (client component)
@@ -51,10 +54,20 @@ src/
       delete-home-practice-item-modal.tsx  delete home practice item confirmation
       copy-code-button.tsx                 clipboard button for the parent access code
       practice-log-section.tsx            SLP-side practice log view + leave-praise form (client component)
-    toolkit/formats/
-      page.tsx                        response formats settings page (server component)
-      formats-list.tsx                 renders real + placeholder format cards (client component)
-      cueing-hierarchy-editor-modal.tsx level name/color/independent editor
+    toolkit/
+      formats/
+        page.tsx                        response formats settings page (server component)
+        formats-list.tsx                 renders format cards (real + placeholder), create/edit/delete state (client component)
+        new-format-modal.tsx             name + type picker for a brand-new custom format
+        cueing-hierarchy-editor-modal.tsx rename + add/remove/rename/recolor levels editor
+        correct-incorrect-editor-modal.tsx rename + custom correct/incorrect labels editor
+        rating-scale-editor-modal.tsx    rename + custom min/max range editor
+        delete-format-confirm-modal.tsx  delete format confirmation
+      goals/
+        page.tsx                        goal bank page (server component) — all bank goals, grouped by area
+        goal-bank-section.tsx            bank goal list UI + add/edit/delete state (client component)
+        bank-goal-form-modal.tsx         add/edit bank goal modal (area, text, default format, target %)
+        delete-bank-goal-confirm-modal.tsx delete bank goal confirmation
     parent/
       page.tsx                        reads the signed parent cookie server-side; login screen or dashboard
       parent-login-form.tsx             access-code entry (client component) — posts to /api/parent/login
@@ -159,7 +172,7 @@ In the Supabase dashboard, open **SQL Editor** and run, in order:
 | `slp_id`     | `uuid`        | owner                                       |
 | `name`       | `text`        | e.g. "Cueing hierarchy"                    |
 | `type`       | `text`        | `cueing_hierarchy`, `correct_incorrect`, `rating_scale`, `pronunciation`, `open_text`, `behaviour_description`, `frequency_tally` |
-| `config`     | `jsonb`       | format-specific config (levels, etc.)      |
+| `config`     | `jsonb`       | format-specific config: `{levels: [{name, color, is_independent}, ...]}` for `cueing_hierarchy`; `{min, max}` for `rating_scale`; `{correctLabel, incorrectLabel}` (both optional) for `correct_incorrect`; unused for the other, not-yet-built types |
 | `created_at` | `timestamptz` | auto-set on insert                         |
 
 **`areas`** — `id`, `slp_id`, `name`.

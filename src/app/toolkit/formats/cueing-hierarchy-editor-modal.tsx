@@ -11,12 +11,15 @@ type Props = {
   onSaved: (updated: ResponseFormat) => void;
 };
 
+const NEW_LEVEL_COLORS = ["teal", "amber", "clay", "blue", "purple", "grey"];
+
 export default function CueingHierarchyEditorModal({
   format,
   onCancel,
   onSaved,
 }: Props) {
   const initialLevels = (format.config.levels ?? []) as CueingLevel[];
+  const [name, setName] = useState(format.name);
   const [levels, setLevels] = useState<CueingLevel[]>(
     initialLevels.map((l) => ({ ...l }))
   );
@@ -29,7 +32,27 @@ export default function CueingHierarchyEditorModal({
     );
   }
 
+  function addLevel() {
+    const color = NEW_LEVEL_COLORS[levels.length % NEW_LEVEL_COLORS.length];
+    setLevels((prev) => [
+      ...prev,
+      { name: "New level", color, is_independent: false },
+    ]);
+  }
+
+  function removeLevel(index: number) {
+    setLevels((prev) => prev.filter((_, i) => i !== index));
+  }
+
   async function handleSave() {
+    if (!name.trim()) {
+      setError("Please give this format a name.");
+      return;
+    }
+    if (levels.length === 0) {
+      setError("Add at least one level.");
+      return;
+    }
     if (levels.some((l) => !l.name.trim())) {
       setError("Every level needs a name.");
       return;
@@ -41,7 +64,7 @@ export default function CueingHierarchyEditorModal({
     const supabase = createClient();
     const { data, error } = await supabase
       .from("response_formats")
-      .update({ config: { ...format.config, levels } })
+      .update({ name: name.trim(), config: { ...format.config, levels } })
       .eq("id", format.id)
       .select("id, name, type, config, created_at")
       .single();
@@ -63,9 +86,25 @@ export default function CueingHierarchyEditorModal({
           Edit cueing hierarchy
         </h2>
         <p className="mt-1 text-sm text-slate-500">
-          Rename each level, change its color, or mark it as an independent
-          response.
+          Rename the format, add or remove levels, change colors, or mark a
+          level as an independent response.
         </p>
+
+        <div className="mt-4">
+          <label
+            htmlFor="cueing-format-name"
+            className="block text-sm font-medium text-slate-700"
+          >
+            Format name
+          </label>
+          <input
+            id="cueing-format-name"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          />
+        </div>
 
         <div className="mt-4 space-y-3">
           {levels.map((level, i) => (
@@ -103,8 +142,25 @@ export default function CueingHierarchyEditorModal({
                 />
                 Independent
               </label>
+              <button
+                type="button"
+                onClick={() => removeLevel(i)}
+                disabled={levels.length <= 1}
+                aria-label={`Remove level ${i + 1}`}
+                className="rounded-md px-2 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-30"
+              >
+                Remove
+              </button>
             </div>
           ))}
+
+          <button
+            type="button"
+            onClick={addLevel}
+            className="w-full rounded-lg border border-dashed border-slate-300 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+          >
+            + Add level
+          </button>
         </div>
 
         {error && <p className="mt-3 text-sm text-red-600">{error}</p>}

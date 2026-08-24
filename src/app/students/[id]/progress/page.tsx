@@ -156,13 +156,11 @@ export default async function StudentProgressPage({
 
                   <div>
                     <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                      {report.isCueing
-                        ? "% independent over time"
-                        : "% correct over time"}
+                      {report.metricLabel} over time
                     </p>
                     <TrendChart
                       points={report.trend}
-                      label={report.isCueing ? "% independent" : "% correct"}
+                      label={report.metricLabel}
                     />
                   </div>
                 </div>

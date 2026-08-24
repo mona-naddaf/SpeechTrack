@@ -71,6 +71,13 @@ export default function GoalFormModal({
     const found = bankGoalsForArea.find((g) => g.id === id);
     if (found) {
       setText(found.text);
+      // Bank goals can carry a default response format / target % — load
+      // them in as a starting point; she can still change either before
+      // saving.
+      setResponseFormatId(found.response_format_id ?? "");
+      setTargetPercent(
+        found.target_percent !== null ? String(found.target_percent) : ""
+      );
     }
   }
 

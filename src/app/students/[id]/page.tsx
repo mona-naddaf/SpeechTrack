@@ -65,7 +65,7 @@ export default async function StudentDetailPage({
       .order("created_at", { ascending: true }),
     supabase
       .from("goals")
-      .select("id, area_id, text")
+      .select("id, area_id, text, response_format_id, target_percent")
       .is("student_id", null)
       .order("text", { ascending: true }),
     supabase
