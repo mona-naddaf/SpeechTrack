@@ -1,3 +1,21 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  /* Rounded, friendly heading font everywhere — set once here rather than
+     on every <h1>-<h3> across the app. */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading), ui-sans-serif, system-ui, sans-serif;
+  }
+
+  ::selection {
+    background-color: theme("colors.brand.200");
+    color: theme("colors.brand.900");
+  }
+}

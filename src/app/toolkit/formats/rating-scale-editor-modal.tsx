@@ -67,12 +67,12 @@ export default function RatingScaleEditorModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/40 px-4 py-8">
-      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
-        <h2 className="text-lg font-bold text-slate-900">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-stone-900/50 px-4 py-8">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <h2 className="text-lg font-bold text-stone-900">
           Edit rating scale
         </h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-stone-500">
           Rename the format or change its number range.
         </p>
 
@@ -80,7 +80,7 @@ export default function RatingScaleEditorModal({
           <div>
             <label
               htmlFor="rs-format-name"
-              className="block text-sm font-medium text-slate-700"
+              className="block text-sm font-medium text-stone-700"
             >
               Format name
             </label>
@@ -89,7 +89,7 @@ export default function RatingScaleEditorModal({
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
             />
           </div>
 
@@ -97,7 +97,7 @@ export default function RatingScaleEditorModal({
             <div>
               <label
                 htmlFor="rs-min"
-                className="block text-sm font-medium text-slate-700"
+                className="block text-sm font-medium text-stone-700"
               >
                 Min
               </label>
@@ -106,13 +106,13 @@ export default function RatingScaleEditorModal({
                 type="number"
                 value={min}
                 onChange={(e) => setMin(e.target.value)}
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
               />
             </div>
             <div>
               <label
                 htmlFor="rs-max"
-                className="block text-sm font-medium text-slate-700"
+                className="block text-sm font-medium text-stone-700"
               >
                 Max
               </label>
@@ -121,7 +121,7 @@ export default function RatingScaleEditorModal({
                 type="number"
                 value={max}
                 onChange={(e) => setMax(e.target.value)}
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
               />
             </div>
           </div>
@@ -134,7 +134,7 @@ export default function RatingScaleEditorModal({
             type="button"
             onClick={onCancel}
             disabled={loading}
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:opacity-50"
+            className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
           >
             Cancel
           </button>
@@ -142,7 +142,7 @@ export default function RatingScaleEditorModal({
             type="button"
             onClick={handleSave}
             disabled={loading}
-            className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-700 disabled:opacity-50"
+            className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
           >
             {loading ? "Saving…" : "Save changes"}
           </button>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Download } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatTrialValue } from "@/lib/trial-value";
 
@@ -155,16 +156,18 @@ export default function ExportButtons({ studentId, studentName }: Props) {
         type="button"
         onClick={handleExportJson}
         disabled={loading !== null}
-        className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
       >
+        <Download className="h-4 w-4" />
         {loading === "json" ? "Exporting…" : "Export JSON backup"}
       </button>
       <button
         type="button"
         onClick={handleExportCsv}
         disabled={loading !== null}
-        className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
       >
+        <Download className="h-4 w-4" />
         {loading === "csv" ? "Exporting…" : "Export trials CSV"}
       </button>
       {error && <p className="w-full text-sm text-red-600">{error}</p>}

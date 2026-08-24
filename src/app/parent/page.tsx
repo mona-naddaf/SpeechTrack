@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { HeartHandshake } from "lucide-react";
 import { createServiceClient } from "@/lib/supabase/service";
 import { PARENT_COOKIE_NAME, verifyParentSessionToken } from "@/lib/parent-session";
 import type { HomePracticeItem, PracticeLogWithPraise } from "@/lib/types";
@@ -7,10 +8,17 @@ import ParentDashboard from "./parent-dashboard";
 
 function LoginScreen() {
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 sm:py-10">
-      <div className="mx-auto max-w-sm">
-        <h1 className="text-2xl font-bold text-slate-900">SpeechTrack</h1>
-        <p className="mt-1 text-slate-600">Home practice</p>
+    <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-cream-50 via-cream-50 to-brand-50 px-4 py-8 sm:px-6 sm:py-10">
+      <div className="mx-auto w-full max-w-sm">
+        <div className="text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-100 shadow-sm">
+            <HeartHandshake className="h-7 w-7 text-brand-600" />
+          </div>
+          <h1 className="mt-4 text-2xl font-bold text-stone-900">
+            SpeechTrack
+          </h1>
+          <p className="mt-1 text-stone-600">Home practice, made easy</p>
+        </div>
         <div className="mt-6">
           <ParentLoginForm />
         </div>
@@ -58,7 +66,7 @@ export default async function ParentPage() {
   ]);
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 sm:py-10">
+    <main className="min-h-screen bg-gradient-to-b from-cream-50 via-cream-50 to-brand-50 px-4 py-6 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-2xl">
         <ParentDashboard
           studentName={student.name}

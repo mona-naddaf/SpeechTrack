@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Home, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatDate } from "@/lib/date";
 import type { HomePracticeItem } from "@/lib/types";
@@ -121,26 +122,28 @@ export default function HomePracticeSection({
   return (
     <div>
       <div className="flex items-center justify-between gap-4">
-        <h2 className="text-lg font-semibold text-slate-900">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-stone-900">
+          <Home className="h-5 w-5 text-brand-500" />
           Home practice
         </h2>
         <button
           onClick={() => setShowAddModal(true)}
-          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-700"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md"
         >
+          <Plus className="h-4 w-4" />
           Add item
         </button>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md p-4">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+          <p className="text-xs font-medium uppercase tracking-wide text-stone-400">
             Parent access code
           </p>
-          <p className="mt-1 font-mono text-2xl font-bold tracking-[0.2em] text-slate-900">
+          <p className="mt-1 font-mono text-2xl font-bold tracking-[0.2em] text-stone-900">
             {parentAccessCode}
           </p>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-stone-500">
             Share this with a parent so they can log in at /parent to see
             practice items and log what they did at home.
           </p>
@@ -155,28 +158,33 @@ export default function HomePracticeSection({
       )}
 
       {!listError && items.length === 0 && (
-        <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
-          No home practice items yet. Add one so the parent has something to
-          work on.
+        <div className="mt-4 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-stone-300 bg-white p-10 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-100">
+            <Home className="h-6 w-6 text-brand-500" />
+          </div>
+          <p className="text-stone-500">
+            No home practice items yet — add one so the parent has something
+            to work on.
+          </p>
         </div>
       )}
 
       {items.length > 0 && (
-        <ul className="mt-4 divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <ul className="mt-4 divide-y divide-stone-200 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md">
           {items.map((item) => (
             <li key={item.id} className="px-4 py-3 sm:px-5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium text-slate-900">
+                  <p className="font-medium text-stone-900">
                     {item.what_to_practice}
                   </p>
                   {item.how_to_practice && (
-                    <p className="mt-1 text-sm text-slate-600">
+                    <p className="mt-1 text-sm text-stone-600">
                       {item.how_to_practice}
                     </p>
                   )}
                   {item.last_worked_date && (
-                    <p className="mt-1 text-xs text-slate-400">
+                    <p className="mt-1 text-xs text-stone-400">
                       Last worked: {formatDate(item.last_worked_date)}
                     </p>
                   )}
@@ -184,13 +192,13 @@ export default function HomePracticeSection({
                 <div className="flex shrink-0 gap-1">
                   <button
                     onClick={() => setEditingItem(item)}
-                    className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100"
+                    className="rounded-lg px-3 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-100"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => setDeletingItem(item)}
-                    className="rounded-md px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+                    className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
                   >
                     Delete
                   </button>

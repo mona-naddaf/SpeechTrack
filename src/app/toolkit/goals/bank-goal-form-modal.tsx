@@ -81,9 +81,9 @@ export default function BankGoalFormModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/40 px-4 py-8">
-      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
-        <h2 className="text-lg font-bold text-slate-900">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-stone-900/50 px-4 py-8">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <h2 className="text-lg font-bold text-stone-900">
           {mode === "add" ? "Add bank goal" : "Edit bank goal"}
         </h2>
 
@@ -91,7 +91,7 @@ export default function BankGoalFormModal({
           <div>
             <label
               htmlFor="bank-goal-area"
-              className="block text-sm font-medium text-slate-700"
+              className="block text-sm font-medium text-stone-700"
             >
               Area
             </label>
@@ -99,7 +99,7 @@ export default function BankGoalFormModal({
               id="bank-goal-area"
               value={areaId}
               onChange={(e) => setAreaId(e.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
             >
               {areas.length === 0 && <option value="">No areas yet</option>}
               {areas.map((area) => (
@@ -113,7 +113,7 @@ export default function BankGoalFormModal({
           <div>
             <label
               htmlFor="bank-goal-text"
-              className="block text-sm font-medium text-slate-700"
+              className="block text-sm font-medium text-stone-700"
             >
               Goal text
             </label>
@@ -122,7 +122,7 @@ export default function BankGoalFormModal({
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={3}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
               placeholder="e.g. Will produce /r/ in initial position of words with 80% accuracy"
             />
           </div>
@@ -131,16 +131,16 @@ export default function BankGoalFormModal({
             <div>
               <label
                 htmlFor="bank-goal-format"
-                className="block text-sm font-medium text-slate-700"
+                className="block text-sm font-medium text-stone-700"
               >
                 Default response format{" "}
-                <span className="text-slate-400">(optional)</span>
+                <span className="text-stone-400">(optional)</span>
               </label>
               <select
                 id="bank-goal-format"
                 value={responseFormatId}
                 onChange={(e) => setResponseFormatId(e.target.value)}
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
               >
                 <option value="">None</option>
                 {responseFormats.map((f) => (
@@ -153,9 +153,9 @@ export default function BankGoalFormModal({
             <div>
               <label
                 htmlFor="bank-goal-target"
-                className="block text-sm font-medium text-slate-700"
+                className="block text-sm font-medium text-stone-700"
               >
-                Target % <span className="text-slate-400">(optional)</span>
+                Target % <span className="text-stone-400">(optional)</span>
               </label>
               <input
                 id="bank-goal-target"
@@ -164,7 +164,7 @@ export default function BankGoalFormModal({
                 max={100}
                 value={targetPercent}
                 onChange={(e) => setTargetPercent(e.target.value)}
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
               />
             </div>
           </div>
@@ -176,14 +176,14 @@ export default function BankGoalFormModal({
               type="button"
               onClick={onCancel}
               disabled={loading}
-              className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:opacity-50"
+              className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-700 disabled:opacity-50"
+              className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
             >
               {loading
                 ? "Saving…"

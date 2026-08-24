@@ -1,5 +1,12 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import {
+  ArrowLeft,
+  CalendarClock,
+  PlayCircle,
+  TrendingUp,
+  User,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type {
   AssessmentAnswerValue,
@@ -190,27 +197,34 @@ export default async function StudentDetailPage({
   );
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 sm:py-10">
+    <main className="min-h-screen bg-cream-50 px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-3xl">
         <Link
           href="/dashboard"
-          className="text-sm text-slate-500 hover:text-slate-700"
+          className="inline-flex items-center gap-1 text-sm text-stone-500 transition-colors hover:text-brand-800"
         >
-          &larr; Back to students
+          <ArrowLeft className="h-4 w-4" />
+          Back to students
         </Link>
 
-        <div className="mt-4">
-          <h1 className="text-2xl font-bold text-slate-900">
-            {student.name}
-          </h1>
-          <p className="mt-1 text-slate-600">{student.class || "No class"}</p>
+        <div className="mt-4 flex items-center gap-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent-100">
+            <User className="h-6 w-6 text-accent-700" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-stone-900">
+              {student.name}
+            </h1>
+            <p className="text-stone-600">{student.class || "No class"}</p>
+          </div>
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <Link
             href={`/students/${student.id}/progress`}
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md"
           >
+            <TrendingUp className="h-4 w-4" />
             View progress
           </Link>
           <ExportButtons studentId={student.id} studentName={student.name} />
@@ -264,11 +278,15 @@ export default async function StudentDetailPage({
 
         <div className="mt-8">
           <div className="flex items-center justify-between gap-4">
-            <h2 className="text-lg font-semibold text-slate-900">Sessions</h2>
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-stone-900">
+              <CalendarClock className="h-5 w-5 text-brand-500" />
+              Sessions
+            </h2>
             <Link
               href={`/students/${student.id}/session/new`}
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-700"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md"
             >
+              <PlayCircle className="h-4 w-4" />
               Start session
             </Link>
           </div>
@@ -280,24 +298,29 @@ export default async function StudentDetailPage({
           )}
 
           {!sessionsResult.error && (sessionsResult.data ?? []).length === 0 && (
-            <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
-              No sessions yet. Start a session to begin tracking progress.
+            <div className="mt-4 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-stone-300 bg-white p-10 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-100">
+                <CalendarClock className="h-6 w-6 text-brand-500" />
+              </div>
+              <p className="text-stone-500">
+                No sessions yet — start one to begin tracking progress.
+              </p>
             </div>
           )}
 
           {(sessionsResult.data ?? []).length > 0 && (
-            <ul className="mt-4 divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <ul className="mt-4 divide-y divide-stone-200 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md">
               {(sessionsResult.data ?? []).map((session) => (
                 <li key={session.id} className="px-4 py-3 sm:px-5">
-                  <p className="font-medium text-slate-900">
+                  <p className="font-medium text-stone-900">
                     {formatDate(session.date)}
                   </p>
                   {session.note ? (
-                    <p className="mt-1 text-sm text-slate-600">
+                    <p className="mt-1 text-sm text-stone-600">
                       {session.note}
                     </p>
                   ) : (
-                    <p className="mt-1 text-sm text-slate-400">No note</p>
+                    <p className="mt-1 text-sm text-stone-400">No note</p>
                   )}
                 </li>
               ))}

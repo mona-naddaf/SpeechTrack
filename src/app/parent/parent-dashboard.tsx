@@ -1,6 +1,12 @@
+import {
+  BookOpenCheck,
+  ClipboardList,
+  PartyPopper,
+  Sparkles,
+} from "lucide-react";
 import { formatDate } from "@/lib/date";
 import { getHowItWentOption } from "@/lib/practice";
-import type { HomePracticeItem, PracticeLogWithPraise } from "@/lib/types";
+import type { HomePracticeItem, HowItWent, PracticeLogWithPraise } from "@/lib/types";
 import LogPracticeForm from "./log-practice-form";
 import LogoutButton from "./logout-button";
 
@@ -10,6 +16,13 @@ type Props = {
   logs: PracticeLogWithPraise[];
   itemsError: string | null;
   logsError: string | null;
+};
+
+// Warm, distinct mood badge colors — matches the mood-picker in LogPracticeForm.
+const MOOD_BADGE_CLASSES: Record<HowItWent, string> = {
+  great: "bg-green-100 text-green-800",
+  okay: "bg-amber-100 text-amber-800",
+  tricky: "bg-brand-100 text-brand-800",
 };
 
 export default function ParentDashboard({
@@ -22,8 +35,9 @@ export default function ParentDashboard({
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
-        <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
-          Hi! Here&apos;s {studentName}&apos;s home practice.
+        <h1 className="text-xl font-bold text-stone-900 sm:text-2xl">
+          Hi! Here&apos;s {studentName}&apos;s home practice.{" "}
+          <span aria-hidden>🏡</span>
         </h1>
         <LogoutButton />
       </div>
@@ -35,33 +49,39 @@ export default function ParentDashboard({
       )}
 
       {items.length === 0 && !itemsError && (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center text-slate-500">
-          Your child&apos;s therapist hasn&apos;t added any practice items
-          yet.
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-stone-300 bg-white p-6 text-center">
+          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-100">
+            <ClipboardList className="h-5 w-5 text-brand-500" />
+          </div>
+          <p className="text-stone-500">
+            Your child&apos;s therapist hasn&apos;t added any practice items
+            yet.
+          </p>
         </div>
       )}
 
       {items.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-stone-900">
+            <ClipboardList className="h-5 w-5 text-brand-500" />
             What to practice
           </h2>
           <div className="mt-3 space-y-3">
             {items.map((item) => (
               <div
                 key={item.id}
-                className="rounded-xl border border-slate-200 bg-white p-4"
+                className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
               >
-                <p className="font-medium text-slate-900">
+                <p className="font-medium text-stone-900">
                   {item.what_to_practice}
                 </p>
                 {item.how_to_practice && (
-                  <p className="mt-1 text-sm text-slate-600">
+                  <p className="mt-1 text-sm text-stone-600">
                     {item.how_to_practice}
                   </p>
                 )}
                 {item.last_worked_date && (
-                  <p className="mt-2 text-xs text-slate-400">
+                  <p className="mt-2 text-xs text-stone-400">
                     Last worked on {formatDate(item.last_worked_date)}
                   </p>
                 )}
@@ -72,7 +92,8 @@ export default function ParentDashboard({
       )}
 
       <div>
-        <h2 className="text-lg font-semibold text-slate-900">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-stone-900">
+          <Sparkles className="h-5 w-5 text-brand-500" />
           Log today&apos;s practice
         </h2>
         <div className="mt-3">
@@ -81,7 +102,8 @@ export default function ParentDashboard({
       </div>
 
       <div>
-        <h2 className="text-lg font-semibold text-slate-900">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-stone-900">
+          <BookOpenCheck className="h-5 w-5 text-brand-500" />
           Practice history
         </h2>
 
@@ -92,8 +114,13 @@ export default function ParentDashboard({
         )}
 
         {logs.length === 0 && !logsError && (
-          <div className="mt-3 rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center text-slate-500">
-            No practice logged yet.
+          <div className="mt-3 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-stone-300 bg-white p-6 text-center">
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-100">
+              <BookOpenCheck className="h-5 w-5 text-brand-500" />
+            </div>
+            <p className="text-stone-500">
+              No practice logged yet — log today&apos;s to get started!
+            </p>
           </div>
         )}
 
@@ -101,29 +128,34 @@ export default function ParentDashboard({
           <div className="mt-3 space-y-3">
             {logs.map((log) => {
               const mood = getHowItWentOption(log.how_it_went);
+              const celebrated = log.praise.length > 0;
               return (
                 <div
                   key={log.id}
-                  className="rounded-xl border border-slate-200 bg-white p-4"
+                  className={`rounded-2xl border bg-white p-4 shadow-sm transition-shadow hover:shadow-md ${
+                    celebrated ? "border-amber-200" : "border-stone-200"
+                  }`}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <p className="font-medium text-slate-900">
+                    <p className="font-medium text-stone-900">
                       {formatDate(log.date)}
                     </p>
-                    <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                    <span
+                      className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${MOOD_BADGE_CLASSES[log.how_it_went]}`}
+                    >
                       <span className="text-base">{mood.emoji}</span>
                       {mood.label}
                     </span>
                   </div>
 
                   {log.activities.length > 0 && (
-                    <p className="mt-2 text-sm text-slate-600">
+                    <p className="mt-2 text-sm text-stone-600">
                       {log.activities.map((a) => a.text).join(", ")}
                     </p>
                   )}
 
                   {log.note && (
-                    <p className="mt-2 text-sm text-slate-600">{log.note}</p>
+                    <p className="mt-2 text-sm text-stone-600">{log.note}</p>
                   )}
 
                   {log.praise.length > 0 && (
@@ -131,9 +163,10 @@ export default function ParentDashboard({
                       {log.praise.map((p) => (
                         <p
                           key={p.id}
-                          className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900"
+                          className="flex items-start gap-2 rounded-xl bg-gradient-to-r from-amber-50 to-brand-50 px-3 py-2.5 text-sm font-medium text-amber-900"
                         >
-                          🌟 {p.message}
+                          <PartyPopper className="h-4 w-4 shrink-0 text-amber-500" />
+                          {p.message}
                         </p>
                       ))}
                     </div>

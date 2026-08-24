@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { ChevronRight, UserPlus, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Student } from "@/lib/types";
 import StudentFormModal from "./student-form-modal";
@@ -103,11 +104,15 @@ export default function StudentsSection({
   return (
     <div>
       <div className="flex items-center justify-between gap-4">
-        <h2 className="text-lg font-semibold text-slate-900">Students</h2>
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-stone-900">
+          <Users className="h-5 w-5 text-brand-500" />
+          Students
+        </h2>
         <button
           onClick={() => setShowAddModal(true)}
-          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-700"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md"
         >
+          <UserPlus className="h-4 w-4" />
           Add student
         </button>
       </div>
@@ -119,39 +124,47 @@ export default function StudentsSection({
       )}
 
       {!listError && students.length === 0 && (
-        <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
-          No students yet. Add your first student to get started.
+        <div className="mt-4 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-stone-300 bg-white p-10 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-100">
+            <Users className="h-6 w-6 text-brand-500" />
+          </div>
+          <p className="text-stone-500">
+            No students yet — add your first one to start tracking progress.
+          </p>
         </div>
       )}
 
       {students.length > 0 && (
-        <ul className="mt-4 divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <ul className="mt-4 divide-y divide-stone-200 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md">
           {students.map((student) => (
             <li
               key={student.id}
-              className="flex items-center justify-between gap-3 px-4 py-1 sm:px-5"
+              className="flex items-center justify-between gap-3 px-4 py-1 transition-colors hover:bg-cream-50 sm:px-5"
             >
               <Link
                 href={`/students/${student.id}`}
-                className="min-w-0 flex-1 py-3"
+                className="flex min-w-0 flex-1 items-center gap-2 py-3"
               >
-                <p className="truncate font-medium text-slate-900">
-                  {student.name}
-                </p>
-                <p className="truncate text-sm text-slate-500">
-                  {student.class || "No class"}
-                </p>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-stone-900">
+                    {student.name}
+                  </p>
+                  <p className="truncate text-sm text-stone-500">
+                    {student.class || "No class"}
+                  </p>
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-stone-300" />
               </Link>
               <div className="flex shrink-0 gap-1">
                 <button
                   onClick={() => setEditingStudent(student)}
-                  className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100"
+                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-100"
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => setDeletingStudent(student)}
-                  className="rounded-md px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
                 >
                   Delete
                 </button>

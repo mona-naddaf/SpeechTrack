@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type {
   AssessmentAnswerValue,
@@ -167,22 +168,22 @@ export default function AssessmentAdminister({
 
   return (
     <div className="pb-24">
-      <div className="rounded-xl border border-slate-200 bg-white p-5">
-        <h1 className="text-2xl font-bold text-slate-900">{assessmentName}</h1>
+      <div className="rounded-2xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md p-5">
+        <h1 className="text-2xl font-bold text-stone-900">{assessmentName}</h1>
         {assessmentDescription && (
-          <p className="mt-1 text-slate-600">{assessmentDescription}</p>
+          <p className="mt-1 text-stone-600">{assessmentDescription}</p>
         )}
 
         <div className="mt-4">
-          <div className="flex items-center justify-between text-sm text-slate-600">
+          <div className="flex items-center justify-between text-sm text-stone-600">
             <span>
               {answeredCount}/{questions.length} answered
             </span>
             <span>{progressPercent}%</span>
           </div>
-          <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+          <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-stone-100">
             <div
-              className="h-full rounded-full bg-slate-900 transition-all"
+              className="h-full rounded-full bg-brand-500 transition-all"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -196,7 +197,7 @@ export default function AssessmentAdminister({
       )}
 
       {questions.length === 0 ? (
-        <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
+        <div className="mt-4 rounded-xl border border-dashed border-stone-300 bg-white p-10 text-center text-stone-500">
           This assessment has no questions yet.
         </div>
       ) : (
@@ -209,23 +210,23 @@ export default function AssessmentAdminister({
             return (
               <li
                 key={question.id}
-                className="rounded-xl border border-slate-200 bg-white p-4"
+                className="rounded-2xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md p-4"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <span className="text-xs font-semibold text-slate-400">
+                    <span className="text-xs font-semibold text-stone-400">
                       #{i + 1}
                     </span>
-                    <p className="mt-1 text-sm font-medium text-slate-900">
+                    <p className="mt-1 text-sm font-medium text-stone-900">
                       {question.prompt}
                     </p>
                     {question.expected_answer && (
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="mt-1 text-xs text-stone-500">
                         Expected: {question.expected_answer}
                       </p>
                     )}
                     {question.notes && (
-                      <p className="mt-1 text-xs text-slate-400">
+                      <p className="mt-1 text-xs text-stone-400">
                         {question.notes}
                       </p>
                     )}
@@ -234,7 +235,7 @@ export default function AssessmentAdminister({
                     className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
                       answered
                         ? "bg-green-100 text-green-700"
-                        : "bg-slate-100 text-slate-400"
+                        : "bg-stone-100 text-stone-600"
                     }`}
                   >
                     {answered ? "Answered" : "Unanswered"}
@@ -250,7 +251,7 @@ export default function AssessmentAdminister({
                         disabled={saving}
                         className={`rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors disabled:opacity-50 ${
                           value?.correct === true
-                            ? "bg-green-600 text-white"
+                            ? "bg-green-700 text-white"
                             : "bg-green-100 text-green-800 hover:bg-green-200"
                         }`}
                       >
@@ -282,7 +283,7 @@ export default function AssessmentAdminister({
                         onBlur={() => handleTextBlur(question)}
                         placeholder="What the child said…"
                         disabled={saving}
-                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 disabled:opacity-50"
+                        className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:opacity-50"
                       />
                       <div className="flex gap-2">
                         {TAGS.map((tag) => (
@@ -294,11 +295,11 @@ export default function AssessmentAdminister({
                             className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
                               value?.tag === tag
                                 ? tag === "correct"
-                                  ? "bg-green-600 text-white"
+                                  ? "bg-green-700 text-white"
                                   : tag === "approx"
-                                    ? "bg-amber-500 text-white"
+                                    ? "bg-amber-700 text-white"
                                     : "bg-red-600 text-white"
-                                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                : "bg-stone-100 text-stone-600 hover:bg-stone-200"
                             }`}
                           >
                             {TAG_LABELS[tag]}
@@ -317,7 +318,7 @@ export default function AssessmentAdminister({
                       onBlur={() => handleTextBlur(question)}
                       rows={2}
                       disabled={saving}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 disabled:opacity-50"
+                      className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:opacity-50"
                     />
                   )}
                 </div>
@@ -327,17 +328,18 @@ export default function AssessmentAdminister({
         </ul>
       )}
 
-      <div className="fixed inset-x-0 bottom-0 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:static sm:mt-6 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+      <div className="fixed inset-x-0 bottom-0 border-t border-stone-200 bg-white/95 px-4 py-3 backdrop-blur sm:static sm:mt-6 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
-          <p className="hidden text-sm text-slate-500 sm:block">
+          <p className="hidden text-sm text-stone-500 sm:block">
             Answers save automatically as you go.
           </p>
           <button
             type="button"
             onClick={handleMarkComplete}
             disabled={completing}
-            className="w-full rounded-md bg-slate-900 px-4 py-3 text-base font-semibold text-white transition-colors hover:bg-slate-700 disabled:opacity-50 sm:w-auto sm:px-4 sm:py-2 sm:text-sm"
+            className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-brand-700 px-4 py-3 text-base font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md disabled:opacity-50 sm:w-auto sm:px-4 sm:py-2 sm:text-sm"
           >
+            <CheckCircle2 className="h-4 w-4" />
             {completing ? "Marking complete…" : "Mark complete"}
           </button>
         </div>

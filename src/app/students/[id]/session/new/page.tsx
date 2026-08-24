@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { SessionGoal } from "@/lib/types";
 import NewSessionForm from "./new-session-form";
@@ -39,19 +40,20 @@ export default async function NewSessionPage({
     .order("created_at", { ascending: false });
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 sm:py-10">
+    <main className="min-h-screen bg-cream-50 px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-3xl">
         <Link
           href={`/students/${student.id}`}
-          className="text-sm text-slate-500 hover:text-slate-700"
+          className="inline-flex items-center gap-1 text-sm text-stone-500 transition-colors hover:text-brand-800"
         >
-          &larr; Back to {student.name}
+          <ArrowLeft className="h-4 w-4" />
+          Back to {student.name}
         </Link>
 
-        <h1 className="mt-4 text-2xl font-bold text-slate-900">
+        <h1 className="mt-4 text-2xl font-bold text-stone-900">
           New session
         </h1>
-        <p className="mt-1 text-slate-600">{student.name}</p>
+        <p className="mt-1 text-stone-600">{student.name}</p>
 
         {error && (
           <p className="mt-4 text-sm text-red-600">

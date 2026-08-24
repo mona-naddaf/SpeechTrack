@@ -35,16 +35,16 @@ export default function RunAssessmentModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/40 px-4 py-8">
-      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
-        <h2 className="text-lg font-bold text-slate-900">Run assessment</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-stone-900/50 px-4 py-8">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <h2 className="text-lg font-bold text-stone-900">Run assessment</h2>
 
         {assessments.length === 0 ? (
-          <p className="mt-3 text-sm text-slate-600">
+          <p className="mt-3 text-sm text-stone-600">
             You don&apos;t have any saved assessments yet.{" "}
             <Link
               href="/toolkit/assessments"
-              className="font-medium text-slate-900 underline underline-offset-2"
+              className="font-medium text-stone-900 underline underline-offset-2"
             >
               Create one in the toolkit
             </Link>{" "}
@@ -57,8 +57,8 @@ export default function RunAssessmentModal({
                 key={a.id}
                 className={`flex cursor-pointer flex-col gap-2 rounded-lg border p-3 text-sm transition-colors ${
                   assessmentId === a.id
-                    ? "border-slate-900 bg-slate-50"
-                    : "border-slate-200 hover:bg-slate-50"
+                    ? "border-stone-900 bg-cream-50"
+                    : "border-stone-200 hover:bg-cream-50"
                 }`}
               >
                 <span className="flex items-start gap-2">
@@ -69,7 +69,7 @@ export default function RunAssessmentModal({
                     checked={assessmentId === a.id}
                     onChange={() => setAssessmentId(a.id)}
                   />
-                  <span className="font-medium text-slate-900">{a.name}</span>
+                  <span className="font-medium text-stone-900">{a.name}</span>
                 </span>
                 <AssessmentMetaBadges
                   kind={a.kind}
@@ -88,7 +88,7 @@ export default function RunAssessmentModal({
             type="button"
             onClick={onCancel}
             disabled={loading}
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:opacity-50"
+            className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
           >
             Cancel
           </button>
@@ -97,7 +97,7 @@ export default function RunAssessmentModal({
               type="button"
               onClick={handleStart}
               disabled={loading}
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-700 disabled:opacity-50"
+              className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
             >
               {loading ? "Starting…" : "Start"}
             </button>

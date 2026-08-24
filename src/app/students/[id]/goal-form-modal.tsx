@@ -120,9 +120,9 @@ export default function GoalFormModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/40 px-4 py-8">
-      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
-        <h2 className="text-lg font-bold text-slate-900">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-stone-900/50 px-4 py-8">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <h2 className="text-lg font-bold text-stone-900">
           {mode === "add" ? "Set a goal" : "Edit goal"}
         </h2>
 
@@ -130,7 +130,7 @@ export default function GoalFormModal({
           <div>
             <label
               htmlFor="goal-area"
-              className="block text-sm font-medium text-slate-700"
+              className="block text-sm font-medium text-stone-700"
             >
               Area
             </label>
@@ -141,7 +141,7 @@ export default function GoalFormModal({
                 setAreaId(e.target.value);
                 setSelectedBankGoalId("");
               }}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
             >
               {areas.length === 0 && <option value="">No areas yet</option>}
               {areas.map((area) => (
@@ -153,10 +153,10 @@ export default function GoalFormModal({
           </div>
 
           <div>
-            <span className="block text-sm font-medium text-slate-700">
+            <span className="block text-sm font-medium text-stone-700">
               Goal text
             </span>
-            <div className="mt-1 flex gap-4 text-sm text-slate-600">
+            <div className="mt-1 flex gap-4 text-sm text-stone-600">
               <label className="flex items-center gap-1.5">
                 <input
                   type="radio"
@@ -181,7 +181,7 @@ export default function GoalFormModal({
               <select
                 value={selectedBankGoalId}
                 onChange={(e) => handleBankGoalSelect(e.target.value)}
-                className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                className="mt-2 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
               >
                 <option value="">
                   {bankGoalsForArea.length === 0
@@ -200,7 +200,7 @@ export default function GoalFormModal({
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={3}
-              className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              className="mt-2 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
               placeholder="e.g. Will produce /r/ in initial position of words with 80% accuracy"
             />
           </div>
@@ -209,23 +209,23 @@ export default function GoalFormModal({
             <div>
               <label
                 htmlFor="goal-baseline"
-                className="block text-sm font-medium text-slate-700"
+                className="block text-sm font-medium text-stone-700"
               >
-                Baseline <span className="text-slate-400">(optional)</span>
+                Baseline <span className="text-stone-400">(optional)</span>
               </label>
               <input
                 id="goal-baseline"
                 type="text"
                 value={baseline}
                 onChange={(e) => setBaseline(e.target.value)}
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
                 placeholder="e.g. 20%"
               />
             </div>
             <div>
               <label
                 htmlFor="goal-target"
-                className="block text-sm font-medium text-slate-700"
+                className="block text-sm font-medium text-stone-700"
               >
                 Target %
               </label>
@@ -236,7 +236,7 @@ export default function GoalFormModal({
                 max={100}
                 value={targetPercent}
                 onChange={(e) => setTargetPercent(e.target.value)}
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
               />
             </div>
           </div>
@@ -244,7 +244,7 @@ export default function GoalFormModal({
           <div>
             <label
               htmlFor="goal-format"
-              className="block text-sm font-medium text-slate-700"
+              className="block text-sm font-medium text-stone-700"
             >
               Response format
             </label>
@@ -252,7 +252,7 @@ export default function GoalFormModal({
               id="goal-format"
               value={responseFormatId}
               onChange={(e) => setResponseFormatId(e.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
             >
               <option value="">None</option>
               {responseFormats.map((f) => (
@@ -266,7 +266,7 @@ export default function GoalFormModal({
           <div>
             <label
               htmlFor="goal-status"
-              className="block text-sm font-medium text-slate-700"
+              className="block text-sm font-medium text-stone-700"
             >
               Status
             </label>
@@ -274,7 +274,7 @@ export default function GoalFormModal({
               id="goal-status"
               value={status}
               onChange={(e) => setStatus(e.target.value as Goal["status"])}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
             >
               <option value="active">Active</option>
               <option value="on_hold">On hold</option>
@@ -289,14 +289,14 @@ export default function GoalFormModal({
               type="button"
               onClick={onCancel}
               disabled={loading}
-              className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:opacity-50"
+              className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-700 disabled:opacity-50"
+              className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
             >
               {loading
                 ? "Saving…"

@@ -44,7 +44,7 @@ export default function TrendChart({ points, label }: Props) {
               x2={WIDTH - PAD_RIGHT}
               y1={yFor(mark)}
               y2={yFor(mark)}
-              className="stroke-slate-200"
+              className="stroke-stone-200"
               strokeWidth={1}
             />
             <text
@@ -52,7 +52,7 @@ export default function TrendChart({ points, label }: Props) {
               y={yFor(mark) + 3}
               textAnchor="end"
               fontSize={9}
-              className="fill-slate-400"
+              className="fill-stone-400"
             >
               {mark}%
             </text>
@@ -63,8 +63,8 @@ export default function TrendChart({ points, label }: Props) {
           <polyline
             points={linePoints}
             fill="none"
-            className="stroke-slate-900"
-            strokeWidth={2}
+            className="stroke-brand-500"
+            strokeWidth={2.5}
             strokeLinecap="round"
             strokeLinejoin="round"
           />
@@ -76,7 +76,7 @@ export default function TrendChart({ points, label }: Props) {
             cx={xFor(i)}
             cy={yFor(p.percent)}
             r={3.5}
-            className="fill-slate-900"
+            className="fill-brand-600"
           />
         ))}
 
@@ -88,7 +88,7 @@ export default function TrendChart({ points, label }: Props) {
               y={HEIGHT - 8}
               textAnchor="middle"
               fontSize={8}
-              className="fill-slate-400"
+              className="fill-stone-400"
             >
               {formatShortDate(p.date)}
             </text>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Check, Copy } from "lucide-react";
 
 type Props = {
   code: string;
@@ -23,9 +24,19 @@ export default function CopyCodeButton({ code }: Props) {
     <button
       type="button"
       onClick={handleCopy}
-      className="shrink-0 rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
+      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md"
     >
-      {copied ? "Copied!" : "Copy code"}
+      {copied ? (
+        <>
+          <Check className="h-4 w-4 text-accent-600" />
+          Copied!
+        </>
+      ) : (
+        <>
+          <Copy className="h-4 w-4" />
+          Copy code
+        </>
+      )}
     </button>
   );
 }

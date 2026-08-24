@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { BookOpenText } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatDate } from "@/lib/date";
 import { getHowItWentOption } from "@/lib/practice";
@@ -55,8 +56,11 @@ export default function PracticeLogSection({
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-slate-900">Practice log</h2>
-      <p className="mt-1 text-sm text-slate-500">
+      <h2 className="flex items-center gap-2 text-lg font-semibold text-stone-900">
+        <BookOpenText className="h-5 w-5 text-brand-500" />
+        Practice log
+      </h2>
+      <p className="mt-1 text-sm text-stone-500">
         Logged by the parent from home — leave a quick note of praise on any
         entry.
       </p>
@@ -68,8 +72,11 @@ export default function PracticeLogSection({
       )}
 
       {!listError && logs.length === 0 && (
-        <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
-          No home practice logged yet.
+        <div className="mt-4 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-stone-300 bg-white p-10 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-100">
+            <BookOpenText className="h-6 w-6 text-brand-500" />
+          </div>
+          <p className="text-stone-500">No home practice logged yet.</p>
         </div>
       )}
 
@@ -80,26 +87,26 @@ export default function PracticeLogSection({
             return (
               <div
                 key={log.id}
-                className="rounded-xl border border-slate-200 bg-white p-4"
+                className="rounded-2xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md p-4"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <p className="font-medium text-slate-900">
+                  <p className="font-medium text-stone-900">
                     {formatDate(log.date)}
                   </p>
-                  <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                  <span className="flex items-center gap-1 rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-600">
                     <span className="text-base">{mood.emoji}</span>
                     {mood.label}
                   </span>
                 </div>
 
                 {log.activities.length > 0 && (
-                  <p className="mt-2 text-sm text-slate-600">
+                  <p className="mt-2 text-sm text-stone-600">
                     {log.activities.map((a) => a.text).join(", ")}
                   </p>
                 )}
 
                 {log.note && (
-                  <p className="mt-2 text-sm text-slate-600">{log.note}</p>
+                  <p className="mt-2 text-sm text-stone-600">{log.note}</p>
                 )}
 
                 {log.praise.length > 0 && (
@@ -126,7 +133,7 @@ export default function PracticeLogSection({
                       }))
                     }
                     placeholder="Leave a quick praise note…"
-                    className="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                    className="min-w-0 flex-1 rounded-lg border border-stone-300 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
                   />
                   <button
                     type="button"
@@ -135,7 +142,7 @@ export default function PracticeLogSection({
                       submittingLogId === log.id ||
                       !(draftByLog[log.id] ?? "").trim()
                     }
-                    className="shrink-0 rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-700 disabled:opacity-50"
+                    className="shrink-0 rounded-lg bg-brand-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md disabled:opacity-50"
                   >
                     {submittingLogId === log.id ? "Saving…" : "Send praise"}
                   </button>

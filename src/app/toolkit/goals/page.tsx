@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowLeft, ClipboardList, Sliders } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Area, ResponseFormatOption } from "@/lib/types";
@@ -30,34 +31,37 @@ export default async function GoalBankPage() {
   ]);
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 sm:py-10">
+    <main className="min-h-screen bg-cream-50 px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-3xl">
         <div className="flex items-center justify-between gap-4">
           <Link
             href="/dashboard"
-            className="text-sm text-slate-500 hover:text-slate-700"
+            className="inline-flex items-center gap-1 text-sm text-stone-500 transition-colors hover:text-brand-800"
           >
-            &larr; Back to dashboard
+            <ArrowLeft className="h-4 w-4" />
+            Back to dashboard
           </Link>
           <div className="flex items-center gap-3">
             <Link
               href="/toolkit/assessments"
-              className="text-sm font-medium text-slate-600 hover:text-slate-900"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
             >
+              <ClipboardList className="h-4 w-4" />
               Assessments
             </Link>
             <Link
               href="/toolkit/formats"
-              className="text-sm font-medium text-slate-600 hover:text-slate-900"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
             >
+              <Sliders className="h-4 w-4" />
               Response formats
             </Link>
           </div>
         </div>
 
         <div className="mt-4">
-          <h1 className="text-2xl font-bold text-slate-900">Goal bank</h1>
-          <p className="mt-1 text-slate-600">
+          <h1 className="text-2xl font-bold text-stone-900">Goal bank</h1>
+          <p className="mt-1 text-stone-600">
             Goals here aren&apos;t tied to a student yet. Add them here once,
             then pick from the bank whenever you set a goal on a student.
           </p>

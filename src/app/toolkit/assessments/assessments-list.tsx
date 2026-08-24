@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ClipboardList, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Area, Assessment, AssessmentWithAreas } from "@/lib/types";
 import AssessmentMetaBadges from "@/components/assessment-meta-badges";
@@ -74,14 +75,16 @@ export default function AssessmentsList({ initialAssessments, areas }: Props) {
   return (
     <div>
       <div className="flex items-center justify-between gap-4">
-        <h2 className="text-lg font-semibold text-slate-900">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-stone-900">
+          <ClipboardList className="h-5 w-5 text-brand-500" />
           Saved assessments
         </h2>
         <button
           onClick={() => setShowNewModal(true)}
-          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-700"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md"
         >
-          + New assessment
+          <Plus className="h-4 w-4" />
+          New assessment
         </button>
       </div>
 
@@ -92,9 +95,14 @@ export default function AssessmentsList({ initialAssessments, areas }: Props) {
       )}
 
       {assessments.length === 0 && (
-        <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
-          No assessments yet. Create one to start building a reusable
-          assessment.
+        <div className="mt-4 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-stone-300 bg-white p-10 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-100">
+            <ClipboardList className="h-6 w-6 text-brand-500" />
+          </div>
+          <p className="text-stone-500">
+            No assessments yet — create one to start building a reusable
+            assessment.
+          </p>
         </div>
       )}
 
@@ -103,11 +111,11 @@ export default function AssessmentsList({ initialAssessments, areas }: Props) {
           {assessments.map((assessment) => (
             <div
               key={assessment.id}
-              className="flex flex-col rounded-xl border border-slate-200 bg-white p-4"
+              className="flex flex-col rounded-2xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md p-4"
             >
-              <p className="font-medium text-slate-900">{assessment.name}</p>
+              <p className="font-medium text-stone-900">{assessment.name}</p>
               {assessment.description ? (
-                <p className="mt-1 text-sm text-slate-600">
+                <p className="mt-1 text-sm text-stone-600">
                   {assessment.description}
                 </p>
               ) : null}
@@ -123,13 +131,13 @@ export default function AssessmentsList({ initialAssessments, areas }: Props) {
               <div className="mt-3 flex justify-end gap-1">
                 <Link
                   href={`/toolkit/assessments/${assessment.id}`}
-                  className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100"
+                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-100"
                 >
                   Edit questions
                 </Link>
                 <button
                   onClick={() => handleDeleteRequest(assessment)}
-                  className="rounded-md px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
                 >
                   Delete
                 </button>

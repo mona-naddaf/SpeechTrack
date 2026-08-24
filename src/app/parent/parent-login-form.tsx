@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowRight, KeyRound } from "lucide-react";
 
 export default function ParentLoginForm() {
   const router = useRouter();
@@ -43,15 +44,16 @@ export default function ParentLoginForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="rounded-xl border border-slate-200 bg-white p-6"
+      className="rounded-2xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md p-6"
     >
       <label
         htmlFor="access-code"
-        className="block text-base font-medium text-slate-700"
+        className="flex items-center gap-2 text-base font-medium text-stone-700"
       >
+        <KeyRound className="h-5 w-5 text-brand-500" />
         Enter your access code
       </label>
-      <p className="mt-1 text-sm text-slate-500">
+      <p className="mt-1 text-sm text-stone-500">
         Your child&apos;s therapist gave you a 6-character code.
       </p>
       <input
@@ -65,7 +67,7 @@ export default function ParentLoginForm() {
         onChange={(e) => setCode(e.target.value.toUpperCase())}
         placeholder="ABC123"
         maxLength={6}
-        className="mt-4 w-full rounded-md border border-slate-300 px-4 py-3 text-center text-2xl font-semibold tracking-[0.3em] focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+        className="mt-4 w-full rounded-lg border border-stone-300 px-4 py-3 text-center text-2xl font-semibold tracking-[0.3em] focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
       />
 
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
@@ -73,9 +75,10 @@ export default function ParentLoginForm() {
       <button
         type="submit"
         disabled={loading}
-        className="mt-4 w-full rounded-md bg-slate-900 px-4 py-3 text-base font-semibold text-white transition-colors hover:bg-slate-700 disabled:opacity-50"
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-brand-700 px-4 py-3 text-base font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md disabled:opacity-50"
       >
         {loading ? "Checking…" : "Continue"}
+        {!loading && <ArrowRight className="h-4 w-4" />}
       </button>
     </form>
   );

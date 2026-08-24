@@ -9,5 +9,5 @@ export const GOAL_STATUS_LABELS: Record<GoalStatus, string> = {
 export const GOAL_STATUS_CLASSES: Record<GoalStatus, string> = {
   active: "bg-green-100 text-green-800",
   on_hold: "bg-amber-100 text-amber-800",
-  mastered: "bg-blue-100 text-blue-800",
+  mastered: "bg-accent-100 text-accent-800",
 };

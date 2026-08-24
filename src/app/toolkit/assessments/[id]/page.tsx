@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Area, AssessmentQuestion } from "@/lib/types";
@@ -53,13 +54,14 @@ export default async function AssessmentEditorPage({
   const { data: questions, error } = questionsResult;
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 sm:py-10">
+    <main className="min-h-screen bg-cream-50 px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-3xl">
         <Link
           href="/toolkit/assessments"
-          className="text-sm text-slate-500 hover:text-slate-700"
+          className="inline-flex items-center gap-1 text-sm text-stone-500 transition-colors hover:text-brand-800"
         >
-          &larr; Back to assessments
+          <ArrowLeft className="h-4 w-4" />
+            Back to assessments
         </Link>
 
         {error && (

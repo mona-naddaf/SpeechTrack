@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ArrowLeft, MessageCircleHeart } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 type Mode = "sign-in" | "sign-up";
@@ -62,22 +63,35 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6">
-      <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
-        <Link href="/" className="text-sm text-slate-500 hover:text-slate-700">
-          &larr; Back
+    <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-cream-50 via-cream-50 to-brand-50 px-6 py-12">
+      <div className="w-full max-w-sm rounded-2xl border border-stone-200 bg-white p-8 shadow-lg">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1 text-sm text-stone-500 transition-colors hover:text-brand-800"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back
         </Link>
 
-        <h1 className="mt-4 text-2xl font-bold text-slate-900">
-          {mode === "sign-in" ? "Sign in" : "Create an account"}
+        <div className="mt-4 flex h-12 w-12 items-center justify-center rounded-xl bg-brand-100">
+          <MessageCircleHeart className="h-6 w-6 text-brand-600" />
+        </div>
+
+        <h1 className="mt-4 text-2xl font-bold text-stone-900">
+          {mode === "sign-in" ? "Welcome back" : "Create an account"}
         </h1>
+        <p className="mt-1 text-sm text-stone-500">
+          {mode === "sign-in"
+            ? "Sign in to pick up where you left off."
+            : "Let's get your caseload set up."}
+        </p>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           {mode === "sign-up" && (
             <div>
               <label
                 htmlFor="full-name"
-                className="block text-sm font-medium text-slate-700"
+                className="block text-sm font-medium text-stone-700"
               >
                 Full name
               </label>
@@ -89,7 +103,7 @@ export default function LoginPage() {
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
               />
             </div>
           )}
@@ -97,7 +111,7 @@ export default function LoginPage() {
           <div>
             <label
               htmlFor="email"
-              className="block text-sm font-medium text-slate-700"
+              className="block text-sm font-medium text-stone-700"
             >
               Email
             </label>
@@ -109,14 +123,14 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
             />
           </div>
 
           <div>
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-slate-700"
+              className="block text-sm font-medium text-stone-700"
             >
               Password
             </label>
@@ -131,17 +145,17 @@ export default function LoginPage() {
               minLength={6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
             />
           </div>
 
           {error && <p className="text-sm text-red-600">{error}</p>}
-          {message && <p className="text-sm text-green-600">{message}</p>}
+          {message && <p className="text-sm text-accent-700">{message}</p>}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-700 disabled:opacity-50"
+            className="w-full rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
           >
             {loading
               ? "Please wait…"
@@ -151,14 +165,14 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-slate-500">
+        <p className="mt-6 text-center text-sm text-stone-500">
           {mode === "sign-in"
             ? "Don't have an account?"
             : "Already have an account?"}{" "}
           <button
             type="button"
             onClick={toggleMode}
-            className="font-medium text-slate-900 underline underline-offset-2"
+            className="font-medium text-brand-700 underline underline-offset-2 hover:text-brand-800"
           >
             {mode === "sign-in" ? "Sign up" : "Sign in"}
           </button>

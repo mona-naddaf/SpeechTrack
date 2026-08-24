@@ -22,6 +22,7 @@ Next.js (App Router) + Supabase + Tailwind starter.
 - **`students.parent_access_code`, `home_practice_items`, `practice_logs`, `praise` tables** — see `supabase/migrations/0004_home_practice_and_parent_access.sql`.
 - **SLP full name** — stored in Supabase Auth's `user_metadata.full_name`, not a table column, so this also needed **no migration**. Set at sign-up (`src/app/login/page.tsx`), updatable via `supabase.auth.updateUser({ data: { full_name } })` (`src/app/dashboard/name-prompt-modal.tsx`), read on the dashboard via `user.user_metadata.full_name`.
 - **`assessments`, `assessment_questions`, `assessment_results`, `assessment_answers` tables** — see `supabase/migrations/0005_assessments.sql`. **This one needs a migration** — these are new tables, unlike the three features above.
+- **`assessments.kind`/`formality`, `assessment_areas` join table** — see `supabase/migrations/0006_assessment_metadata.sql`. **Also needs a migration.** `kind`/`formality` are nullable at the DB level (existing assessments just show "not set" until edited) even though the create form requires them going forward.
 
 ## Project structure
 
@@ -124,9 +125,21 @@ supabase/
     0003_sessions_and_trials.sql     sessions, trials tables + RLS
     0004_home_practice_and_parent_access.sql   parent_access_code + home_practice_items, practice_logs, praise + RLS
     0005_assessments.sql             assessments, assessment_questions, assessment_results, assessment_answers + RLS
+    0006_assessment_metadata.sql     assessments.kind/formality + assessment_areas join table + RLS
 ```
 
 As you add features, new pages go under `src/app/...` and shared logic under `src/lib/...`.
+
+### Design system
+
+Warm and friendly rather than clinical, since this is used by SLPs working with kids (and the `/parent` view is used directly by parents):
+
+- **Color** — three custom Tailwind scales in `tailwind.config.ts`: `brand` (coral, primary actions/accents), `accent` (teal, secondary — links, "mastered" status, tags), `cream` (warm page background, `bg-cream-50`). Everything else uses Tailwind's built-in `stone` (warm neutral, replacing the default cool `slate`) for text/borders/surfaces. `red`/`green`/`amber` stay as the universal semantic colors for destructive actions, correct/incorrect, and warnings. The cueing-hierarchy level colors (`src/lib/colors.ts`) are unchanged — they were already soft/pastel Tailwind pairs and read fine alongside the new palette.
+- **Type** — `next/font/google` in `src/app/layout.tsx`: **Baloo 2** (rounded, friendly) for all headings via a `@layer base` rule on `h1`-`h6` in `globals.css` (set once there rather than on every heading element), **Inter** for body text as the Tailwind `font-sans` default.
+- **Shape & depth** — buttons/inputs `rounded-lg`, cards/modals `rounded-2xl`, pills `rounded-full`; cards carry `shadow-sm` with a `hover:shadow-md` lift, buttons add a subtle `hover:-translate-y-0.5` on top.
+- **Icons** — [lucide-react](https://lucide.dev), used at nav links, section headings, empty states, and key action buttons (matched to what each button/section does — no icon components live in `src/lib/`, they're inlined per usage).
+- **`src/components/`** — the one exception to "everything colocated under `src/app/...`": `assessment-meta-badges.tsx` is shared between the toolkit assessments list and the student-page "Run assessment" picker, so it's the first genuinely cross-route UI component.
+- **Parent view extra warmth** — `/parent` leans further into the palette than the SLP-side pages: a soft gradient background, bigger/rounder mood-picker buttons with per-mood colors and a tactile `active:scale-95` press, and praise notes styled as a small celebration (gradient background, 🎉 icon) rather than a plain list item.
 
 Progress & Reports reads only from `sessions`/`trials`/`goals` — no new tables or migration needed, and no new npm dependency (charts are hand-rolled inline SVG/CSS rather than a charting library, to keep the bundle small and avoid another moving part).
 
@@ -174,6 +187,7 @@ In the Supabase dashboard, open **SQL Editor** and run, in order:
 3. `supabase/migrations/0003_sessions_and_trials.sql`
 4. `supabase/migrations/0004_home_practice_and_parent_access.sql`
 5. `supabase/migrations/0005_assessments.sql`
+6. `supabase/migrations/0006_assessment_metadata.sql`
 
 (Or apply them with the Supabase CLI if you use one.)
 

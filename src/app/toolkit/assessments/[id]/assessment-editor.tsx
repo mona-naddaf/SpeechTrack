@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ListChecks, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type {
   Area,
@@ -244,7 +245,7 @@ export default function AssessmentEditor({
 
   return (
     <div>
-      <div className="rounded-xl border border-slate-200 bg-white p-5">
+      <div className="rounded-2xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md p-5">
         <label htmlFor="assessment-name" className="sr-only">
           Assessment name
         </label>
@@ -254,7 +255,7 @@ export default function AssessmentEditor({
           value={name}
           onChange={(e) => setName(e.target.value)}
           onBlur={saveName}
-          className="w-full border-none p-0 text-2xl font-bold text-slate-900 focus:outline-none focus:ring-0"
+          className="w-full border-none p-0 text-2xl font-bold text-stone-900 focus:outline-none focus:ring-0"
         />
 
         <label htmlFor="assessment-description" className="sr-only">
@@ -267,13 +268,13 @@ export default function AssessmentEditor({
           onBlur={saveDescription}
           rows={2}
           placeholder="Description (optional)"
-          className="mt-2 w-full resize-none border-none p-0 text-slate-600 focus:outline-none focus:ring-0"
+          className="mt-2 w-full resize-none border-none p-0 text-stone-600 focus:outline-none focus:ring-0"
         />
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
-            <span className="block text-sm font-medium text-slate-700">Kind</span>
-            <div className="mt-1 flex gap-4 text-sm text-slate-600">
+            <span className="block text-sm font-medium text-stone-700">Kind</span>
+            <div className="mt-1 flex gap-4 text-sm text-stone-600">
               {KINDS.map((k) => (
                 <label key={k} className="flex items-center gap-1.5">
                   <input
@@ -288,10 +289,10 @@ export default function AssessmentEditor({
             </div>
           </div>
           <div>
-            <span className="block text-sm font-medium text-slate-700">
+            <span className="block text-sm font-medium text-stone-700">
               Formality
             </span>
-            <div className="mt-1 flex gap-4 text-sm text-slate-600">
+            <div className="mt-1 flex gap-4 text-sm text-stone-600">
               {FORMALITIES.map((f) => (
                 <label key={f} className="flex items-center gap-1.5">
                   <input
@@ -309,17 +310,17 @@ export default function AssessmentEditor({
 
         {areas.length > 0 && (
           <div className="mt-4">
-            <span className="block text-sm font-medium text-slate-700">
-              Areas <span className="text-slate-400">(optional)</span>
+            <span className="block text-sm font-medium text-stone-700">
+              Areas <span className="text-stone-400">(optional)</span>
             </span>
-            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-slate-600">
+            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-stone-600">
               {areas.map((area) => (
                 <label key={area.id} className="flex items-center gap-1.5">
                   <input
                     type="checkbox"
                     checked={areaIds.has(area.id)}
                     onChange={() => toggleArea(area.id)}
-                    className="h-4 w-4 rounded border-slate-300"
+                    className="h-4 w-4 rounded border-stone-300"
                   />
                   {area.name}
                 </label>
@@ -334,20 +335,27 @@ export default function AssessmentEditor({
       </div>
 
       <div className="mt-6 flex items-center justify-between gap-4">
-        <h2 className="text-lg font-semibold text-slate-900">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-stone-900">
+          <ListChecks className="h-5 w-5 text-brand-500" />
           Questions ({questions.length})
         </h2>
         <button
           onClick={() => setShowAddModal(true)}
-          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-700"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md"
         >
-          + Add question
+          <Plus className="h-4 w-4" />
+          Add question
         </button>
       </div>
 
       {questions.length === 0 && (
-        <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
-          No questions yet. Add one to start building this assessment.
+        <div className="mt-4 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-stone-300 bg-white p-10 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-100">
+            <ListChecks className="h-6 w-6 text-brand-500" />
+          </div>
+          <p className="text-stone-500">
+            No questions yet — add one to start building this assessment.
+          </p>
         </div>
       )}
 
@@ -356,27 +364,27 @@ export default function AssessmentEditor({
           {questions.map((question, i) => (
             <li
               key={question.id}
-              className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-start sm:justify-between"
+              className="flex flex-col gap-2 rounded-2xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md p-4 sm:flex-row sm:items-start sm:justify-between"
             >
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-semibold text-slate-400">
+                  <span className="text-xs font-semibold text-stone-400">
                     #{i + 1}
                   </span>
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                  <span className="rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-600">
                     {ASSESSMENT_RESPONSE_TYPE_LABELS[question.response_type]}
                   </span>
                 </div>
-                <p className="mt-2 text-sm font-medium text-slate-900">
+                <p className="mt-2 text-sm font-medium text-stone-900">
                   {question.prompt}
                 </p>
                 {question.expected_answer && (
-                  <p className="mt-1 text-sm text-slate-500">
+                  <p className="mt-1 text-sm text-stone-500">
                     Expected: {question.expected_answer}
                   </p>
                 )}
                 {question.notes && (
-                  <p className="mt-1 text-sm text-slate-400">
+                  <p className="mt-1 text-sm text-stone-400">
                     {question.notes}
                   </p>
                 )}
@@ -387,7 +395,7 @@ export default function AssessmentEditor({
                   onClick={() => moveQuestion(i, -1)}
                   disabled={i === 0 || reordering}
                   aria-label="Move up"
-                  className="rounded-md px-2 py-1.5 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
+                  className="rounded-lg px-2 py-1.5 text-sm font-medium text-stone-500 transition-colors hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-30"
                 >
                   ↑
                 </button>
@@ -395,19 +403,19 @@ export default function AssessmentEditor({
                   onClick={() => moveQuestion(i, 1)}
                   disabled={i === questions.length - 1 || reordering}
                   aria-label="Move down"
-                  className="rounded-md px-2 py-1.5 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
+                  className="rounded-lg px-2 py-1.5 text-sm font-medium text-stone-500 transition-colors hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-30"
                 >
                   ↓
                 </button>
                 <button
                   onClick={() => setEditingQuestion(question)}
-                  className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100"
+                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-100"
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => setDeletingQuestion(question)}
-                  className="rounded-md px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
                 >
                   Delete
                 </button>

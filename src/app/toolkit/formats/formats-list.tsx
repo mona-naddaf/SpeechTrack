@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { CueingLevel, ResponseFormat, ResponseFormatType } from "@/lib/types";
 import { RESPONSE_FORMAT_TYPE_LABELS } from "@/lib/response-format-types";
@@ -98,9 +99,10 @@ export default function FormatsList({ initialFormats }: Props) {
       <div className="flex justify-end">
         <button
           onClick={() => setShowNewModal(true)}
-          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-700"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md"
         >
-          + New custom format
+          <Plus className="h-4 w-4" />
+          New custom format
         </button>
       </div>
 
@@ -113,12 +115,12 @@ export default function FormatsList({ initialFormats }: Props) {
       {formats.map((format) => (
         <div
           key={format.id}
-          className="rounded-xl border border-slate-200 bg-white p-5"
+          className="rounded-2xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md p-5"
         >
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h2 className="font-semibold text-slate-900">{format.name}</h2>
-              <p className="text-xs text-slate-400">
+              <h2 className="font-semibold text-stone-900">{format.name}</h2>
+              <p className="text-xs text-stone-400">
                 {RESPONSE_FORMAT_TYPE_LABELS.find((t) => t.type === format.type)
                   ?.label ?? format.type}
               </p>
@@ -126,13 +128,13 @@ export default function FormatsList({ initialFormats }: Props) {
             <div className="flex shrink-0 gap-1">
               <button
                 onClick={() => setEditingFormat(format)}
-                className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100"
+                className="rounded-lg px-3 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-100"
               >
                 Edit
               </button>
               <button
                 onClick={() => handleDeleteRequest(format)}
-                className="rounded-md px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+                className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
               >
                 Delete
               </button>
@@ -174,7 +176,7 @@ export default function FormatsList({ initialFormats }: Props) {
           )}
 
           {format.type === "rating_scale" && (
-            <p className="mt-4 text-sm text-slate-600">
+            <p className="mt-4 text-sm text-stone-600">
               Range: {format.config.min ?? 0}–{format.config.max ?? 4}
             </p>
           )}
@@ -182,7 +184,7 @@ export default function FormatsList({ initialFormats }: Props) {
           {!["cueing_hierarchy", "correct_incorrect", "rating_scale"].includes(
             format.type
           ) && (
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-stone-500">
               Editing for this format type is coming soon.
             </p>
           )}
@@ -192,15 +194,15 @@ export default function FormatsList({ initialFormats }: Props) {
       {placeholderTypes.map((t) => (
         <div
           key={t.type}
-          className="rounded-xl border border-dashed border-slate-300 bg-white p-5 opacity-70"
+          className="rounded-xl border border-dashed border-stone-300 bg-white p-5 opacity-70"
         >
           <div className="flex items-center justify-between gap-4">
-            <h2 className="font-semibold text-slate-700">{t.label}</h2>
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">
+            <h2 className="font-semibold text-stone-700">{t.label}</h2>
+            <span className="rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-600">
               Coming soon
             </span>
           </div>
-          <p className="mt-1 text-sm text-slate-500">{t.description}</p>
+          <p className="mt-1 text-sm text-stone-500">{t.description}</p>
         </div>
       ))}
 

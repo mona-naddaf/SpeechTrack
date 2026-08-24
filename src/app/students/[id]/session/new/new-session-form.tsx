@@ -154,10 +154,10 @@ export default function NewSessionForm({ studentId, goals }: Props) {
 
   return (
     <div className="space-y-6 pb-24">
-      <div className="rounded-xl border border-slate-200 bg-white p-4">
+      <div className="rounded-2xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md p-4">
         <label
           htmlFor="session-date"
-          className="block text-sm font-medium text-slate-700"
+          className="block text-sm font-medium text-stone-700"
         >
           Date
         </label>
@@ -166,7 +166,7 @@ export default function NewSessionForm({ studentId, goals }: Props) {
           type="date"
           value={date}
           onChange={(e) => handleDateChange(e.target.value)}
-          className="mt-1 w-full max-w-xs rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          className="mt-1 w-full max-w-xs rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
         />
       </div>
 
@@ -177,7 +177,7 @@ export default function NewSessionForm({ studentId, goals }: Props) {
       )}
 
       {goals.length === 0 && (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
+        <div className="rounded-xl border border-dashed border-stone-300 bg-white p-10 text-center text-stone-500">
           This student has no active goals yet. Add a goal on their page
           first, or just save a note below.
         </div>
@@ -195,30 +195,30 @@ export default function NewSessionForm({ studentId, goals }: Props) {
         ))}
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-4">
+      <div className="rounded-2xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md p-4">
         <label
           htmlFor="session-note"
-          className="block text-sm font-medium text-slate-700"
+          className="block text-sm font-medium text-stone-700"
         >
-          Session note <span className="text-slate-400">(optional)</span>
+          Session note <span className="text-stone-400">(optional)</span>
         </label>
         <textarea
           id="session-note"
           value={note}
           onChange={(e) => setNote(e.target.value)}
           rows={3}
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
           placeholder="What happened in this session?"
         />
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+      <div className="fixed inset-x-0 bottom-0 border-t border-stone-200 bg-white/95 px-4 py-3 backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
         <div className="mx-auto max-w-3xl">
           <button
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="w-full rounded-md bg-slate-900 px-4 py-3 text-base font-semibold text-white transition-colors hover:bg-slate-700 disabled:opacity-50 sm:w-auto"
+            className="w-full rounded-lg bg-brand-700 px-4 py-3 text-base font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md disabled:opacity-50 sm:w-auto"
           >
             {saving ? "Saving…" : "Save session"}
           </button>

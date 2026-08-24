@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Check, Undo2, X } from "lucide-react";
 import type { SessionGoal, Trial } from "@/lib/types";
 import { getColorOption } from "@/lib/colors";
 
@@ -54,19 +55,19 @@ export default function GoalTrialCard({
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4">
+    <div className="rounded-2xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md p-4">
       <div className="flex items-start justify-between gap-2">
         <div>
           {goal.area && (
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+            <span className="rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-600">
               {goal.area.name}
             </span>
           )}
-          <p className="mt-2 text-sm font-medium text-slate-900">
+          <p className="mt-2 text-sm font-medium text-stone-900">
             {goal.text}
           </p>
         </div>
-        <span className="shrink-0 text-xs text-slate-400">
+        <span className="shrink-0 text-xs text-stone-400">
           {trials.length} trial{trials.length === 1 ? "" : "s"}
         </span>
       </div>
@@ -107,7 +108,7 @@ export default function GoalTrialCard({
                 type="button"
                 onClick={() => handleLog({ rating })}
                 disabled={logging}
-                className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg bg-blue-100 px-2 py-3 text-center text-sm font-semibold text-blue-800 transition-transform active:scale-95 disabled:opacity-50"
+                className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg bg-accent-100 px-2 py-3 text-center text-sm font-semibold text-accent-800 transition-transform active:scale-95 disabled:opacity-50"
               >
                 <span>{rating}</span>
                 {count > 0 && (
@@ -127,7 +128,10 @@ export default function GoalTrialCard({
             disabled={logging}
             className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg bg-green-100 px-2 py-3 text-center text-sm font-semibold text-green-800 transition-transform active:scale-95 disabled:opacity-50"
           >
-            <span>{correctLabel}</span>
+            <span className="flex items-center gap-1">
+              <Check className="h-4 w-4" />
+              {correctLabel}
+            </span>
             {(tally.correct ?? 0) > 0 && (
               <span className="rounded-full bg-white/70 px-2 py-0.5 text-xs font-bold">
                 {tally.correct}
@@ -140,7 +144,10 @@ export default function GoalTrialCard({
             disabled={logging}
             className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg bg-red-100 px-2 py-3 text-center text-sm font-semibold text-red-800 transition-transform active:scale-95 disabled:opacity-50"
           >
-            <span>{incorrectLabel}</span>
+            <span className="flex items-center gap-1">
+              <X className="h-4 w-4" />
+              {incorrectLabel}
+            </span>
             {(tally.incorrect ?? 0) > 0 && (
               <span className="rounded-full bg-white/70 px-2 py-0.5 text-xs font-bold">
                 {tally.incorrect}
@@ -155,8 +162,9 @@ export default function GoalTrialCard({
           type="button"
           onClick={handleUndo}
           disabled={undoing || trials.length === 0}
-          className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-100 disabled:opacity-40"
+          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-stone-500 transition-colors hover:bg-stone-100 disabled:opacity-40"
         >
+          <Undo2 className="h-4 w-4" />
           Undo last
         </button>
       </div>

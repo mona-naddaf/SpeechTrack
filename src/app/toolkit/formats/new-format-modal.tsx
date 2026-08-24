@@ -124,9 +124,9 @@ export default function NewFormatModal({ onCancel, onCreated }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/40 px-4 py-8">
-      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
-        <h2 className="text-lg font-bold text-slate-900">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-stone-900/50 px-4 py-8">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <h2 className="text-lg font-bold text-stone-900">
           New custom response format
         </h2>
 
@@ -134,7 +134,7 @@ export default function NewFormatModal({ onCancel, onCreated }: Props) {
           <div>
             <label
               htmlFor="new-format-name"
-              className="block text-sm font-medium text-slate-700"
+              className="block text-sm font-medium text-stone-700"
             >
               Name
             </label>
@@ -146,12 +146,12 @@ export default function NewFormatModal({ onCancel, onCreated }: Props) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Articulation approximation"
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
             />
           </div>
 
           <div>
-            <span className="block text-sm font-medium text-slate-700">
+            <span className="block text-sm font-medium text-stone-700">
               Type
             </span>
             <div className="mt-2 space-y-2">
@@ -160,8 +160,8 @@ export default function NewFormatModal({ onCancel, onCreated }: Props) {
                   key={opt.type}
                   className={`flex cursor-pointer items-start gap-2 rounded-lg border p-3 text-sm transition-colors ${
                     type === opt.type
-                      ? "border-slate-900 bg-slate-50"
-                      : "border-slate-200 hover:bg-slate-50"
+                      ? "border-stone-900 bg-cream-50"
+                      : "border-stone-200 hover:bg-cream-50"
                   }`}
                 >
                   <input
@@ -172,10 +172,10 @@ export default function NewFormatModal({ onCancel, onCreated }: Props) {
                     onChange={() => setType(opt.type)}
                   />
                   <span>
-                    <span className="block font-medium text-slate-900">
+                    <span className="block font-medium text-stone-900">
                       {opt.label}
                     </span>
-                    <span className="block text-slate-500">
+                    <span className="block text-stone-500">
                       {opt.description}
                     </span>
                   </span>
@@ -189,7 +189,7 @@ export default function NewFormatModal({ onCancel, onCreated }: Props) {
               <div>
                 <label
                   htmlFor="new-correct-label"
-                  className="block text-sm font-medium text-slate-700"
+                  className="block text-sm font-medium text-stone-700"
                 >
                   &quot;Correct&quot; label
                 </label>
@@ -198,13 +198,13 @@ export default function NewFormatModal({ onCancel, onCreated }: Props) {
                   type="text"
                   value={correctLabel}
                   onChange={(e) => setCorrectLabel(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
                 />
               </div>
               <div>
                 <label
                   htmlFor="new-incorrect-label"
-                  className="block text-sm font-medium text-slate-700"
+                  className="block text-sm font-medium text-stone-700"
                 >
                   &quot;Incorrect&quot; label
                 </label>
@@ -213,7 +213,7 @@ export default function NewFormatModal({ onCancel, onCreated }: Props) {
                   type="text"
                   value={incorrectLabel}
                   onChange={(e) => setIncorrectLabel(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
                 />
               </div>
             </div>
@@ -224,7 +224,7 @@ export default function NewFormatModal({ onCancel, onCreated }: Props) {
               <div>
                 <label
                   htmlFor="new-rs-min"
-                  className="block text-sm font-medium text-slate-700"
+                  className="block text-sm font-medium text-stone-700"
                 >
                   Min
                 </label>
@@ -233,13 +233,13 @@ export default function NewFormatModal({ onCancel, onCreated }: Props) {
                   type="number"
                   value={min}
                   onChange={(e) => setMin(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
                 />
               </div>
               <div>
                 <label
                   htmlFor="new-rs-max"
-                  className="block text-sm font-medium text-slate-700"
+                  className="block text-sm font-medium text-stone-700"
                 >
                   Max
                 </label>
@@ -248,14 +248,14 @@ export default function NewFormatModal({ onCancel, onCreated }: Props) {
                   type="number"
                   value={max}
                   onChange={(e) => setMax(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
                 />
               </div>
             </div>
           )}
 
           {type === "cueing_hierarchy" && (
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-stone-500">
               You&apos;ll start with two levels and can add, remove, rename,
               or recolor them right after creating it.
             </p>
@@ -268,14 +268,14 @@ export default function NewFormatModal({ onCancel, onCreated }: Props) {
               type="button"
               onClick={onCancel}
               disabled={loading}
-              className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:opacity-50"
+              className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-700 disabled:opacity-50"
+              className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
             >
               {loading ? "Creating…" : "Create format"}
             </button>
