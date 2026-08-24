@@ -225,3 +225,52 @@ export type AssessmentAnswer = {
   value: AssessmentAnswerValue;
   created_at: string;
 };
+
+// ============================================================
+// Teacher side — mirrors Student/Area/Goal above, but backed by
+// completely separate tables (teacher_students, teacher_subjects,
+// teacher_response_formats, teacher_goals). Response formats reuse
+// ResponseFormat/ResponseFormatType/ResponseFormatOption as-is since the
+// shape (id, name, type, config, created_at) is identical either side.
+// ============================================================
+
+export type TeacherStudent = {
+  id: string;
+  name: string;
+  class: string | null;
+  created_at: string;
+};
+
+export type TeacherSubject = {
+  id: string;
+  name: string;
+};
+
+export type TeacherGoal = {
+  id: string;
+  student_id: string | null;
+  subject_id: string;
+  text: string;
+  response_format_id: string | null;
+  baseline: string | null;
+  target_percent: number | null;
+  status: GoalStatus;
+  created_at: string;
+};
+
+/** A teacher goal row joined with its subject and response format for display. */
+export type TeacherGoalWithRelations = TeacherGoal & {
+  subject: { id: string; name: string } | null;
+  response_format: { id: string; name: string } | null;
+};
+
+/** A teacher goal-bank template (student_id is null) — just enough to
+ *  list/pick from, plus the optional defaults it can hand off when picked
+ *  for a student. */
+export type TeacherBankGoal = {
+  id: string;
+  subject_id: string;
+  text: string;
+  response_format_id: string | null;
+  target_percent: number | null;
+};

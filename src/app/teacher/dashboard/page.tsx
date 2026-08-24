@@ -1,8 +1,10 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { GraduationCap } from "lucide-react";
+import { ListChecks, Sliders } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/role";
 import SignOutButton from "./sign-out-button";
+import StudentsSection from "./students-section";
 
 export default async function TeacherDashboardPage() {
   const supabase = await createClient();
@@ -22,6 +24,11 @@ export default async function TeacherDashboardPage() {
     redirect("/dashboard");
   }
 
+  const { data: students, error } = await supabase
+    .from("teacher_students")
+    .select("id, name, class, created_at")
+    .order("created_at", { ascending: false });
+
   const fullName =
     typeof user.user_metadata?.full_name === "string"
       ? user.user_metadata.full_name.trim()
@@ -35,14 +42,31 @@ export default async function TeacherDashboardPage() {
           <h1 className="text-xl font-bold text-stone-900 sm:text-2xl">
             Welcome, {displayName} <span aria-hidden>👋</span>
           </h1>
-          <SignOutButton />
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/teacher/toolkit/goals"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
+            >
+              <ListChecks className="h-4 w-4" />
+              Goal bank
+            </Link>
+            <Link
+              href="/teacher/toolkit/subjects"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
+            >
+              <Sliders className="h-4 w-4" />
+              Subjects &amp; formats
+            </Link>
+            <SignOutButton />
+          </div>
         </div>
 
-        <div className="mt-8 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-stone-300 bg-white p-10 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-100">
-            <GraduationCap className="h-6 w-6 text-brand-500" />
-          </div>
-          <p className="text-stone-500">Your students will appear here.</p>
+        <div className="mt-8">
+          <StudentsSection
+            teacherId={user.id}
+            initialStudents={students ?? []}
+            initialError={error?.message ?? null}
+          />
         </div>
       </div>
     </main>

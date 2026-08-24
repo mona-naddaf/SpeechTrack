@@ -7,7 +7,11 @@ Next.js (App Router) + Supabase + Tailwind starter.
 - **Landing page** (`/`) — app name + "Sign in" button.
 - **Auth** (`/login`) — a "Who's signing in today?" chooser (**SLP** / **Teacher** / **Parent**) rather than one generic sign-in. Parent goes straight to `/parent`'s access-code flow. SLP and Teacher both lead to the same email/password sign-in/sign-up form, framed for whichever was picked (icon, subtitle) — sign-up additionally asks "Are you a Speech-Language Pathologist or a Teacher?" as a required field alongside full name/email/password, which sets the account's **role**. After sign-in, routing always follows the account's actual stored role (not just which chooser button was clicked): SLP → `/dashboard`, Teacher → `/teacher/dashboard`.
 - **Protected dashboard** (`/dashboard`) — SLP-only: redirects Teacher accounts to `/teacher/dashboard`, and redirects to `/login` if not authenticated (enforced in middleware *and* in the page itself). Greets the signed-in SLP by name ("Welcome, Mona") and lists their students with add/edit/delete. Any account without a name yet (pre-dating the full-name field) gets a one-time-per-login prompt to add it.
-- **Teacher dashboard** (`/teacher/dashboard`) — placeholder for now ("Welcome, [name]! Your students will appear here."), guarded the same way: redirects SLP accounts to `/dashboard`, redirects to `/login` if not authenticated. No teacher-specific features beyond this yet — SLPs and Teachers are completely separate, never sharing students or data, just this same app shell/auth pattern.
+- **Teacher dashboard** (`/teacher/dashboard`) — a real student list (add/edit/delete), guarded the same way as the SLP dashboard: redirects SLP accounts to `/dashboard`, redirects to `/login` if not authenticated. Fully mirrors the SLP's students/areas/response-formats/goals feature set, but on completely separate tables (`teacher_students`, `teacher_subjects`, `teacher_response_formats`, `teacher_goals`) — Teachers and SLPs never share students or data, just this same app shell/component patterns/styling.
+  - **Teacher student detail** (`/teacher/students/[id]`) — name, class, and a **Goals** section, same shape as the SLP one: subject instead of area, pick from bank or write new, baseline, target %, response format, status.
+  - **Teacher subjects & formats** (`/teacher/toolkit/subjects`) — two sections on one page: **Subjects** (add/edit/delete — unlike SLP "areas", which have no CRUD UI at all, subjects are fully manageable) and **Response formats**, which reuses the exact same custom-format editor components as `/toolkit/formats` (Correct/Incorrect, Rating scale, Cueing hierarchy), just pointed at `teacher_response_formats`.
+  - **Teacher goal bank** (`/teacher/toolkit/goals`) — add/edit/delete reusable goals grouped by subject, mirrors `/toolkit/goals` exactly. These show up in the "From goal bank" picker when setting a goal on a teacher's student.
+  - New teacher accounts are seeded on signup with a default **Correct/Incorrect** response format and 7 default subjects (Math, Reading, Writing, Spelling, Science, Social Studies, Behavior/Social-Emotional) — the same `handle_new_user()` trigger that seeds SLP defaults, now branching on the account's role.
 - **Student detail** (`/students/[id]`) — name, class, and a **Goals** section (add/edit/delete, picking an area, optionally a bank goal — which can also prefill its default response format and target % — baseline, target %, response format, status).
 - **Response formats** (`/toolkit/formats`) — view the SLP's response formats; full editor for the seeded **Cueing hierarchy** (rename, add/remove levels, change colors, toggle "independent"), plus **Correct/Incorrect** (rename, customize the two labels) and **Rating scale** (rename, set a custom min–max range); "+ New custom format" creates any of those three from scratch, and any format can be renamed or deleted (deletion is blocked with a clear message if a goal still uses it). Placeholder cards remain for the other, not-yet-built format types. Every format — built-in or custom — shows up as a selectable option anywhere a response format is picked (e.g. setting a goal), and session logging renders the right widget for its type (level buttons, a numeric rating row, or a Correct/Incorrect toggle with its custom labels).
 - **Goal bank** (`/toolkit/goals`) — add, edit, and delete goals that aren't tied to any student yet (area, goal text, optional default response format, optional target %), grouped by area. These show up as pickable options in the "From goal bank" flow when setting a goal on a student.
@@ -25,6 +29,7 @@ Next.js (App Router) + Supabase + Tailwind starter.
 - **Account role (SLP/Teacher)** — same pattern again: stored in Supabase Auth's `user_metadata.role`, **no migration needed**. `src/lib/role.ts`'s `getUserRole()` is the single source of truth for reading it — any account without a role set yet (pre-dating this field) defaults to `"slp"`, so no existing account/data breaks. Set at sign-up alongside full name; each protected dashboard route re-derives the role server-side and redirects to the other one if it doesn't match, rather than trusting which chooser button was clicked at `/login`.
 - **`assessments`, `assessment_questions`, `assessment_results`, `assessment_answers` tables** — see `supabase/migrations/0005_assessments.sql`. **This one needs a migration** — these are new tables, unlike the three features above.
 - **`assessments.kind`/`formality`, `assessment_areas` join table** — see `supabase/migrations/0006_assessment_metadata.sql`. **Also needs a migration.** `kind`/`formality` are nullable at the DB level (existing assessments just show "not set" until edited) even though the create form requires them going forward.
+- **`teacher_students`, `teacher_subjects`, `teacher_response_formats`, `teacher_goals` tables** — see `supabase/migrations/0007_teacher_students_subjects_goals.sql`. **Also needs a migration** — four new tables, same `teacher_id`-scoped RLS pattern as the SLP tables. This migration also makes `handle_new_user()` role-aware (seeds SLP defaults or Teacher defaults depending on `raw_user_meta_data->>'role'` at signup) — existing accounts are unaffected, since the trigger only fires on new signups.
 
 ## Project structure
 
@@ -40,9 +45,35 @@ src/
       delete-confirm-modal.tsx         delete student confirmation
       sign-out-button.tsx              sign out button
       name-prompt-modal.tsx            one-time-per-login "add your name" prompt (client component)
-    teacher/dashboard/
-      page.tsx                        protected Teacher dashboard — placeholder (server component)
-      sign-out-button.tsx              sign out button
+    teacher/
+      dashboard/
+        page.tsx                        protected Teacher dashboard — student list (server component)
+        students-section.tsx             student list UI + add/edit/delete state (client component)
+        student-form-modal.tsx           add/edit student modal
+        delete-confirm-modal.tsx         delete student confirmation
+        sign-out-button.tsx              sign out button
+      students/[id]/
+        page.tsx                        Teacher student detail (server component) — Goals section
+        goals-section.tsx                 goal list UI + add/edit/delete state (client component)
+        goal-form-modal.tsx               add/edit goal modal (subject, bank/write, baseline, target %, format, status)
+        delete-goal-confirm-modal.tsx     delete goal confirmation
+      toolkit/
+        subjects/
+          page.tsx                        subjects + response formats page (server component)
+          subjects-section.tsx             subject list UI + add/edit/delete state (client component)
+          subject-form-modal.tsx           add/edit subject modal
+          delete-subject-confirm-modal.tsx delete subject confirmation (blocked with a message if a goal uses it)
+          formats-list.tsx                 renders format cards, create/edit/delete state (client component) — same UI patterns as /toolkit/formats
+          new-format-modal.tsx             name + type picker for a brand-new custom format
+          correct-incorrect-editor-modal.tsx rename + custom correct/incorrect labels editor
+          rating-scale-editor-modal.tsx    rename + custom min/max range editor
+          cueing-hierarchy-editor-modal.tsx rename + add/remove/rename/recolor levels editor
+          delete-format-confirm-modal.tsx  delete format confirmation
+        goals/
+          page.tsx                        goal bank page (server component) — all bank goals, grouped by subject
+          goal-bank-section.tsx            bank goal list UI + add/edit/delete state (client component)
+          bank-goal-form-modal.tsx         add/edit bank goal modal (subject, text, default format, target %)
+          delete-bank-goal-confirm-modal.tsx delete bank goal confirmation
     students/[id]/
       page.tsx                        student detail (server component) — goals + past sessions
       goals-section.tsx                goal list UI + add/edit/delete state (client component)
@@ -107,7 +138,7 @@ src/
     layout.tsx
     globals.css
   lib/
-    types.ts                        shared TypeScript types (Student, Goal, ResponseFormat, Session, Trial, HomePracticeItem, PracticeLog, Assessment, AssessmentQuestion, AssessmentResult, AssessmentAnswer, ...)
+    types.ts                        shared TypeScript types (Student, Goal, ResponseFormat, Session, Trial, HomePracticeItem, PracticeLog, Assessment, AssessmentQuestion, AssessmentResult, AssessmentAnswer, TeacherStudent, TeacherSubject, TeacherGoal, ...)
     colors.ts                       named color palette used by the cueing hierarchy editor
     response-format-types.ts         labels/descriptions for all response format types
     goal-status.ts                   labels/badge colors for goal status
@@ -132,6 +163,7 @@ supabase/
     0004_home_practice_and_parent_access.sql   parent_access_code + home_practice_items, practice_logs, praise + RLS
     0005_assessments.sql             assessments, assessment_questions, assessment_results, assessment_answers + RLS
     0006_assessment_metadata.sql     assessments.kind/formality + assessment_areas join table + RLS
+    0007_teacher_students_subjects_goals.sql   teacher_students, teacher_subjects, teacher_response_formats, teacher_goals + RLS + role-aware handle_new_user()
 ```
 
 As you add features, new pages go under `src/app/...` and shared logic under `src/lib/...`.
@@ -194,6 +226,7 @@ In the Supabase dashboard, open **SQL Editor** and run, in order:
 4. `supabase/migrations/0004_home_practice_and_parent_access.sql`
 5. `supabase/migrations/0005_assessments.sql`
 6. `supabase/migrations/0006_assessment_metadata.sql`
+7. `supabase/migrations/0007_teacher_students_subjects_goals.sql`
 
 (Or apply them with the Supabase CLI if you use one.)
 
@@ -346,6 +379,8 @@ Row Level Security is enabled on every table, scoped to `slp_id = auth.uid()` (d
 | `created_at`    | `timestamptz` | auto-set on insert                                                          |
 
 An answer that's cleared back to empty is deleted rather than saved blank, so progress/answered counts stay accurate.
+
+**`teacher_students`, `teacher_subjects`, `teacher_response_formats`, `teacher_goals`** — the Teacher-side mirror of `students`/`areas`/`response_formats`/`goals` above, same shapes, same `teacher_id`-scoped RLS pattern (`teacher_id = auth.uid()` in place of `slp_id`), but completely separate tables — no foreign keys or joins ever cross between the SLP and Teacher sides. `teacher_goals.student_id` nullable means goal-bank template, same as `goals`. `teacher_response_formats` reuses the identical `type`/`config` shape as `response_formats` (`cueing_hierarchy`, `correct_incorrect`, `rating_scale`, ...), so the same app-layer editor components work against either table.
 
 ### Parent access — security approach
 
