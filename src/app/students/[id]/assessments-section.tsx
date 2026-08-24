@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { formatDate } from "@/lib/date";
-import type { Assessment, AssessmentStatus } from "@/lib/types";
+import type { AssessmentStatus, AssessmentWithAreas } from "@/lib/types";
 import type { AssessmentScore } from "@/lib/assessment";
 import RunAssessmentModal from "./run-assessment-modal";
 
@@ -23,7 +23,7 @@ export type AssessmentResultDisplay = {
 
 type Props = {
   studentId: string;
-  assessments: Assessment[];
+  assessments: AssessmentWithAreas[];
   initialResults: AssessmentResultDisplay[];
   assessmentsError: string | null;
   resultsError: string | null;

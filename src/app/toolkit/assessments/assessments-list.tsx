@@ -4,17 +4,20 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import type { Assessment } from "@/lib/types";
+import type { Area, Assessment, AssessmentWithAreas } from "@/lib/types";
+import AssessmentMetaBadges from "@/components/assessment-meta-badges";
 import NewAssessmentModal from "./new-assessment-modal";
 import DeleteAssessmentConfirmModal from "./delete-assessment-confirm-modal";
 
 type Props = {
-  initialAssessments: Assessment[];
+  initialAssessments: AssessmentWithAreas[];
+  areas: Area[];
 };
 
-export default function AssessmentsList({ initialAssessments }: Props) {
+export default function AssessmentsList({ initialAssessments, areas }: Props) {
   const router = useRouter();
-  const [assessments, setAssessments] = useState<Assessment[]>(initialAssessments);
+  const [assessments, setAssessments] =
+    useState<AssessmentWithAreas[]>(initialAssessments);
   const [showNewModal, setShowNewModal] = useState(false);
   const [deletingAssessment, setDeletingAssessment] = useState<Assessment | null>(
     null
@@ -104,12 +107,18 @@ export default function AssessmentsList({ initialAssessments }: Props) {
             >
               <p className="font-medium text-slate-900">{assessment.name}</p>
               {assessment.description ? (
-                <p className="mt-1 flex-1 text-sm text-slate-600">
+                <p className="mt-1 text-sm text-slate-600">
                   {assessment.description}
                 </p>
-              ) : (
-                <div className="flex-1" />
-              )}
+              ) : null}
+
+              <div className="mt-2 flex-1">
+                <AssessmentMetaBadges
+                  kind={assessment.kind}
+                  formality={assessment.formality}
+                  areas={assessment.areas}
+                />
+              </div>
 
               <div className="mt-3 flex justify-end gap-1">
                 <Link
@@ -132,6 +141,7 @@ export default function AssessmentsList({ initialAssessments }: Props) {
 
       {showNewModal && (
         <NewAssessmentModal
+          areas={areas}
           onCancel={() => setShowNewModal(false)}
           onCreated={handleCreated}
         />

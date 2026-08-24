@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type {
-  Assessment,
   AssessmentAnswerValue,
   AssessmentQuestionResponseType,
   GoalWithRelations,
@@ -10,7 +9,11 @@ import type {
   PracticeLogWithPraise,
 } from "@/lib/types";
 import { formatDate } from "@/lib/date";
-import { computeAssessmentScore } from "@/lib/assessment";
+import {
+  computeAssessmentScore,
+  flattenAssessmentAreas,
+  type RawAssessmentWithAreasJoin,
+} from "@/lib/assessment";
 import GoalsSection from "./goals-section";
 import ExportButtons from "./export-buttons";
 import HomePracticeSection from "./home-practice-section";
@@ -100,7 +103,9 @@ export default async function StudentDetailPage({
       .order("created_at", { ascending: false }),
     supabase
       .from("assessments")
-      .select("id, name, description, created_at")
+      .select(
+        "id, name, description, kind, formality, created_at, assessment_areas(areas(id, name))"
+      )
       .order("name", { ascending: true }),
     supabase
       .from("assessment_results")
@@ -227,7 +232,9 @@ export default async function StudentDetailPage({
         <div className="mt-8">
           <AssessmentsSection
             studentId={student.id}
-            assessments={(assessmentsResult.data ?? []) as Assessment[]}
+            assessments={flattenAssessmentAreas(
+              (assessmentsResult.data ?? []) as unknown as RawAssessmentWithAreasJoin[]
+            )}
             initialResults={assessmentResultDisplays}
             assessmentsError={assessmentsResult.error?.message ?? null}
             resultsError={assessmentResultsResult.error?.message ?? null}

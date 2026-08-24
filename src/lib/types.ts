@@ -160,11 +160,22 @@ export type AssessmentQuestionResponseType =
   | "transcription"
   | "free_text";
 
+export type AssessmentKind = "screening" | "assessment";
+export type AssessmentFormality = "formal" | "informal";
+
 export type Assessment = {
   id: string;
   name: string;
   description: string | null;
+  kind: AssessmentKind | null;
+  formality: AssessmentFormality | null;
   created_at: string;
+};
+
+/** An assessment joined with the areas it covers (via assessment_areas) —
+ *  used anywhere the metadata badges are shown (toolkit list, run picker). */
+export type AssessmentWithAreas = Assessment & {
+  areas: Area[];
 };
 
 export type AssessmentQuestion = {

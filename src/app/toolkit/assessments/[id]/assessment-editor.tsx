@@ -2,22 +2,45 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { Assessment, AssessmentQuestion } from "@/lib/types";
-import { ASSESSMENT_RESPONSE_TYPE_LABELS } from "@/lib/assessment";
+import type {
+  Area,
+  AssessmentFormality,
+  AssessmentKind,
+  AssessmentQuestion,
+  AssessmentWithAreas,
+} from "@/lib/types";
+import {
+  ASSESSMENT_FORMALITY_LABELS,
+  ASSESSMENT_KIND_LABELS,
+  ASSESSMENT_RESPONSE_TYPE_LABELS,
+} from "@/lib/assessment";
 import QuestionFormModal, { type QuestionFormValues } from "./question-form-modal";
 import DeleteQuestionConfirmModal from "./delete-question-confirm-modal";
 
 const QUESTION_SELECT_COLUMNS =
   "id, assessment_id, order_index, prompt, response_type, expected_answer, notes, created_at";
 
+const KINDS: AssessmentKind[] = ["screening", "assessment"];
+const FORMALITIES: AssessmentFormality[] = ["formal", "informal"];
+
 type Props = {
-  assessment: Assessment;
+  assessment: AssessmentWithAreas;
   initialQuestions: AssessmentQuestion[];
+  areas: Area[];
 };
 
-export default function AssessmentEditor({ assessment, initialQuestions }: Props) {
+export default function AssessmentEditor({
+  assessment,
+  initialQuestions,
+  areas,
+}: Props) {
   const [name, setName] = useState(assessment.name);
   const [description, setDescription] = useState(assessment.description ?? "");
+  const [kind, setKind] = useState(assessment.kind);
+  const [formality, setFormality] = useState(assessment.formality);
+  const [areaIds, setAreaIds] = useState<Set<string>>(
+    new Set(assessment.areas.map((a) => a.id))
+  );
   const [detailsError, setDetailsError] = useState<string | null>(null);
 
   const [questions, setQuestions] = useState<AssessmentQuestion[]>(
@@ -54,6 +77,62 @@ export default function AssessmentEditor({ assessment, initialQuestions }: Props
       .update({ description: trimmed || null })
       .eq("id", assessment.id);
     if (error) setDetailsError(error.message);
+  }
+
+  async function saveKind(next: AssessmentKind) {
+    setDetailsError(null);
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("assessments")
+      .update({ kind: next })
+      .eq("id", assessment.id);
+    if (error) {
+      setDetailsError(error.message);
+      return;
+    }
+    setKind(next);
+  }
+
+  async function saveFormality(next: AssessmentFormality) {
+    setDetailsError(null);
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("assessments")
+      .update({ formality: next })
+      .eq("id", assessment.id);
+    if (error) {
+      setDetailsError(error.message);
+      return;
+    }
+    setFormality(next);
+  }
+
+  async function toggleArea(areaId: string) {
+    setDetailsError(null);
+    const supabase = createClient();
+    const checked = areaIds.has(areaId);
+
+    const { error } = checked
+      ? await supabase
+          .from("assessment_areas")
+          .delete()
+          .eq("assessment_id", assessment.id)
+          .eq("area_id", areaId)
+      : await supabase
+          .from("assessment_areas")
+          .insert({ assessment_id: assessment.id, area_id: areaId });
+
+    if (error) {
+      setDetailsError(error.message);
+      return;
+    }
+
+    setAreaIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.delete(areaId);
+      else next.add(areaId);
+      return next;
+    });
   }
 
   async function handleAddQuestion(values: QuestionFormValues) {
@@ -190,6 +269,64 @@ export default function AssessmentEditor({ assessment, initialQuestions }: Props
           placeholder="Description (optional)"
           className="mt-2 w-full resize-none border-none p-0 text-slate-600 focus:outline-none focus:ring-0"
         />
+
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div>
+            <span className="block text-sm font-medium text-slate-700">Kind</span>
+            <div className="mt-1 flex gap-4 text-sm text-slate-600">
+              {KINDS.map((k) => (
+                <label key={k} className="flex items-center gap-1.5">
+                  <input
+                    type="radio"
+                    name="assessment-kind"
+                    checked={kind === k}
+                    onChange={() => saveKind(k)}
+                  />
+                  {ASSESSMENT_KIND_LABELS[k]}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div>
+            <span className="block text-sm font-medium text-slate-700">
+              Formality
+            </span>
+            <div className="mt-1 flex gap-4 text-sm text-slate-600">
+              {FORMALITIES.map((f) => (
+                <label key={f} className="flex items-center gap-1.5">
+                  <input
+                    type="radio"
+                    name="assessment-formality"
+                    checked={formality === f}
+                    onChange={() => saveFormality(f)}
+                  />
+                  {ASSESSMENT_FORMALITY_LABELS[f]}
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {areas.length > 0 && (
+          <div className="mt-4">
+            <span className="block text-sm font-medium text-slate-700">
+              Areas <span className="text-slate-400">(optional)</span>
+            </span>
+            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-slate-600">
+              {areas.map((area) => (
+                <label key={area.id} className="flex items-center gap-1.5">
+                  <input
+                    type="checkbox"
+                    checked={areaIds.has(area.id)}
+                    onChange={() => toggleArea(area.id)}
+                    className="h-4 w-4 rounded border-slate-300"
+                  />
+                  {area.name}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
 
         {detailsError && (
           <p className="mt-2 text-sm text-red-600">{detailsError}</p>

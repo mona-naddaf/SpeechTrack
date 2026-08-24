@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type { Assessment } from "@/lib/types";
+import type { AssessmentWithAreas } from "@/lib/types";
+import AssessmentMetaBadges from "@/components/assessment-meta-badges";
 
 type Props = {
-  assessments: Assessment[];
+  assessments: AssessmentWithAreas[];
   onCancel: () => void;
   onSubmit: (assessmentId: string) => Promise<string | null>;
 };
@@ -34,8 +35,8 @@ export default function RunAssessmentModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
-      <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-lg">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/40 px-4 py-8">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
         <h2 className="text-lg font-bold text-slate-900">Run assessment</h2>
 
         {assessments.length === 0 ? (
@@ -50,25 +51,33 @@ export default function RunAssessmentModal({
             first.
           </p>
         ) : (
-          <div className="mt-4">
-            <label
-              htmlFor="run-assessment-select"
-              className="block text-sm font-medium text-slate-700"
-            >
-              Assessment
-            </label>
-            <select
-              id="run-assessment-select"
-              value={assessmentId}
-              onChange={(e) => setAssessmentId(e.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
-            >
-              {assessments.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
+          <div className="mt-4 max-h-80 space-y-2 overflow-y-auto">
+            {assessments.map((a) => (
+              <label
+                key={a.id}
+                className={`flex cursor-pointer flex-col gap-2 rounded-lg border p-3 text-sm transition-colors ${
+                  assessmentId === a.id
+                    ? "border-slate-900 bg-slate-50"
+                    : "border-slate-200 hover:bg-slate-50"
+                }`}
+              >
+                <span className="flex items-start gap-2">
+                  <input
+                    type="radio"
+                    name="run-assessment"
+                    className="mt-0.5"
+                    checked={assessmentId === a.id}
+                    onChange={() => setAssessmentId(a.id)}
+                  />
+                  <span className="font-medium text-slate-900">{a.name}</span>
+                </span>
+                <AssessmentMetaBadges
+                  kind={a.kind}
+                  formality={a.formality}
+                  areas={a.areas}
+                />
+              </label>
+            ))}
           </div>
         )}
 

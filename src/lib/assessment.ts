@@ -1,8 +1,12 @@
 import { formatDate } from "./date";
 import type {
+  Area,
   AssessmentAnswerValue,
+  AssessmentFormality,
+  AssessmentKind,
   AssessmentQuestion,
   AssessmentQuestionResponseType,
+  AssessmentWithAreas,
 } from "./types";
 
 export const ASSESSMENT_RESPONSE_TYPE_LABELS: Record<
@@ -13,6 +17,50 @@ export const ASSESSMENT_RESPONSE_TYPE_LABELS: Record<
   transcription: "Transcription",
   free_text: "Free text",
 };
+
+export const ASSESSMENT_KIND_LABELS: Record<AssessmentKind, string> = {
+  screening: "Screening",
+  assessment: "Assessment",
+};
+
+export const ASSESSMENT_FORMALITY_LABELS: Record<AssessmentFormality, string> = {
+  formal: "Formal",
+  informal: "Informal",
+};
+
+/** Raw shape of an `assessments` row selected with a nested
+ *  `assessment_areas(areas(id, name))` join. */
+export type RawAssessmentWithAreasJoin = {
+  id: string;
+  name: string;
+  description: string | null;
+  kind: AssessmentKind | null;
+  formality: AssessmentFormality | null;
+  created_at: string;
+  assessment_areas: { areas: Area | Area[] | null }[] | null;
+};
+
+/** Flattens the nested assessment_areas -> areas join into a plain
+ *  `areas: Area[]` list. assessment_areas -> areas is a to-one relation
+ *  from each join row's perspective, so — same postgrest-js quirk noted
+ *  elsewhere in this codebase (no generated Database types) — it may be
+ *  typed as an array but come back as a single object at runtime; this
+ *  handles both. */
+export function flattenAssessmentAreas(
+  rows: RawAssessmentWithAreasJoin[]
+): AssessmentWithAreas[] {
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    kind: row.kind,
+    formality: row.formality,
+    created_at: row.created_at,
+    areas: (row.assessment_areas ?? [])
+      .map((join) => (Array.isArray(join.areas) ? join.areas[0] : join.areas))
+      .filter((area): area is Area => Boolean(area)),
+  }));
+}
 
 export const TRANSCRIPTION_TAG_LABELS: Record<
   NonNullable<AssessmentAnswerValue["tag"]>,

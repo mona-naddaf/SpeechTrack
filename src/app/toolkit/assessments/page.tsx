@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { Assessment } from "@/lib/types";
+import type { Area } from "@/lib/types";
+import { flattenAssessmentAreas, type RawAssessmentWithAreasJoin } from "@/lib/assessment";
 import AssessmentsList from "./assessments-list";
 
 export default async function AssessmentsPage() {
@@ -14,10 +15,19 @@ export default async function AssessmentsPage() {
     redirect("/login");
   }
 
-  const { data: assessments, error } = await supabase
-    .from("assessments")
-    .select("id, name, description, created_at")
-    .order("created_at", { ascending: false });
+  const [assessmentsResult, areasResult] = await Promise.all([
+    supabase
+      .from("assessments")
+      .select(
+        "id, name, description, kind, formality, created_at, assessment_areas(areas(id, name))"
+      )
+      .order("created_at", { ascending: false }),
+    supabase.from("areas").select("id, name").order("name", { ascending: true }),
+  ]);
+  const { error } = assessmentsResult;
+  const assessments = flattenAssessmentAreas(
+    (assessmentsResult.data ?? []) as unknown as RawAssessmentWithAreasJoin[]
+  );
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 sm:py-10">
@@ -60,7 +70,10 @@ export default async function AssessmentsPage() {
         )}
 
         <div className="mt-6">
-          <AssessmentsList initialAssessments={(assessments ?? []) as Assessment[]} />
+          <AssessmentsList
+            initialAssessments={assessments}
+            areas={(areasResult.data ?? []) as Area[]}
+          />
         </div>
       </div>
     </main>
