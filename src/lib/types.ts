@@ -274,3 +274,48 @@ export type TeacherBankGoal = {
   response_format_id: string | null;
   target_percent: number | null;
 };
+
+/** A teacher goal as needed on the session-logging page — same shape as
+ *  SessionGoal, but "subject" in place of "area". */
+export type TeacherSessionGoal = {
+  id: string;
+  text: string;
+  subject: { id: string; name: string } | null;
+  response_format: {
+    id: string;
+    name: string;
+    type: ResponseFormatType;
+    config: { levels?: CueingLevel[] } & Partial<RatingScaleConfig> &
+      CorrectIncorrectConfig &
+      Record<string, unknown>;
+  } | null;
+};
+
+// ============================================================
+// Teacher behavior tracking
+// ============================================================
+
+export type TeacherBehaviorType = {
+  id: string;
+  name: string;
+  color: string;
+};
+
+/** 1 = Mild, 2 = Moderate, 3 = Significant. Nullable since positive
+ *  behaviors (e.g. "Great participation") don't need one. */
+export type BehaviorSeverity = 1 | 2 | 3;
+
+export type BehaviorLog = {
+  id: string;
+  student_id: string;
+  date: string;
+  behavior_type_id: string;
+  severity: BehaviorSeverity | null;
+  note: string | null;
+  created_at: string;
+};
+
+/** A behavior log row joined with its behavior type for display. */
+export type BehaviorLogWithType = BehaviorLog & {
+  behavior_type: { id: string; name: string; color: string } | null;
+};

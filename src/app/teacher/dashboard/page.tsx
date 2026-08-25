@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ListChecks, Sliders } from "lucide-react";
+import { ListChecks, Sliders, Smile } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/role";
 import SignOutButton from "./sign-out-button";
@@ -56,6 +56,13 @@ export default async function TeacherDashboardPage() {
             >
               <Sliders className="h-4 w-4" />
               Subjects &amp; formats
+            </Link>
+            <Link
+              href="/teacher/toolkit/behavior-types"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
+            >
+              <Smile className="h-4 w-4" />
+              Behavior types
             </Link>
             <SignOutButton />
           </div>

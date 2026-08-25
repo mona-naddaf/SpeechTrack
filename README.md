@@ -11,7 +11,10 @@ Next.js (App Router) + Supabase + Tailwind starter.
   - **Teacher student detail** (`/teacher/students/[id]`) — name, class, and a **Goals** section, same shape as the SLP one: subject instead of area, pick from bank or write new, baseline, target %, response format, status.
   - **Teacher subjects & formats** (`/teacher/toolkit/subjects`) — two sections on one page: **Subjects** (add/edit/delete — unlike SLP "areas", which have no CRUD UI at all, subjects are fully manageable) and **Response formats**, which reuses the exact same custom-format editor components as `/toolkit/formats` (Correct/Incorrect, Rating scale, Cueing hierarchy), just pointed at `teacher_response_formats`.
   - **Teacher goal bank** (`/teacher/toolkit/goals`) — add/edit/delete reusable goals grouped by subject, mirrors `/toolkit/goals` exactly. These show up in the "From goal bank" picker when setting a goal on a teacher's student.
-  - New teacher accounts are seeded on signup with a default **Correct/Incorrect** response format and 7 default subjects (Math, Reading, Writing, Spelling, Science, Social Studies, Behavior/Social-Emotional) — the same `handle_new_user()` trigger that seeds SLP defaults, now branching on the account's role.
+  - **Teacher behavior types** (`/teacher/toolkit/behavior-types`) — add/edit/delete her own color-coded behavior tags (picking from the same color palette used elsewhere in the app), same editable-pill pattern as Subjects. Deletion is blocked with a clear message if a type has already been used to log behavior.
+  - **Behavior tracking** (on a Teacher student's page) — "Log behavior" opens a quick form: date (defaults to today), behavior type, an optional severity (Mild/Moderate/Significant — click again to clear; deliberately optional rather than type-conditional, since positive behaviors just skip it), optional note. Below it: a small color-coded "Behavior trends" breakdown (count per type, most-logged first) computed from her history, then the full history list (date, type badge, severity if set, note), most recent first. No edit/delete on individual log entries yet — not asked for, easy to add later if wanted.
+  - **Teacher session logging** (`/teacher/students/[id]/session/new`, from "Start session" on a Teacher student's page) — mirrors `/students/[id]/session/new` exactly: editable date, one card per active goal rendering the right widget for its response format (Correct/Incorrect toggle, rating-scale row, or cueing-hierarchy level buttons), "Undo last" per card, optional note, auto-saving every tap immediately (same pattern as the SLP side — nothing is lost if she navigates away mid-session). The student page's **Sessions** section lists past sessions (date + note, most recent first).
+  - New teacher accounts are seeded on signup with a default **Correct/Incorrect** response format, 7 default subjects (Math, Reading, Writing, Spelling, Science, Social Studies, Behavior/Social-Emotional), and 5 default behavior types (Off-task, Disruptive, Outburst, Great participation, Kind to others) — the same `handle_new_user()` trigger that seeds SLP defaults, now branching on the account's role.
 - **Student detail** (`/students/[id]`) — name, class, and a **Goals** section (add/edit/delete, picking an area, optionally a bank goal — which can also prefill its default response format and target % — baseline, target %, response format, status).
 - **Response formats** (`/toolkit/formats`) — view the SLP's response formats; full editor for the seeded **Cueing hierarchy** (rename, add/remove levels, change colors, toggle "independent"), plus **Correct/Incorrect** (rename, customize the two labels) and **Rating scale** (rename, set a custom min–max range); "+ New custom format" creates any of those three from scratch, and any format can be renamed or deleted (deletion is blocked with a clear message if a goal still uses it). Placeholder cards remain for the other, not-yet-built format types. Every format — built-in or custom — shows up as a selectable option anywhere a response format is picked (e.g. setting a goal), and session logging renders the right widget for its type (level buttons, a numeric rating row, or a Correct/Incorrect toggle with its custom labels).
 - **Goal bank** (`/toolkit/goals`) — add, edit, and delete goals that aren't tied to any student yet (area, goal text, optional default response format, optional target %), grouped by area. These show up as pickable options in the "From goal bank" flow when setting a goal on a student.
@@ -30,6 +33,8 @@ Next.js (App Router) + Supabase + Tailwind starter.
 - **`assessments`, `assessment_questions`, `assessment_results`, `assessment_answers` tables** — see `supabase/migrations/0005_assessments.sql`. **This one needs a migration** — these are new tables, unlike the three features above.
 - **`assessments.kind`/`formality`, `assessment_areas` join table** — see `supabase/migrations/0006_assessment_metadata.sql`. **Also needs a migration.** `kind`/`formality` are nullable at the DB level (existing assessments just show "not set" until edited) even though the create form requires them going forward.
 - **`teacher_students`, `teacher_subjects`, `teacher_response_formats`, `teacher_goals` tables** — see `supabase/migrations/0007_teacher_students_subjects_goals.sql`. **Also needs a migration** — four new tables, same `teacher_id`-scoped RLS pattern as the SLP tables. This migration also makes `handle_new_user()` role-aware (seeds SLP defaults or Teacher defaults depending on `raw_user_meta_data->>'role'` at signup) — existing accounts are unaffected, since the trigger only fires on new signups.
+- **`teacher_behavior_types`, `behavior_logs` tables** — see `supabase/migrations/0008_teacher_behavior_tracking.sql`. **Also needs a migration** — two new tables, same `teacher_id`-scoped RLS pattern. Extends `handle_new_user()` again to also seed 5 default behavior types for new Teacher accounts, and backfills them for any Teacher account created between 0007 and this migration (skips anyone who already has behavior types, so it's safe to re-run).
+- **`teacher_sessions`, `teacher_trials` tables** — see `supabase/migrations/0009_teacher_sessions_trials.sql`. **Also needs a migration** — two new tables, mirroring `sessions`/`trials` exactly: `teacher_sessions` has its own `teacher_id`-scoped RLS, `teacher_trials` has no `teacher_id` column of its own and checks ownership via `teacher_sessions.teacher_id` instead (same pattern as `trials` → `sessions`).
 
 ## Project structure
 
@@ -53,10 +58,16 @@ src/
         delete-confirm-modal.tsx         delete student confirmation
         sign-out-button.tsx              sign out button
       students/[id]/
-        page.tsx                        Teacher student detail (server component) — Goals section
+        page.tsx                        Teacher student detail (server component) — Goals, Behavior, Sessions sections
         goals-section.tsx                 goal list UI + add/edit/delete state (client component)
         goal-form-modal.tsx               add/edit goal modal (subject, bank/write, baseline, target %, format, status)
         delete-goal-confirm-modal.tsx     delete goal confirmation
+        behavior-section.tsx              behavior trends breakdown + history list + "Log behavior" state (client component)
+        log-behavior-modal.tsx            log-behavior modal (date, type, optional severity, optional note)
+        session/new/
+          page.tsx                        new-session page (server component) — fetches active goals
+          new-session-form.tsx             date/note state, auto-saves session + trials (client component)
+          goal-trial-card.tsx              per-goal trial buttons + running tally + undo
       toolkit/
         subjects/
           page.tsx                        subjects + response formats page (server component)
@@ -74,6 +85,11 @@ src/
           goal-bank-section.tsx            bank goal list UI + add/edit/delete state (client component)
           bank-goal-form-modal.tsx         add/edit bank goal modal (subject, text, default format, target %)
           delete-bank-goal-confirm-modal.tsx delete bank goal confirmation
+        behavior-types/
+          page.tsx                        behavior types page (server component)
+          behavior-types-section.tsx       behavior type list UI + add/edit/delete state (client component)
+          behavior-type-form-modal.tsx     add/edit behavior type modal (name + color swatch picker)
+          delete-behavior-type-confirm-modal.tsx delete behavior type confirmation (blocked if used by a log)
     students/[id]/
       page.tsx                        student detail (server component) — goals + past sessions
       goals-section.tsx                goal list UI + add/edit/delete state (client component)
@@ -138,7 +154,7 @@ src/
     layout.tsx
     globals.css
   lib/
-    types.ts                        shared TypeScript types (Student, Goal, ResponseFormat, Session, Trial, HomePracticeItem, PracticeLog, Assessment, AssessmentQuestion, AssessmentResult, AssessmentAnswer, TeacherStudent, TeacherSubject, TeacherGoal, ...)
+    types.ts                        shared TypeScript types (Student, Goal, ResponseFormat, Session, Trial, HomePracticeItem, PracticeLog, Assessment, AssessmentQuestion, AssessmentResult, AssessmentAnswer, TeacherStudent, TeacherSubject, TeacherGoal, TeacherBehaviorType, BehaviorLog, ...)
     colors.ts                       named color palette used by the cueing hierarchy editor
     response-format-types.ts         labels/descriptions for all response format types
     goal-status.ts                   labels/badge colors for goal status
@@ -148,6 +164,7 @@ src/
     progress.ts                     per-goal aggregation: level breakdown, trend, trend direction, summary text
     assessment.ts                   response-type labels, answer formatting, scoring, plain-text report builder
     role.ts                         getUserRole() — single source of truth for SLP-vs-Teacher, defaults to "slp"
+    behavior.ts                     severity labels/badge colors for Teacher behavior logs
     parent-session.ts                signs/verifies the parent session cookie (HMAC-SHA256, no library)
     supabase/
       client.ts                     Supabase client for Client Components
@@ -164,6 +181,8 @@ supabase/
     0005_assessments.sql             assessments, assessment_questions, assessment_results, assessment_answers + RLS
     0006_assessment_metadata.sql     assessments.kind/formality + assessment_areas join table + RLS
     0007_teacher_students_subjects_goals.sql   teacher_students, teacher_subjects, teacher_response_formats, teacher_goals + RLS + role-aware handle_new_user()
+    0008_teacher_behavior_tracking.sql   teacher_behavior_types, behavior_logs + RLS + extends handle_new_user() with default behavior types
+    0009_teacher_sessions_trials.sql     teacher_sessions, teacher_trials + RLS (mirrors sessions/trials)
 ```
 
 As you add features, new pages go under `src/app/...` and shared logic under `src/lib/...`.
@@ -227,6 +246,8 @@ In the Supabase dashboard, open **SQL Editor** and run, in order:
 5. `supabase/migrations/0005_assessments.sql`
 6. `supabase/migrations/0006_assessment_metadata.sql`
 7. `supabase/migrations/0007_teacher_students_subjects_goals.sql`
+8. `supabase/migrations/0008_teacher_behavior_tracking.sql`
+9. `supabase/migrations/0009_teacher_sessions_trials.sql`
 
 (Or apply them with the Supabase CLI if you use one.)
 
@@ -381,6 +402,23 @@ Row Level Security is enabled on every table, scoped to `slp_id = auth.uid()` (d
 An answer that's cleared back to empty is deleted rather than saved blank, so progress/answered counts stay accurate.
 
 **`teacher_students`, `teacher_subjects`, `teacher_response_formats`, `teacher_goals`** — the Teacher-side mirror of `students`/`areas`/`response_formats`/`goals` above, same shapes, same `teacher_id`-scoped RLS pattern (`teacher_id = auth.uid()` in place of `slp_id`), but completely separate tables — no foreign keys or joins ever cross between the SLP and Teacher sides. `teacher_goals.student_id` nullable means goal-bank template, same as `goals`. `teacher_response_formats` reuses the identical `type`/`config` shape as `response_formats` (`cueing_hierarchy`, `correct_incorrect`, `rating_scale`, ...), so the same app-layer editor components work against either table.
+
+**`teacher_behavior_types`** — `id`, `teacher_id`, `name`, `color` (one of the named values in `src/lib/colors.ts`, same palette the cueing hierarchy editor uses). No `created_at`, same minimalism as `teacher_subjects`.
+
+**`behavior_logs`** — one row per logged behavior incident. Has its own `teacher_id` column (unlike `trials`/`practice_logs`, which derive ownership through a parent row), so RLS is the plain direct-column pattern.
+
+| column             | type          | notes                                              |
+|--------------------|---------------|--------------------------------------------------------|
+| `id`               | `uuid`        | primary key                                              |
+| `teacher_id`       | `uuid`        | owner                                                    |
+| `student_id`       | `uuid`        | references `teacher_students`, `on delete cascade`       |
+| `date`             | `date`        | defaults to today                                        |
+| `behavior_type_id` | `uuid`        | references `teacher_behavior_types`                      |
+| `severity`         | `integer`     | optional, 1–3 (Mild/Moderate/Significant) — nullable for positive behaviors |
+| `note`             | `text`        | optional                                                 |
+| `created_at`       | `timestamptz` | auto-set on insert                                       |
+
+**`teacher_sessions`, `teacher_trials`** — the Teacher-side mirror of `sessions`/`trials`. `teacher_trials` has no `teacher_id` column of its own — RLS checks ownership via `teacher_sessions.teacher_id`, same pattern as `trials` → `sessions`.
 
 ### Parent access — security approach
 

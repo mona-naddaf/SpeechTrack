@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Sliders } from "lucide-react";
+import { ArrowLeft, Sliders, Smile } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/role";
@@ -51,13 +51,22 @@ export default async function TeacherGoalBankPage() {
             <ArrowLeft className="h-4 w-4" />
             Back to dashboard
           </Link>
-          <Link
-            href="/teacher/toolkit/subjects"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
-          >
-            <Sliders className="h-4 w-4" />
-            Subjects &amp; formats
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/teacher/toolkit/subjects"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
+            >
+              <Sliders className="h-4 w-4" />
+              Subjects &amp; formats
+            </Link>
+            <Link
+              href="/teacher/toolkit/behavior-types"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
+            >
+              <Smile className="h-4 w-4" />
+              Behavior types
+            </Link>
+          </div>
         </div>
 
         <div className="mt-4">
