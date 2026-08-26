@@ -24,11 +24,11 @@ type Props = {
    *  rather than rendered empty, so nothing changes for existing parents
    *  until their SLP/Teacher opts a goal in. */
   progressReports: GoalProgressReport[];
-  /** Teacher-side only: whether the Teacher has turned behavior sharing on
-   *  for this student. Kept separate from behaviorBreakdown below because
-   *  "shared, but nothing logged recently" should still show the section
-   *  (with a friendly empty state) rather than hide it — only an actual
-   *  false here hides it. Always false on the SLP side. */
+  /** Whether the SLP/Teacher has turned behavior sharing on for this
+   *  student. Kept separate from behaviorBreakdown below because "shared,
+   *  but nothing logged recently" should still show the section (with a
+   *  friendly empty state) rather than hide it — only an actual false
+   *  here hides it. */
   showBehaviorSection: boolean;
   behaviorBreakdown: BehaviorBreakdownEntry[];
 };

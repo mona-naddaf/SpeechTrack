@@ -15,8 +15,8 @@ type Props = {
 
 // Parent-facing behavior summary — a friendly count/breakdown by type
 // only. No severity, no notes, no raw log list: that detail stays on the
-// Teacher side. Only rendered at all when the Teacher has turned sharing
-// on for this student (see share_behavior_with_parent).
+// SLP/Teacher side. Only rendered at all when the SLP/Teacher has turned
+// sharing on for this student (see share_behavior_with_parent).
 export default function BehaviorSection({ breakdown }: Props) {
   return (
     <div>

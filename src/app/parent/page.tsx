@@ -45,7 +45,7 @@ function LoginScreen() {
 
 // Turns a raw count-by-behavior-type into the sorted, percent-scaled
 // shape BehaviorSection renders — same "bar width relative to the
-// largest count" logic as the Teacher-side behavior breakdown.
+// largest count" logic as the SLP/Teacher-side behavior breakdown.
 function buildBehaviorBreakdown(logs: RawBehaviorLog[]): BehaviorBreakdownEntry[] {
   const counts = new Map<string, { name: string; color: string; count: number }>();
   for (const log of logs) {
@@ -113,6 +113,13 @@ export default async function ParentPage() {
   const responseFormatEmbed = isTeacherStudent
     ? "response_format:teacher_response_formats(id, name, type, config)"
     : "response_format:response_formats(id, name, type, config)";
+  // Both students.share_behavior_with_parent and
+  // teacher_students.share_behavior_with_parent exist now (0011, 0012), so
+  // this reads the same way either side — only the log/type tables differ.
+  const behaviorLogsTable = isTeacherStudent ? "behavior_logs" : "slp_behavior_logs";
+  const behaviorTypeEmbed = isTeacherStudent
+    ? "behavior_type:teacher_behavior_types(id, name, color)"
+    : "behavior_type:behavior_types(id, name, color)";
 
   // Two separate literal .select() calls rather than one driven by a
   // computed column-list string — postgrest-js statically parses a select()
@@ -127,7 +134,7 @@ export default async function ParentPage() {
         .maybeSingle()
     : await supabase
         .from("students")
-        .select("id, name")
+        .select("id, name, share_behavior_with_parent")
         .eq("id", session.studentId)
         .maybeSingle();
 
@@ -136,9 +143,9 @@ export default async function ParentPage() {
     return <LoginScreen />;
   }
 
-  const shareBehaviorWithParent =
-    isTeacherStudent &&
-    Boolean((student as { share_behavior_with_parent?: boolean }).share_behavior_with_parent);
+  const shareBehaviorWithParent = Boolean(
+    (student as { share_behavior_with_parent?: boolean }).share_behavior_with_parent
+  );
 
   const [itemsResult, logsResult, goalsResult, behaviorLogsResult] =
     await Promise.all([
@@ -163,8 +170,8 @@ export default async function ParentPage() {
         .order("created_at", { ascending: false }),
       shareBehaviorWithParent
         ? supabase
-            .from("behavior_logs")
-            .select("id, behavior_type:teacher_behavior_types(id, name, color)")
+            .from(behaviorLogsTable)
+            .select(`id, ${behaviorTypeEmbed}`)
             .eq("student_id", student.id)
             .gte("date", daysAgoLocalDateString(30))
         : Promise.resolve({ data: [] as RawBehaviorLog[], error: null }),

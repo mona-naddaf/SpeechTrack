@@ -323,3 +323,30 @@ export type BehaviorLog = {
 export type BehaviorLogWithType = BehaviorLog & {
   behavior_type: { id: string; name: string; color: string } | null;
 };
+
+// ============================================================
+// SLP behavior tracking — mirrors Teacher behavior tracking above, but
+// backed by behavior_types/slp_behavior_logs (separate tables; BehaviorSeverity
+// is shared since the 1–3 scale means the same thing either side).
+// ============================================================
+
+export type BehaviorType = {
+  id: string;
+  name: string;
+  color: string;
+};
+
+export type SlpBehaviorLog = {
+  id: string;
+  student_id: string;
+  date: string;
+  behavior_type_id: string;
+  severity: BehaviorSeverity | null;
+  note: string | null;
+  created_at: string;
+};
+
+/** An SLP behavior log row joined with its behavior type for display. */
+export type SlpBehaviorLogWithType = SlpBehaviorLog & {
+  behavior_type: { id: string; name: string; color: string } | null;
+};

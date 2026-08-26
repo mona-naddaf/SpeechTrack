@@ -18,10 +18,12 @@ Next.js (App Router) + Supabase + Tailwind starter.
 - **Student detail** (`/students/[id]`) — name, class, and a **Goals** section (add/edit/delete, picking an area, optionally a bank goal — which can also prefill its default response format and target % — baseline, target %, response format, status).
 - **Response formats** (`/toolkit/formats`) — view the SLP's response formats; full editor for the seeded **Cueing hierarchy** (rename, add/remove levels, change colors, toggle "independent"), plus **Correct/Incorrect** (rename, customize the two labels) and **Rating scale** (rename, set a custom min–max range); "+ New custom format" creates any of those three from scratch, and any format can be renamed or deleted (deletion is blocked with a clear message if a goal still uses it). Placeholder cards remain for the other, not-yet-built format types. Every format — built-in or custom — shows up as a selectable option anywhere a response format is picked (e.g. setting a goal), and session logging renders the right widget for its type (level buttons, a numeric rating row, or a Correct/Incorrect toggle with its custom labels).
 - **Goal bank** (`/toolkit/goals`) — add, edit, and delete goals that aren't tied to any student yet (area, goal text, optional default response format, optional target %), grouped by area. These show up as pickable options in the "From goal bank" flow when setting a goal on a student.
+- **Behavior types** (`/toolkit/behavior-types`) — the SLP-side mirror of Teacher behavior types (line above `teacher_behavior_types`): add/edit/delete her own color-coded behavior tags, same editable-pill pattern, deletion blocked with a clear message if a type has already been used to log behavior. Seeded on signup with 5 defaults suited to speech therapy: Off-task, Frustrated, Refused task, Great effort, Positive interaction.
+- **Behavior tracking** (on the student page) — mirrors the Teacher one exactly, on separate tables (`behavior_types`/`slp_behavior_logs` instead of `teacher_behavior_types`/`behavior_logs`): "Log behavior" quick form (date, type, optional severity, optional note), a color-coded "Behavior trends" breakdown, then the full history list, most recent first. Also where the "Show behavior summary to parent" toggle lives (`students.share_behavior_with_parent`).
 - **Session logging** (`/students/[id]/session/new`) — "Start session" on the student page opens a live-tally logging screen: editable date, one card per active goal (colored level buttons for cueing-hierarchy goals, a numeric row for rating-scale goals, a Correct/Incorrect toggle — with custom labels if set — for everything else), an "Undo last" per card, and an optional note. Every tap auto-saves a trial immediately; "Save session" just finalizes the note/date and returns to the student page, which now lists past sessions (date + note, most recent first).
 - **Progress & reports** (`/students/[id]/progress`, linked from "View progress" on the student page) — one card per goal (any status): for cueing-hierarchy goals, a level-percentage breakdown bar plus a "% independent over time" line chart; for rating-scale goals, a "% of max rating over time" chart; for everything else, a "% correct over time" chart (one point per session date). Each card shows total trial count, date range, and an auto-generated plain-language summary with a "Copy summary" button. Charts are hand-rolled inline SVG/CSS (no charting library) and render server-side — only the copy button ships client JS. "Export JSON backup" and "Export trials CSV" buttons on the student page download the student's full data client-side, no server round trip beyond the Supabase queries.
 - **Home practice** (on the student page) — SLP-managed list of home-practice items (add/edit/delete), plus the student's **parent access code** with a copy button, plus a read-only **practice log** view of everything the parent has logged, where the SLP can leave a short praise note on any entry.
-- **Parent view** (`/parent`, no Supabase login) — a parent types their child's 6-character access code to get in. Once in: the current home-practice items, a big-button form to log today's practice (checklist + 😄/🙂/😕 mood + optional note), and their practice history with any praise attached. Everything else is opt-in and off by default: a goal only shows up as a "Progress" card (the exact same card as the SLP/Teacher progress page — charts included) once its `visible_to_parent` is turned on, and a Teacher student only gets a simple "Behavior" summary card once `share_behavior_with_parent` is on for them — see the `0011_selective_parent_sharing.sql` bullet below. Still no assessments/sessions/trials/raw logs, and no *other* student, ever. See **Parent access — security approach** below.
+- **Parent view** (`/parent`, no Supabase login) — a parent types their child's 6-character access code to get in. Once in: the current home-practice items, a big-button form to log today's practice (checklist + 😄/🙂/😕 mood + optional note), and their practice history with any praise attached. Everything else is opt-in and off by default: a goal only shows up as a "Progress" card (the exact same card as the SLP/Teacher progress page — charts included) once its `visible_to_parent` is turned on, and a student (SLP or Teacher side) only gets a simple "Behavior" summary card once `share_behavior_with_parent` is on for them — see the `0011_selective_parent_sharing.sql`/`0012_slp_behavior_tracking.sql` bullets below. Still no assessments/sessions/trials/raw logs, and no *other* student, ever. See **Parent access — security approach** below.
 - **Assessment builder** (`/toolkit/assessments`) — build reusable assessments from scratch: name + description, then questions (prompt, response type — Correct/Incorrect, Transcription, or Free text — optional expected answer, optional notes), add/edit/delete/reorder (↑/↓). Always private to the owning SLP — no visibility/sharing option at all, unlike goals/response formats. An assessment can be renamed/deleted like the other toolkit resources, blocked with a clear message if it's already been run against a student.
 - **Running an assessment** (from a student's page, "Run assessment" → `/students/[id]/assessment/[resultId]`) — pick one of her saved assessments to start a result; every question is answerable in any order (not forced sequential), each with the right input for its type (Correct/Incorrect toggle; a transcription text field plus an optional correct/approx/incorrect tag; a plain text field), auto-saving as she goes (immediately for toggles/tags, on blur for text) — matching the auto-save pattern from session logging. Shows a live "X/Y answered" progress bar. In-progress results are resumable from the student page. "Mark complete" locks it into a **read-only report**: every question with its full recorded answer (not just a score), a summary score (right_wrong + tagged-transcription answers only; free_text listed but unscored), and a "Copy report" button for a plain-text version. The student page lists both in-progress (resume) and completed (score + link to report) results.
 - **`students` table** — see `supabase/migrations/0001_students.sql`.
@@ -37,6 +39,7 @@ Next.js (App Router) + Supabase + Tailwind starter.
 - **`teacher_sessions`, `teacher_trials` tables** — see `supabase/migrations/0009_teacher_sessions_trials.sql`. **Also needs a migration** — two new tables, mirroring `sessions`/`trials` exactly: `teacher_sessions` has its own `teacher_id`-scoped RLS, `teacher_trials` has no `teacher_id` column of its own and checks ownership via `teacher_sessions.teacher_id` instead (same pattern as `trials` → `sessions`).
 - **`teacher_students.parent_access_code`, `teacher_home_practice_items`, `teacher_practice_logs`, `teacher_praise` tables** — see `supabase/migrations/0010_teacher_home_practice_and_parent_access.sql`. **Also needs a migration** — the Teacher-side mirror of everything in `0004_home_practice_and_parent_access.sql`, same shapes, same `teacher_id`-scoped RLS pattern for the Teacher-managed table, same service-role-only-write pattern for the log/praise tables. `generate_parent_access_code()` (shared by both `students` and `teacher_students`) is widened here to check uniqueness across both tables, so a code always resolves to exactly one student regardless of which side created it. `/parent` and its API routes check both tables and branch by which one matched, but render the identical dashboard UI either way — see "Parent access — security approach" below.
 - **`goals.visible_to_parent`, `teacher_goals.visible_to_parent`, `teacher_students.share_behavior_with_parent`** — see `supabase/migrations/0011_selective_parent_sharing.sql`. **Also needs a migration** — three added boolean columns (all default `false`), nothing structurally new: no new tables, no RLS changes, since the existing owner-scoped update policies on `goals`/`teacher_goals`/`teacher_students` already cover any column on those rows, and `/parent` already reads everything through the RLS-bypassing service-role client. The SLP/Teacher toggles these per-goal ("Show progress to parent") and per-student ("Show behavior summary to parent") on the student page, saved immediately on change. `/parent` shows a "Progress" section built from `buildGoalReport()` (`src/lib/progress.ts`) filtered to only `visible_to_parent` goals, rendered with the exact same card component the SLP/Teacher progress page uses (`src/app/students/[id]/progress/goal-progress-card.tsx` — level breakdown, trend chart, written summary, "Copy summary" button, all identical; extracted out of the SLP progress page and cross-imported by both the Teacher progress page and `/parent` so there's only one card to keep in sync). Teacher students additionally get a "Behavior" section (only when `share_behavior_with_parent` is on) — a friendly count-by-type breakdown of `behavior_logs` from the last 30 days, no severity or notes; this one *is* a simplified parent-only view, unlike Progress. Either section is omitted entirely (not shown empty) when nothing's been shared yet, so existing parent dashboards are unaffected until an SLP/Teacher opts something in.
+- **`behavior_types`, `slp_behavior_logs` tables, `students.share_behavior_with_parent`** — see `supabase/migrations/0012_slp_behavior_tracking.sql`. **Also needs a migration** — the SLP-side mirror of `0008_teacher_behavior_tracking.sql` (same `slp_id`-scoped RLS pattern, same 5-defaults-on-signup seeding, adjusted for speech therapy: Off-task, Frustrated, Refused task, Great effort, Positive interaction; backfills existing SLP accounts the same "skip anyone who already has rows" way) plus the SLP equivalent of `teacher_students.share_behavior_with_parent`. `/parent`'s Behavior section (`src/app/parent/behavior-section.tsx`, `buildBehaviorBreakdown()` in `src/app/parent/page.tsx`) is unchanged by this migration — it already branched on student type for every other table, so it just gained a second real branch instead of an always-empty one.
 
 ## Project structure
 
@@ -97,12 +100,16 @@ src/
       goals-section.tsx                goal list UI + add/edit/delete state (client component)
       goal-form-modal.tsx              add/edit goal modal
       delete-goal-confirm-modal.tsx    delete goal confirmation
+      behavior-section.tsx              behavior trends breakdown + history list + "Log behavior" state (client component)
+      log-behavior-modal.tsx            log-behavior modal (date, type, optional severity, optional note)
+      share-behavior-toggle.tsx         "Show behavior summary to parent" checkbox (client component)
       session/new/
         page.tsx                        new-session page (server component) — fetches active goals
         new-session-form.tsx             date/note state, auto-saves session + trials (client component)
         goal-trial-card.tsx              per-goal trial buttons + running tally + undo
       progress/
         page.tsx                        progress report (server component) — aggregates + renders per-goal cards
+        goal-progress-card.tsx            one goal's full report card — status, trials, level breakdown, trend chart, summary (shared by this page, the Teacher progress page, and /parent's Progress section)
         level-breakdown-bars.tsx          cueing-hierarchy level % bars (server component)
         trend-chart.tsx                   hand-rolled inline SVG line chart (server component)
         copy-summary-button.tsx           clipboard button (client component — the only client JS on this page)
@@ -133,6 +140,11 @@ src/
         goal-bank-section.tsx            bank goal list UI + add/edit/delete state (client component)
         bank-goal-form-modal.tsx         add/edit bank goal modal (area, text, default format, target %)
         delete-bank-goal-confirm-modal.tsx delete bank goal confirmation
+      behavior-types/
+        page.tsx                        behavior types page (server component)
+        behavior-types-section.tsx       behavior type list UI + add/edit/delete state (client component)
+        behavior-type-form-modal.tsx     add/edit behavior type modal (name + color swatch picker)
+        delete-behavior-type-confirm-modal.tsx delete behavior type confirmation (blocked if used by a log)
       assessments/
         page.tsx                        assessment list page (server component)
         assessments-list.tsx             saved assessments list + create/delete state (client component)
@@ -146,7 +158,9 @@ src/
     parent/
       page.tsx                        reads the signed parent cookie server-side; login screen or dashboard
       parent-login-form.tsx             access-code entry (client component) — posts to /api/parent/login
-      parent-dashboard.tsx              items + log-practice form + history (server component)
+      parent-dashboard.tsx              items + log-practice form + history + Progress/Behavior sections (server component)
+      progress-section.tsx              renders GoalProgressCard for each visible_to_parent goal
+      behavior-section.tsx              friendly count-by-type breakdown, only when share_behavior_with_parent is on
       log-practice-form.tsx             checklist + mood + note (client component) — posts to /api/parent/practice/log
       logout-button.tsx                 clears the parent cookie (client component)
     api/parent/
@@ -156,7 +170,7 @@ src/
     layout.tsx
     globals.css
   lib/
-    types.ts                        shared TypeScript types (Student, Goal, ResponseFormat, Session, Trial, HomePracticeItem, PracticeLog, Assessment, AssessmentQuestion, AssessmentResult, AssessmentAnswer, TeacherStudent, TeacherSubject, TeacherGoal, TeacherBehaviorType, BehaviorLog, ...)
+    types.ts                        shared TypeScript types (Student, Goal, ResponseFormat, Session, Trial, HomePracticeItem, PracticeLog, Assessment, AssessmentQuestion, AssessmentResult, AssessmentAnswer, TeacherStudent, TeacherSubject, TeacherGoal, TeacherBehaviorType, BehaviorLog, BehaviorType, SlpBehaviorLog, ...)
     colors.ts                       named color palette used by the cueing hierarchy editor
     response-format-types.ts         labels/descriptions for all response format types
     goal-status.ts                   labels/badge colors for goal status
@@ -166,7 +180,7 @@ src/
     progress.ts                     per-goal aggregation: level breakdown, trend, trend direction, summary text
     assessment.ts                   response-type labels, answer formatting, scoring, plain-text report builder
     role.ts                         getUserRole() — single source of truth for SLP-vs-Teacher, defaults to "slp"
-    behavior.ts                     severity labels/badge colors for Teacher behavior logs
+    behavior.ts                     severity labels/badge colors, shared by SLP and Teacher behavior logs
     parent-session.ts                signs/verifies the parent session cookie (HMAC-SHA256, no library)
     supabase/
       client.ts                     Supabase client for Client Components
@@ -185,6 +199,9 @@ supabase/
     0007_teacher_students_subjects_goals.sql   teacher_students, teacher_subjects, teacher_response_formats, teacher_goals + RLS + role-aware handle_new_user()
     0008_teacher_behavior_tracking.sql   teacher_behavior_types, behavior_logs + RLS + extends handle_new_user() with default behavior types
     0009_teacher_sessions_trials.sql     teacher_sessions, teacher_trials + RLS (mirrors sessions/trials)
+    0010_teacher_home_practice_and_parent_access.sql   teacher_students.parent_access_code, teacher_home_practice_items, teacher_practice_logs, teacher_praise + RLS
+    0011_selective_parent_sharing.sql    goals.visible_to_parent, teacher_goals.visible_to_parent, teacher_students.share_behavior_with_parent
+    0012_slp_behavior_tracking.sql       behavior_types, slp_behavior_logs + RLS + students.share_behavior_with_parent (mirrors 0008 for the SLP side)
 ```
 
 As you add features, new pages go under `src/app/...` and shared logic under `src/lib/...`.
@@ -252,6 +269,7 @@ In the Supabase dashboard, open **SQL Editor** and run, in order:
 9. `supabase/migrations/0009_teacher_sessions_trials.sql`
 10. `supabase/migrations/0010_teacher_home_practice_and_parent_access.sql`
 11. `supabase/migrations/0011_selective_parent_sharing.sql`
+12. `supabase/migrations/0012_slp_behavior_tracking.sql`
 
 (Or apply them with the Supabase CLI if you use one.)
 
@@ -422,6 +440,8 @@ An answer that's cleared back to empty is deleted rather than saved blank, so pr
 | `note`             | `text`        | optional                                                 |
 | `created_at`       | `timestamptz` | auto-set on insert                                       |
 
+**`behavior_types`, `slp_behavior_logs`** — the SLP-side mirror of the two tables above, added later (`0012_slp_behavior_tracking.sql`) once behavior tracking proved worth having on both sides: same shapes, `slp_id` in place of `teacher_id`, `students`/`behavior_types` in place of `teacher_students`/`teacher_behavior_types` for the two foreign keys, otherwise column-for-column identical.
+
 **`teacher_sessions`, `teacher_trials`** — the Teacher-side mirror of `sessions`/`trials`. `teacher_trials` has no `teacher_id` column of its own — RLS checks ownership via `teacher_sessions.teacher_id`, same pattern as `trials` → `sessions`.
 
 ### Parent access — security approach
@@ -432,7 +452,7 @@ Parents never get a Supabase Auth account, so RLS (which is keyed entirely on `a
 2. Every other parent-facing route/page re-verifies that signed cookie and derives `student_id`/`studentType` **only from it** — never from anything in the request body — before touching the database, then picks the matching table set (`students`/`home_practice_items`/`practice_logs`/`praise` vs. `teacher_students`/`teacher_home_practice_items`/`teacher_practice_logs`/`teacher_praise`). `ParentDashboard` itself takes plain props and has no idea which side the data came from — the two flows render identically.
 3. `home_practice_items`/`teacher_home_practice_items` stay under the normal `slp_id`/`teacher_id`-based RLS the rest of the app uses. `practice_logs`/`praise` and `teacher_practice_logs`/`teacher_praise` are readable/writable by the SLP/Teacher through normal RLS too (via a join back to `students`/`teacher_students`), but are only ever *written* by parents through the service-role route.
 4. `src/middleware.ts` excludes `/parent` and `/api/parent` entirely — that flow has nothing to do with Supabase Auth sessions and shouldn't touch that code path.
-5. Progress/behavior sharing (`0011_selective_parent_sharing.sql`) is read-only and opt-in per row: `/parent` only ever shows a goal whose `visible_to_parent` is `true`, and only ever shows a Teacher student's behavior summary when that student's `share_behavior_with_parent` is `true`. There's no route for a parent to write either flag — both are only ever set by the SLP/Teacher from their own student page, through the same RLS-protected update path every other goal/student edit already uses.
+5. Progress/behavior sharing (`0011_selective_parent_sharing.sql`, `0012_slp_behavior_tracking.sql`) is read-only and opt-in per row: `/parent` only ever shows a goal whose `visible_to_parent` is `true`, and only ever shows a student's behavior summary when that student's `share_behavior_with_parent` is `true` (SLP or Teacher side). There's no route for a parent to write either flag — both are only ever set by the SLP/Teacher from their own student page, through the same RLS-protected update path every other goal/student edit already uses.
 
 **Trade-off:** this moves enforcement from the database (safe regardless of application bugs) into that route-handler code (a bug there could leak across students, since the service key ignores RLS). Known limitations, accepted for simplicity: no rate-limiting/lockout on the login endpoint (a 6-character code from a 32-symbol alphabet is ~1 billion combinations, but nothing throttles repeated guesses), and no CSRF token on the log-practice submission (mitigated by `SameSite=Lax`, but not airtight — worst case is a forged log entry, not a data leak, since reading data still requires the code).
 

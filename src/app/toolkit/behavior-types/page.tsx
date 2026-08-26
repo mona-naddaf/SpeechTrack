@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { ArrowLeft, ClipboardList, Smile, Target } from "lucide-react";
 import { redirect } from "next/navigation";
+import { ArrowLeft, ClipboardList, Sliders, Target } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import FormatsList from "./formats-list";
+import type { BehaviorType } from "@/lib/types";
+import BehaviorTypesSection from "./behavior-types-section";
 
-export default async function ResponseFormatsPage() {
+export default async function BehaviorTypesPage() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -14,10 +15,10 @@ export default async function ResponseFormatsPage() {
     redirect("/login");
   }
 
-  const { data: formats, error } = await supabase
-    .from("response_formats")
-    .select("id, name, type, config, created_at")
-    .order("created_at", { ascending: true });
+  const { data: behaviorTypes, error } = await supabase
+    .from("behavior_types")
+    .select("id, name, color")
+    .order("name", { ascending: true });
 
   return (
     <main className="min-h-screen bg-cream-50 px-4 py-8 sm:px-6 sm:py-10">
@@ -46,33 +47,35 @@ export default async function ResponseFormatsPage() {
               Goal bank
             </Link>
             <Link
-              href="/toolkit/behavior-types"
+              href="/toolkit/formats"
               className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
             >
-              <Smile className="h-4 w-4" />
-              Behavior types
+              <Sliders className="h-4 w-4" />
+              Response formats
             </Link>
           </div>
         </div>
 
         <div className="mt-4">
           <h1 className="text-2xl font-bold text-stone-900">
-            Response formats
+            Behavior types
           </h1>
           <p className="mt-1 text-stone-600">
-            These are the ways you can score a student&apos;s response during
-            a session. Build your own from scratch, or edit the defaults.
+            These are the tags you can log against a student&apos;s
+            behavior, each with its own color.
           </p>
         </div>
 
         {error && (
           <p className="mt-4 text-sm text-red-600">
-            Couldn&apos;t load response formats: {error.message}
+            Couldn&apos;t load behavior types: {error.message}
           </p>
         )}
 
         <div className="mt-6">
-          <FormatsList initialFormats={formats ?? []} />
+          <BehaviorTypesSection
+            initialBehaviorTypes={(behaviorTypes ?? []) as BehaviorType[]}
+          />
         </div>
       </div>
     </main>

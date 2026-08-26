@@ -14,6 +14,7 @@ import type {
   GoalWithRelations,
   HomePracticeItem,
   PracticeLogWithPraise,
+  SlpBehaviorLogWithType,
 } from "@/lib/types";
 import { formatDate } from "@/lib/date";
 import {
@@ -25,6 +26,7 @@ import GoalsSection from "./goals-section";
 import ExportButtons from "./export-buttons";
 import HomePracticeSection from "./home-practice-section";
 import PracticeLogSection from "./practice-log-section";
+import BehaviorSection from "./behavior-section";
 import AssessmentsSection, {
   type AssessmentResultDisplay,
 } from "./assessments-section";
@@ -48,7 +50,9 @@ export default async function StudentDetailPage({
   // that exists but belongs to someone else comes back as no row, not an error.
   const { data: student } = await supabase
     .from("students")
-    .select("id, name, class, parent_access_code, created_at")
+    .select(
+      "id, name, class, parent_access_code, share_behavior_with_parent, created_at"
+    )
     .eq("id", id)
     .maybeSingle();
 
@@ -66,6 +70,8 @@ export default async function StudentDetailPage({
     practiceLogsResult,
     assessmentsResult,
     assessmentResultsResult,
+    behaviorLogsResult,
+    behaviorTypesResult,
   ] = await Promise.all([
     supabase
       .from("goals")
@@ -121,6 +127,18 @@ export default async function StudentDetailPage({
       )
       .eq("student_id", id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("slp_behavior_logs")
+      .select(
+        "id, student_id, date, behavior_type_id, severity, note, created_at, behavior_type:behavior_types(id, name, color)"
+      )
+      .eq("student_id", id)
+      .order("date", { ascending: false })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("behavior_types")
+      .select("id, name, color")
+      .order("name", { ascending: true }),
   ]);
 
   // Assessment results need two more batched lookups (question counts per
@@ -273,6 +291,19 @@ export default async function StudentDetailPage({
                 []) as unknown as PracticeLogWithPraise[]
             }
             initialError={practiceLogsResult.error?.message ?? null}
+          />
+        </div>
+
+        <div className="mt-8">
+          <BehaviorSection
+            studentId={student.id}
+            initialLogs={
+              (behaviorLogsResult.data ??
+                []) as unknown as SlpBehaviorLogWithType[]
+            }
+            initialLogsError={behaviorLogsResult.error?.message ?? null}
+            behaviorTypes={behaviorTypesResult.data ?? []}
+            shareBehaviorWithParent={student.share_behavior_with_parent}
           />
         </div>
 

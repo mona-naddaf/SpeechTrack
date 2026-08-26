@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ClipboardList, Sliders, Target } from "lucide-react";
+import { ClipboardList, Sliders, Smile, Target } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/role";
 import SignOutButton from "./sign-out-button";
@@ -64,6 +64,13 @@ export default async function DashboardPage() {
             >
               <Sliders className="h-4 w-4" />
               Response formats
+            </Link>
+            <Link
+              href="/toolkit/behavior-types"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
+            >
+              <Smile className="h-4 w-4" />
+              Behavior types
             </Link>
             <SignOutButton />
           </div>
