@@ -7,9 +7,13 @@ import type { StudentStreak } from "@/lib/caseload";
 
 type Props = {
   atRiskStudents: StudentStreak[];
-  /** e.g. (id) => `/students/${id}` on the SLP side, `/teacher/students/${id}`
-   *  on the Teacher side — the two dashboards link into different trees. */
-  studentHref: (studentId: string) => string;
+  /** "/students" on the SLP side, "/teacher/students" on the Teacher side
+   *  — the two dashboards link into different trees. A plain string
+   *  rather than an href-building function: functions can't cross the
+   *  server-to-client-component boundary (this is a "use client"
+   *  component, rendered from a server component page), only
+   *  serializable props like strings can. */
+  basePath: string;
 };
 
 /** Warm, easy-to-ignore nudges for streaks that are about to break (see
@@ -18,7 +22,7 @@ type Props = {
  *  dismissed on the spot if it's not useful right now. Nothing is
  *  persisted: dismissing just clears it from this page view, and it'll
  *  reappear next visit if the streak is still at risk then. */
-export default function StreakRiskNudges({ atRiskStudents, studentHref }: Props) {
+export default function StreakRiskNudges({ atRiskStudents, basePath }: Props) {
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
 
   const visible = atRiskStudents.filter((s) => !dismissedIds.has(s.studentId));
@@ -32,7 +36,7 @@ export default function StreakRiskNudges({ atRiskStudents, studentHref }: Props)
           className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-brand-200 bg-brand-50/60 px-4 py-2.5 text-sm text-stone-700"
         >
           <Link
-            href={studentHref(student.studentId)}
+            href={`${basePath}/${student.studentId}`}
             className="flex-1 hover:underline"
           >
             Don&apos;t forget {student.name} today to keep their{" "}

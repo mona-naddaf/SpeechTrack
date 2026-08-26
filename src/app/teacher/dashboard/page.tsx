@@ -115,7 +115,7 @@ export default async function TeacherDashboardPage() {
           />
           <StreakRiskNudges
             atRiskStudents={atRiskStudents}
-            studentHref={(id) => `/teacher/students/${id}`}
+            basePath="/teacher/students"
           />
         </div>
 

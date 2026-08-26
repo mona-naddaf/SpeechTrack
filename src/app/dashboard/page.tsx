@@ -123,7 +123,7 @@ export default async function DashboardPage() {
           />
           <StreakRiskNudges
             atRiskStudents={atRiskStudents}
-            studentHref={(id) => `/students/${id}`}
+            basePath="/students"
           />
         </div>
 
