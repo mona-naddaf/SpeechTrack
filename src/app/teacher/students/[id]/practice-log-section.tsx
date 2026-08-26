@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/client";
 import { formatDate } from "@/lib/date";
 import { getHowItWentOption } from "@/lib/practice";
 import type { PracticeLogWithPraise } from "@/lib/types";
+import SectionHeader from "@/components/section-header";
+import { useSectionPreferences } from "@/components/section-preferences";
 
 type Props = {
   initialLogs: PracticeLogWithPraise[];
@@ -21,6 +23,14 @@ export default function PracticeLogSection({
   const [draftByLog, setDraftByLog] = useState<Record<string, string>>({});
   const [submittingLogId, setSubmittingLogId] = useState<string | null>(null);
   const [errorByLog, setErrorByLog] = useState<Record<string, string>>({});
+  const {
+    collapsed,
+    onToggleCollapse,
+    onMoveUp,
+    onMoveDown,
+    canMoveUp,
+    canMoveDown,
+  } = useSectionPreferences("practice_log");
 
   async function handleAddPraise(logId: string) {
     const message = (draftByLog[logId] ?? "").trim();
@@ -56,10 +66,19 @@ export default function PracticeLogSection({
 
   return (
     <div>
-      <h2 className="flex items-center gap-2 text-lg font-semibold text-stone-900">
-        <BookOpenText className="h-5 w-5 text-brand-500" />
-        Practice log
-      </h2>
+      <SectionHeader
+        icon={BookOpenText}
+        title="Practice log"
+        collapsed={collapsed}
+        onToggleCollapse={onToggleCollapse}
+        onMoveUp={onMoveUp}
+        onMoveDown={onMoveDown}
+        canMoveUp={canMoveUp}
+        canMoveDown={canMoveDown}
+      />
+
+      {!collapsed && (
+        <>
       <p className="mt-1 text-sm text-stone-500">
         Logged by the parent from home — leave a quick note of praise on any
         entry.
@@ -156,6 +175,8 @@ export default function PracticeLogSection({
             );
           })}
         </div>
+      )}
+        </>
       )}
     </div>
   );

@@ -5,6 +5,8 @@ import { Home, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatDate } from "@/lib/date";
 import type { HomePracticeItem } from "@/lib/types";
+import SectionHeader from "@/components/section-header";
+import { useSectionPreferences } from "@/components/section-preferences";
 import HomePracticeItemFormModal from "./home-practice-item-form-modal";
 import DeleteHomePracticeItemModal from "./delete-home-practice-item-modal";
 import CopyCodeButton from "./copy-code-button";
@@ -31,6 +33,14 @@ export default function HomePracticeSection({
   const [deletingItem, setDeletingItem] = useState<HomePracticeItem | null>(
     null
   );
+  const {
+    collapsed,
+    onToggleCollapse,
+    onMoveUp,
+    onMoveDown,
+    canMoveUp,
+    canMoveDown,
+  } = useSectionPreferences("home_practice");
 
   function sortByNewest(list: HomePracticeItem[]) {
     return [...list].sort(
@@ -121,20 +131,28 @@ export default function HomePracticeSection({
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-stone-900">
-          <Home className="h-5 w-5 text-brand-500" />
-          Home practice
-        </h2>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md"
-        >
-          <Plus className="h-4 w-4" />
-          Add item
-        </button>
-      </div>
+      <SectionHeader
+        icon={Home}
+        title="Home practice"
+        collapsed={collapsed}
+        onToggleCollapse={onToggleCollapse}
+        onMoveUp={onMoveUp}
+        onMoveDown={onMoveDown}
+        canMoveUp={canMoveUp}
+        canMoveDown={canMoveDown}
+        actions={
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md"
+          >
+            <Plus className="h-4 w-4" />
+            Add item
+          </button>
+        }
+      />
 
+      {!collapsed && (
+        <>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md p-4">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-stone-400">
@@ -207,6 +225,8 @@ export default function HomePracticeSection({
             </li>
           ))}
         </ul>
+      )}
+        </>
       )}
 
       {showAddModal && (

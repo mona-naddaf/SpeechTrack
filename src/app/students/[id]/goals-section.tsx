@@ -12,6 +12,8 @@ import type {
 import { GOAL_STATUS_CLASSES, GOAL_STATUS_LABELS } from "@/lib/goal-status";
 import { fireCelebrationConfetti } from "@/lib/confetti";
 import CelebrationToast from "@/components/celebration-toast";
+import SectionHeader from "@/components/section-header";
+import { useSectionPreferences } from "@/components/section-preferences";
 import GoalFormModal, { type GoalFormValues } from "./goal-form-modal";
 import DeleteGoalConfirmModal from "./delete-goal-confirm-modal";
 
@@ -48,6 +50,14 @@ export default function GoalsSection({
     Record<string, string>
   >({});
   const [showMasteryCelebration, setShowMasteryCelebration] = useState(false);
+  const {
+    collapsed,
+    onToggleCollapse,
+    onMoveUp,
+    onMoveDown,
+    canMoveUp,
+    canMoveDown,
+  } = useSectionPreferences("goals");
 
   function sortByNewest(list: GoalWithRelations[]) {
     return [...list].sort(
@@ -203,38 +213,46 @@ export default function GoalsSection({
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-stone-900">
-          <Target className="h-5 w-5 text-brand-500" />
-          Goals
-        </h2>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md"
-        >
-          <Plus className="h-4 w-4" />
-          Set a goal
-        </button>
-      </div>
+      <SectionHeader
+        icon={Target}
+        title="Goals"
+        collapsed={collapsed}
+        onToggleCollapse={onToggleCollapse}
+        onMoveUp={onMoveUp}
+        onMoveDown={onMoveDown}
+        canMoveUp={canMoveUp}
+        canMoveDown={canMoveDown}
+        actions={
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md"
+          >
+            <Plus className="h-4 w-4" />
+            Set a goal
+          </button>
+        }
+      />
 
-      {listError && (
-        <p className="mt-4 text-sm text-red-600">
-          Couldn&apos;t load goals: {listError}
-        </p>
-      )}
+      {!collapsed && (
+        <>
+          {listError && (
+            <p className="mt-4 text-sm text-red-600">
+              Couldn&apos;t load goals: {listError}
+            </p>
+          )}
 
-      {!listError && goals.length === 0 && (
-        <div className="mt-4 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-stone-300 bg-white p-10 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-100">
-            <Target className="h-6 w-6 text-brand-500" />
-          </div>
-          <p className="text-stone-500">
-            No goals yet — set one to start tracking progress.
-          </p>
-        </div>
-      )}
+          {!listError && goals.length === 0 && (
+            <div className="mt-4 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-stone-300 bg-white p-10 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-100">
+                <Target className="h-6 w-6 text-brand-500" />
+              </div>
+              <p className="text-stone-500">
+                No goals yet — set one to start tracking progress.
+              </p>
+            </div>
+          )}
 
-      {goals.length > 0 && (
+          {goals.length > 0 && (
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {goals.map((goal) => (
             <div
@@ -294,6 +312,8 @@ export default function GoalsSection({
             </div>
           ))}
         </div>
+          )}
+        </>
       )}
 
       {showAddModal && (

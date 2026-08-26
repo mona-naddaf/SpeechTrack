@@ -7,6 +7,8 @@ import { formatDate } from "@/lib/date";
 import { getColorOption } from "@/lib/colors";
 import { SEVERITY_CLASSES, SEVERITY_LABELS } from "@/lib/behavior";
 import type { BehaviorLogWithType, TeacherBehaviorType } from "@/lib/types";
+import SectionHeader from "@/components/section-header";
+import { useSectionPreferences } from "@/components/section-preferences";
 import LogBehaviorModal, { type LogBehaviorValues } from "./log-behavior-modal";
 import ShareBehaviorToggle from "./share-behavior-toggle";
 
@@ -28,6 +30,14 @@ export default function BehaviorSection({
   const [logs, setLogs] = useState<BehaviorLogWithType[]>(initialLogs);
   const [listError] = useState<string | null>(initialLogsError);
   const [showLogModal, setShowLogModal] = useState(false);
+  const {
+    collapsed,
+    onToggleCollapse,
+    onMoveUp,
+    onMoveDown,
+    canMoveUp,
+    canMoveDown,
+  } = useSectionPreferences("behavior");
 
   const breakdown = useMemo(() => {
     const counts = new Map<string, number>();
@@ -89,26 +99,34 @@ export default function BehaviorSection({
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-stone-900">
-          <Smile className="h-5 w-5 text-brand-500" />
-          Behavior
-        </h2>
-        <div className="flex items-center gap-3">
-          <ShareBehaviorToggle
-            studentId={studentId}
-            initialShared={shareBehaviorWithParent}
-          />
-          <button
-            onClick={() => setShowLogModal(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md"
-          >
-            <ClipboardPlus className="h-4 w-4" />
-            Log behavior
-          </button>
-        </div>
-      </div>
+      <SectionHeader
+        icon={Smile}
+        title="Behavior"
+        collapsed={collapsed}
+        onToggleCollapse={onToggleCollapse}
+        onMoveUp={onMoveUp}
+        onMoveDown={onMoveDown}
+        canMoveUp={canMoveUp}
+        canMoveDown={canMoveDown}
+        actions={
+          <div className="flex items-center gap-3">
+            <ShareBehaviorToggle
+              studentId={studentId}
+              initialShared={shareBehaviorWithParent}
+            />
+            <button
+              onClick={() => setShowLogModal(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md"
+            >
+              <ClipboardPlus className="h-4 w-4" />
+              Log behavior
+            </button>
+          </div>
+        }
+      />
 
+      {!collapsed && (
+        <>
       {listError && (
         <p className="mt-4 text-sm text-red-600">
           Couldn&apos;t load behavior logs: {listError}
@@ -186,6 +204,8 @@ export default function BehaviorSection({
             );
           })}
         </ul>
+      )}
+        </>
       )}
 
       {showLogModal && (

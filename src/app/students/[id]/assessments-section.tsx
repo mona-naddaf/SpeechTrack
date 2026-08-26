@@ -8,6 +8,8 @@ import { createClient } from "@/lib/supabase/client";
 import { formatDate } from "@/lib/date";
 import type { AssessmentStatus, AssessmentWithAreas } from "@/lib/types";
 import type { AssessmentScore } from "@/lib/assessment";
+import SectionHeader from "@/components/section-header";
+import { useSectionPreferences } from "@/components/section-preferences";
 import RunAssessmentModal from "./run-assessment-modal";
 
 export type AssessmentResultDisplay = {
@@ -39,6 +41,14 @@ export default function AssessmentsSection({
 }: Props) {
   const router = useRouter();
   const [showRunModal, setShowRunModal] = useState(false);
+  const {
+    collapsed,
+    onToggleCollapse,
+    onMoveUp,
+    onMoveDown,
+    canMoveUp,
+    canMoveDown,
+  } = useSectionPreferences("assessments");
 
   const inProgress = initialResults.filter((r) => r.status === "in_progress");
   const completed = initialResults
@@ -73,20 +83,28 @@ export default function AssessmentsSection({
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-stone-900">
-          <ClipboardList className="h-5 w-5 text-brand-500" />
-          Assessments
-        </h2>
-        <button
-          onClick={() => setShowRunModal(true)}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md"
-        >
-          <PlayCircle className="h-4 w-4" />
-          Run assessment
-        </button>
-      </div>
+      <SectionHeader
+        icon={ClipboardList}
+        title="Assessments"
+        collapsed={collapsed}
+        onToggleCollapse={onToggleCollapse}
+        onMoveUp={onMoveUp}
+        onMoveDown={onMoveDown}
+        canMoveUp={canMoveUp}
+        canMoveDown={canMoveDown}
+        actions={
+          <button
+            onClick={() => setShowRunModal(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md"
+          >
+            <PlayCircle className="h-4 w-4" />
+            Run assessment
+          </button>
+        }
+      />
 
+      {!collapsed && (
+        <>
       {(assessmentsError || resultsError) && (
         <p className="mt-4 text-sm text-red-600">
           Couldn&apos;t load assessments: {assessmentsError ?? resultsError}
@@ -164,6 +182,8 @@ export default function AssessmentsSection({
             ))}
           </ul>
         </div>
+      )}
+        </>
       )}
 
       {showRunModal && (

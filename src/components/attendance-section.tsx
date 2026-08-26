@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/client";
 import { formatDate } from "@/lib/date";
 import { ATTENDANCE_REASON_LABELS } from "@/lib/attendance";
 import type { AttendanceRecord } from "@/lib/types";
+import SectionHeader from "./section-header";
+import { useSectionPreferences } from "./section-preferences";
 import MarkAbsentModal, { type MarkAbsentValues } from "./mark-absent-modal";
 
 type Props = {
@@ -35,6 +37,14 @@ export default function AttendanceSection({
   const [records, setRecords] = useState<AttendanceRecord[]>(initialRecords);
   const [listError] = useState<string | null>(initialError);
   const [showModal, setShowModal] = useState(false);
+  const {
+    collapsed,
+    onToggleCollapse,
+    onMoveUp,
+    onMoveDown,
+    canMoveUp,
+    canMoveDown,
+  } = useSectionPreferences("attendance");
 
   async function handleAdd(values: MarkAbsentValues) {
     const supabase = createClient();
@@ -67,20 +77,28 @@ export default function AttendanceSection({
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-stone-900">
-          <CalendarX className="h-5 w-5 text-brand-500" />
-          Attendance
-        </h2>
-        <button
-          onClick={() => setShowModal(true)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md"
-        >
-          <Plus className="h-4 w-4" />
-          Mark absent
-        </button>
-      </div>
+      <SectionHeader
+        icon={CalendarX}
+        title="Attendance"
+        collapsed={collapsed}
+        onToggleCollapse={onToggleCollapse}
+        onMoveUp={onMoveUp}
+        onMoveDown={onMoveDown}
+        canMoveUp={canMoveUp}
+        canMoveDown={canMoveDown}
+        actions={
+          <button
+            onClick={() => setShowModal(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md"
+          >
+            <Plus className="h-4 w-4" />
+            Mark absent
+          </button>
+        }
+      />
 
+      {!collapsed && (
+        <>
       {listError && (
         <p className="mt-4 text-sm text-red-600">
           Couldn&apos;t load attendance: {listError}
@@ -118,6 +136,8 @@ export default function AttendanceSection({
             </li>
           ))}
         </ul>
+      )}
+        </>
       )}
 
       {showModal && (

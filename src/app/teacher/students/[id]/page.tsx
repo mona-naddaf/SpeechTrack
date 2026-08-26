@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, CalendarClock, PlayCircle, TrendingUp } from "lucide-react";
+import { ArrowLeft, TrendingUp } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/role";
-import { formatDate, getTodayLocalDateString } from "@/lib/date";
+import { getTodayLocalDateString } from "@/lib/date";
 import type {
   AttendanceRecord,
   BehaviorLogWithType,
@@ -16,6 +16,8 @@ import { formatScheduledDays } from "@/lib/schedule";
 import StreakBadge from "@/components/streak-badge";
 import AvatarBadge from "@/components/avatar-badge";
 import AttendanceSection from "@/components/attendance-section";
+import SessionsSection from "@/components/sessions-section";
+import SectionPreferencesProvider from "@/components/section-preferences";
 import GoalsSection from "./goals-section";
 import BehaviorSection from "./behavior-section";
 import HomePracticeSection from "./home-practice-section";
@@ -183,115 +185,99 @@ export default async function TeacherStudentDetailPage({
           <ExportButtons studentId={student.id} studentName={student.name} />
         </div>
 
-        <div className="mt-8">
-          <GoalsSection
-            studentId={student.id}
-            initialGoals={
-              (goalsResult.data ?? []) as unknown as TeacherGoalWithRelations[]
-            }
-            initialGoalsError={goalsResult.error?.message ?? null}
-            subjects={subjectsResult.data ?? []}
-            responseFormats={formatsResult.data ?? []}
-            bankGoals={bankGoalsResult.data ?? []}
-          />
-        </div>
-
-        <div className="mt-8">
-          <HomePracticeSection
-            studentId={student.id}
-            parentAccessCode={student.parent_access_code}
-            initialItems={
-              (homePracticeResult.data ?? []) as unknown as HomePracticeItem[]
-            }
-            initialError={homePracticeResult.error?.message ?? null}
-          />
-        </div>
-
-        <div className="mt-8">
-          <PracticeLogSection
-            initialLogs={
-              (practiceLogsResult.data ??
-                []) as unknown as PracticeLogWithPraise[]
-            }
-            initialError={practiceLogsResult.error?.message ?? null}
-          />
-        </div>
-
-        <div className="mt-8">
-          <BehaviorSection
-            studentId={student.id}
-            initialLogs={
-              (behaviorLogsResult.data ?? []) as unknown as BehaviorLogWithType[]
-            }
-            initialLogsError={behaviorLogsResult.error?.message ?? null}
-            behaviorTypes={behaviorTypesResult.data ?? []}
-            shareBehaviorWithParent={student.share_behavior_with_parent}
-          />
-        </div>
-
-        <div className="mt-8">
-          <AttendanceSection
-            studentId={student.id}
-            ownerId={user.id}
-            ownerField="teacher_id"
-            initialRecords={
-              (attendanceResult.data ?? []) as unknown as AttendanceRecord[]
-            }
-            initialError={attendanceResult.error?.message ?? null}
-          />
-        </div>
-
-        <div className="mt-8">
-          <div className="flex items-center justify-between gap-4">
-            <h2 className="flex items-center gap-2 text-lg font-semibold text-stone-900">
-              <CalendarClock className="h-5 w-5 text-brand-500" />
-              Sessions
-            </h2>
-            <Link
-              href={`/teacher/students/${student.id}/session/new`}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md"
-            >
-              <PlayCircle className="h-4 w-4" />
-              Start session
-            </Link>
-          </div>
-
-          {sessionsResult.error && (
-            <p className="mt-4 text-sm text-red-600">
-              Couldn&apos;t load sessions: {sessionsResult.error.message}
-            </p>
-          )}
-
-          {!sessionsResult.error && (sessionsResult.data ?? []).length === 0 && (
-            <div className="mt-4 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-stone-300 bg-white p-10 text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-100">
-                <CalendarClock className="h-6 w-6 text-brand-500" />
-              </div>
-              <p className="text-stone-500">
-                No sessions yet — start one to begin tracking progress.
-              </p>
-            </div>
-          )}
-
-          {(sessionsResult.data ?? []).length > 0 && (
-            <ul className="mt-4 divide-y divide-stone-200 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md">
-              {(sessionsResult.data ?? []).map((session) => (
-                <li key={session.id} className="px-4 py-3 sm:px-5">
-                  <p className="font-medium text-stone-900">
-                    {formatDate(session.date)}
-                  </p>
-                  {session.note ? (
-                    <p className="mt-1 text-sm text-stone-600">
-                      {session.note}
-                    </p>
-                  ) : (
-                    <p className="mt-1 text-sm text-stone-400">No note</p>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <SectionPreferencesProvider
+          storageKey="bloomtrack:student-page-sections:teacher"
+          sections={[
+            {
+              key: "goals",
+              defaultCollapsed: false,
+              node: (
+                <GoalsSection
+                  studentId={student.id}
+                  initialGoals={
+                    (goalsResult.data ??
+                      []) as unknown as TeacherGoalWithRelations[]
+                  }
+                  initialGoalsError={goalsResult.error?.message ?? null}
+                  subjects={subjectsResult.data ?? []}
+                  responseFormats={formatsResult.data ?? []}
+                  bankGoals={bankGoalsResult.data ?? []}
+                />
+              ),
+            },
+            {
+              key: "home_practice",
+              defaultCollapsed: true,
+              node: (
+                <HomePracticeSection
+                  studentId={student.id}
+                  parentAccessCode={student.parent_access_code}
+                  initialItems={
+                    (homePracticeResult.data ??
+                      []) as unknown as HomePracticeItem[]
+                  }
+                  initialError={homePracticeResult.error?.message ?? null}
+                />
+              ),
+            },
+            {
+              key: "practice_log",
+              defaultCollapsed: true,
+              node: (
+                <PracticeLogSection
+                  initialLogs={
+                    (practiceLogsResult.data ??
+                      []) as unknown as PracticeLogWithPraise[]
+                  }
+                  initialError={practiceLogsResult.error?.message ?? null}
+                />
+              ),
+            },
+            {
+              key: "behavior",
+              defaultCollapsed: true,
+              node: (
+                <BehaviorSection
+                  studentId={student.id}
+                  initialLogs={
+                    (behaviorLogsResult.data ??
+                      []) as unknown as BehaviorLogWithType[]
+                  }
+                  initialLogsError={behaviorLogsResult.error?.message ?? null}
+                  behaviorTypes={behaviorTypesResult.data ?? []}
+                  shareBehaviorWithParent={student.share_behavior_with_parent}
+                />
+              ),
+            },
+            {
+              key: "attendance",
+              defaultCollapsed: true,
+              node: (
+                <AttendanceSection
+                  studentId={student.id}
+                  ownerId={user.id}
+                  ownerField="teacher_id"
+                  initialRecords={
+                    (attendanceResult.data ??
+                      []) as unknown as AttendanceRecord[]
+                  }
+                  initialError={attendanceResult.error?.message ?? null}
+                />
+              ),
+            },
+            {
+              key: "sessions",
+              defaultCollapsed: true,
+              node: (
+                <SessionsSection
+                  sessions={sessionsResult.data ?? []}
+                  error={sessionsResult.error?.message ?? null}
+                  newSessionHref={`/teacher/students/${student.id}/session/new`}
+                />
+              ),
+            },
+          ]}
+        />
       </div>
     </main>
   );
