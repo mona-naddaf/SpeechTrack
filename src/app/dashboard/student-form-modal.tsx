@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import type { ExpectedFrequency, Student } from "@/lib/types";
+import type { DayOfWeek, ExpectedFrequency, Student } from "@/lib/types";
 import { EXPECTED_FREQUENCY_LABELS } from "@/lib/streaks";
 import AvatarPicker from "@/components/avatar-picker";
+import SchedulePicker from "@/components/schedule-picker";
 
 type Props = {
   mode: "add" | "edit";
@@ -14,6 +15,7 @@ type Props = {
     className: string;
     expectedFrequency: ExpectedFrequency;
     avatar: string | null;
+    scheduledDays: DayOfWeek[];
   }) => Promise<string | null>;
 };
 
@@ -36,6 +38,9 @@ export default function StudentFormModal({
   const [avatar, setAvatar] = useState<string | null>(
     initialStudent?.avatar ?? null
   );
+  const [scheduledDays, setScheduledDays] = useState<DayOfWeek[]>(
+    initialStudent?.scheduled_days ?? []
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,6 +59,7 @@ export default function StudentFormModal({
       className: className.trim(),
       expectedFrequency,
       avatar,
+      scheduledDays,
     });
     setLoading(false);
     if (result) {
@@ -130,6 +136,8 @@ export default function StudentFormModal({
           </div>
 
           <AvatarPicker value={avatar} onChange={setAvatar} />
+
+          <SchedulePicker value={scheduledDays} onChange={setScheduledDays} />
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 

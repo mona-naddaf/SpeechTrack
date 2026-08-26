@@ -2,6 +2,16 @@
  *  the streak cadence in src/lib/streaks.ts. */
 export type ExpectedFrequency = "daily" | "few_times_week" | "weekly";
 
+/** Lowercase day names, matching what's stored in scheduled_days. */
+export type DayOfWeek =
+  | "monday"
+  | "tuesday"
+  | "wednesday"
+  | "thursday"
+  | "friday"
+  | "saturday"
+  | "sunday";
+
 export type Student = {
   id: string;
   name: string;
@@ -10,6 +20,8 @@ export type Student = {
   /** A single emoji, picked from src/lib/avatar.ts's curated set — null
    *  means not chosen yet, shown as a neutral placeholder icon instead. */
   avatar: string | null;
+  /** Which weekdays sessions are scheduled for — empty array means not set. */
+  scheduled_days: DayOfWeek[];
   created_at: string;
 };
 
@@ -252,6 +264,27 @@ export type TeacherStudent = {
   /** A single emoji, picked from src/lib/avatar.ts's curated set — null
    *  means not chosen yet, shown as a neutral placeholder icon instead. */
   avatar: string | null;
+  /** Which weekdays sessions are scheduled for — empty array means not set. */
+  scheduled_days: DayOfWeek[];
+  created_at: string;
+};
+
+// ============================================================
+// Attendance — a single shared table (attendance_records) for both the
+// SLP and Teacher sides, unlike everything else in this file. Exactly
+// one of slp_id/teacher_id is set per row at the database level; the
+// app-facing shape here doesn't even need to carry those columns since
+// every read is already scoped to "my own records" by RLS.
+// ============================================================
+
+export type AttendanceReason = "sick" | "vacation" | "school_event" | "other";
+
+export type AttendanceRecord = {
+  id: string;
+  student_id: string;
+  date: string;
+  reason: AttendanceReason | null;
+  reason_note: string | null;
   created_at: string;
 };
 

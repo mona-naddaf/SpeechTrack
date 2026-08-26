@@ -46,58 +46,96 @@ export function weekStartOf(dateStr: string): string {
   return toDateStr(d);
 }
 
+// A hard cap on how many periods the backward walk will ever examine —
+// purely a defensive bound (real data never gets close to this) so a
+// pathological input (e.g. an absence record on every day back to the
+// epoch) can't turn this into an unbounded loop.
+const MAX_STREAK_PERIODS = 5000;
+
 /**
  * The single shared streak calculation, used by:
- * - the SLP/Teacher student page, with that student's logged session dates
- *   and their chosen `expected_frequency`
- * - the parent dashboard, with practice-log dates and a fixed "daily"
- *   cadence (see src/app/parent/page.tsx) — "daily" here means exactly
- *   the same thing either caller means: a qualifying entry every
- *   calendar day.
+ * - the SLP/Teacher student page, with that student's logged session dates,
+ *   their chosen `expected_frequency`, and their attendance_records dates
+ * - the parent dashboard, with practice-log dates, a fixed "daily" cadence
+ *   (see src/app/parent/page.tsx), and no absence dates — "daily" here
+ *   means exactly the same thing either caller means: a qualifying entry
+ *   every calendar day.
  *
  * "daily": counts consecutive calendar days with at least one entry,
  * walking backward from `today`. `today` itself is allowed to have no
  * entry yet ("pending") without breaking the streak, since the day isn't
- * over — but every day before that must have one, or the walk stops.
+ * over. A day covered by an excused absence is "protected": it doesn't
+ * add to the count (it wasn't an actual session), but it also doesn't
+ * break the walk — the streak just carries on to the day before it. Only
+ * a day that's neither logged nor excused stops the walk.
  *
  * "weekly" / "few_times_week": the same idea, one calendar week
- * (Monday–Sunday) at a time, requiring 1 or 2 entries in that week
- * respectively. The current week is likewise allowed to be pending.
+ * (Monday–Sunday) at a time, requiring 1 or 2 *real* entries in that week
+ * respectively to count as a completed week. The current week is
+ * likewise allowed to be pending. A week that falls short on real
+ * entries alone but reaches quota once its excused-absence days are
+ * added in is "protected" the same way a single day is: it doesn't add
+ * to the streak, but the walk continues past it rather than stopping.
  *
  * Returns 0 if the currently-pending period doesn't count on its own and
- * the period before it already fails the cadence.
+ * the period before it already fails the cadence (even with absences).
  */
 export function computeCadenceStreak(
   dates: string[],
   frequency: ExpectedFrequency,
-  today: string
+  today: string,
+  absentDates: string[] = []
 ): number {
   const daySet = new Set(dates);
+  const absentSet = new Set(absentDates);
 
   if (frequency === "daily") {
     let streak = 0;
-    let cursor = daySet.has(today) ? today : addDays(today, -1);
-    while (daySet.has(cursor)) {
-      streak++;
+    let cursor =
+      daySet.has(today) || absentSet.has(today) ? today : addDays(today, -1);
+    for (let i = 0; i < MAX_STREAK_PERIODS; i++) {
+      if (daySet.has(cursor)) {
+        streak++;
+      } else if (!absentSet.has(cursor)) {
+        break; // a real gap — neither logged nor excused
+      }
+      // an excused-but-unlogged day: protected, no increment, keep going
       cursor = addDays(cursor, -1);
     }
     return streak;
   }
 
   const requiredPerWeek = frequency === "few_times_week" ? 2 : 1;
-  const countsByWeek = new Map<string, number>();
+  const realCountsByWeek = new Map<string, number>();
   for (const date of daySet) {
     const weekStart = weekStartOf(date);
-    countsByWeek.set(weekStart, (countsByWeek.get(weekStart) ?? 0) + 1);
+    realCountsByWeek.set(weekStart, (realCountsByWeek.get(weekStart) ?? 0) + 1);
   }
+  const absentCountsByWeek = new Map<string, number>();
+  for (const date of absentSet) {
+    const weekStart = weekStartOf(date);
+    absentCountsByWeek.set(
+      weekStart,
+      (absentCountsByWeek.get(weekStart) ?? 0) + 1
+    );
+  }
+  const realCount = (week: string) => realCountsByWeek.get(week) ?? 0;
+  const combinedCount = (week: string) =>
+    realCount(week) + (absentCountsByWeek.get(week) ?? 0);
 
   let streak = 0;
   let cursorWeek = weekStartOf(today);
-  if ((countsByWeek.get(cursorWeek) ?? 0) < requiredPerWeek) {
+  if (realCount(cursorWeek) < requiredPerWeek) {
     cursorWeek = addDays(cursorWeek, -7);
   }
-  while ((countsByWeek.get(cursorWeek) ?? 0) >= requiredPerWeek) {
-    streak++;
+  for (let i = 0; i < MAX_STREAK_PERIODS; i++) {
+    if (realCount(cursorWeek) >= requiredPerWeek) {
+      streak++;
+    } else if (combinedCount(cursorWeek) < requiredPerWeek) {
+      break; // a real gap — absences alone don't make up the quota either
+    }
+    // protected week: quota only reached with absences filled in — no
+    // increment, but the walk continues
     cursorWeek = addDays(cursorWeek, -7);
   }
   return streak;
@@ -142,26 +180,30 @@ function daysRemainingInWeek(today: string): number {
 
 /**
  * True when a student has an active streak that's genuinely about to
- * break if nothing is logged soon — the basis for the dashboard's
- * "streak at risk" nudge. Requires a real streak to protect (streak 0
- * is never "at risk", there's nothing to lose yet):
+ * break if nothing is logged (or excused) soon — the basis for the
+ * dashboard's "streak at risk" nudge. Requires a real streak to protect
+ * (streak 0 is never "at risk", there's nothing to lose yet):
  *
- * - "daily": today hasn't been logged yet. A whole day is urgent enough
- *   on its own — this cadence is checked every day by definition.
+ * - "daily": today is neither logged nor excused yet. A whole day is
+ *   urgent enough on its own — this cadence is checked every day by
+ *   definition. An excused today is never at risk — it's already protected.
  * - "weekly" / "few_times_week": this calendar week hasn't met its quota
- *   yet, AND there are 2 or fewer days left in it (Friday through
- *   Sunday) — flagging every Monday a weekly-cadence student hasn't
- *   logged yet would be noise, not a nudge.
+ *   yet even counting excused days, AND there are 2 or fewer days left
+ *   in it (Friday through Sunday) — flagging every Monday a
+ *   weekly-cadence student hasn't logged yet would be noise, not a nudge.
  */
 export function isStreakAtRisk(
   dates: string[],
   frequency: ExpectedFrequency,
-  today: string
+  today: string,
+  absentDates: string[] = []
 ): boolean {
-  if (computeCadenceStreak(dates, frequency, today) === 0) return false;
+  if (computeCadenceStreak(dates, frequency, today, absentDates) === 0) {
+    return false;
+  }
 
   if (frequency === "daily") {
-    return !new Set(dates).has(today);
+    return !new Set(dates).has(today) && !new Set(absentDates).has(today);
   }
 
   const requiredPerWeek = frequency === "few_times_week" ? 2 : 1;
@@ -171,7 +213,12 @@ export function isStreakAtRisk(
   const uniqueDatesThisWeek = new Set(
     dates.filter((date) => weekStartOf(date) === currentWeekStart)
   );
-  if (uniqueDatesThisWeek.size >= requiredPerWeek) return false;
+  const uniqueAbsencesThisWeek = new Set(
+    absentDates.filter((date) => weekStartOf(date) === currentWeekStart)
+  );
+  if (uniqueDatesThisWeek.size + uniqueAbsencesThisWeek.size >= requiredPerWeek) {
+    return false;
+  }
 
   return daysRemainingInWeek(today) <= 2;
 }

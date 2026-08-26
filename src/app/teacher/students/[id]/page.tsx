@@ -5,14 +5,17 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/role";
 import { formatDate, getTodayLocalDateString } from "@/lib/date";
 import type {
+  AttendanceRecord,
   BehaviorLogWithType,
   HomePracticeItem,
   PracticeLogWithPraise,
   TeacherGoalWithRelations,
 } from "@/lib/types";
 import { computeCadenceStreak, formatCadenceStreakLabel } from "@/lib/streaks";
+import { formatScheduledDays } from "@/lib/schedule";
 import StreakBadge from "@/components/streak-badge";
 import AvatarBadge from "@/components/avatar-badge";
+import AttendanceSection from "@/components/attendance-section";
 import GoalsSection from "./goals-section";
 import BehaviorSection from "./behavior-section";
 import HomePracticeSection from "./home-practice-section";
@@ -44,7 +47,7 @@ export default async function TeacherStudentDetailPage({
   const { data: student } = await supabase
     .from("teacher_students")
     .select(
-      "id, name, class, parent_access_code, share_behavior_with_parent, expected_frequency, avatar, created_at"
+      "id, name, class, parent_access_code, share_behavior_with_parent, expected_frequency, avatar, scheduled_days, created_at"
     )
     .eq("id", id)
     .maybeSingle();
@@ -63,6 +66,7 @@ export default async function TeacherStudentDetailPage({
     sessionsResult,
     homePracticeResult,
     practiceLogsResult,
+    attendanceResult,
   ] = await Promise.all([
     supabase
       .from("teacher_goals")
@@ -117,12 +121,19 @@ export default async function TeacherStudentDetailPage({
       .eq("student_id", id)
       .order("date", { ascending: false })
       .order("created_at", { ascending: false }),
+    supabase
+      .from("attendance_records")
+      .select("id, student_id, date, reason, reason_note, created_at")
+      .eq("student_id", id)
+      .order("date", { ascending: false })
+      .order("created_at", { ascending: false }),
   ]);
 
   const sessionStreak = computeCadenceStreak(
     (sessionsResult.data ?? []).map((s) => s.date),
     student.expected_frequency,
-    getTodayLocalDateString()
+    getTodayLocalDateString(),
+    (attendanceResult.data ?? []).map((a) => a.date)
   );
 
   return (
@@ -144,6 +155,11 @@ export default async function TeacherStudentDetailPage({
                 {student.name}
               </h1>
               <p className="text-stone-600">{student.class || "No class"}</p>
+              {student.scheduled_days.length > 0 && (
+                <p className="mt-0.5 text-xs text-stone-400">
+                  Scheduled: {formatScheduledDays(student.scheduled_days)}
+                </p>
+              )}
             </div>
           </div>
           <StreakBadge
@@ -210,6 +226,18 @@ export default async function TeacherStudentDetailPage({
             initialLogsError={behaviorLogsResult.error?.message ?? null}
             behaviorTypes={behaviorTypesResult.data ?? []}
             shareBehaviorWithParent={student.share_behavior_with_parent}
+          />
+        </div>
+
+        <div className="mt-8">
+          <AttendanceSection
+            studentId={student.id}
+            ownerId={user.id}
+            ownerField="teacher_id"
+            initialRecords={
+              (attendanceResult.data ?? []) as unknown as AttendanceRecord[]
+            }
+            initialError={attendanceResult.error?.message ?? null}
           />
         </div>
 

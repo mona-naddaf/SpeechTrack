@@ -36,7 +36,9 @@ export default async function DashboardPage() {
 
   const { data: students, error } = await supabase
     .from("students")
-    .select("id, name, class, expected_frequency, avatar, created_at")
+    .select(
+      "id, name, class, expected_frequency, avatar, scheduled_days, created_at"
+    )
     .order("created_at", { ascending: false });
 
   const fullName =
@@ -45,26 +47,35 @@ export default async function DashboardPage() {
       : "";
   const displayName = fullName || user.email;
 
-  // Caseload wins + at-risk nudges — both derived from the same two
-  // lightweight queries (RLS already scopes both to her own students, so
-  // neither needs an explicit slp_id filter).
+  // Caseload wins + at-risk nudges — all derived from the same three
+  // lightweight queries (RLS already scopes each to her own students, so
+  // none needs an explicit slp_id filter). attendance_records feeds the
+  // same streak math as sessions — an excused absence protects a streak
+  // without counting as a session (see computeCadenceStreak in
+  // src/lib/streaks.ts).
   const today = getTodayLocalDateString();
-  const [sessionsResult, masteredCountResult] = await Promise.all([
-    supabase.from("sessions").select("student_id, date"),
-    supabase
-      .from("goals")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "mastered")
-      .gte("mastered_at", daysAgoLocalDateString(30)),
-  ]);
+  const [sessionsResult, attendanceResult, masteredCountResult] =
+    await Promise.all([
+      supabase.from("sessions").select("student_id, date"),
+      supabase.from("attendance_records").select("student_id, date"),
+      supabase
+        .from("goals")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "mastered")
+        .gte("mastered_at", daysAgoLocalDateString(30)),
+    ]);
 
   const sessionDatesByStudentId = groupDatesByStudent(
     sessionsResult.data ?? []
   );
+  const absentDatesByStudentId = groupDatesByStudent(
+    attendanceResult.data ?? []
+  );
   const caseloadStreaks = computeCaseloadStreaks(
     students ?? [],
     sessionDatesByStudentId,
-    today
+    today,
+    absentDatesByStudentId
   );
   const sessionsThisWeek = (sessionsResult.data ?? []).filter(
     (s) => weekStartOf(s.date) === weekStartOf(today)
@@ -72,7 +83,8 @@ export default async function DashboardPage() {
   const atRiskStudents = findAtRiskStreaks(
     students ?? [],
     sessionDatesByStudentId,
-    today
+    today,
+    absentDatesByStudentId
   );
 
   return (

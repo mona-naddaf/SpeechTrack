@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ChevronRight, UserPlus, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import type { ExpectedFrequency, Student } from "@/lib/types";
+import type { DayOfWeek, ExpectedFrequency, Student } from "@/lib/types";
 import AvatarBadge from "@/components/avatar-badge";
 import StudentFormModal from "./student-form-modal";
 import DeleteConfirmModal from "./delete-confirm-modal";
@@ -40,11 +40,13 @@ export default function StudentsSection({
     className,
     expectedFrequency,
     avatar,
+    scheduledDays,
   }: {
     name: string;
     className: string;
     expectedFrequency: ExpectedFrequency;
     avatar: string | null;
+    scheduledDays: DayOfWeek[];
   }) {
     const supabase = createClient();
     const { data, error } = await supabase
@@ -55,8 +57,11 @@ export default function StudentsSection({
         class: className || null,
         expected_frequency: expectedFrequency,
         avatar,
+        scheduled_days: scheduledDays,
       })
-      .select("id, name, class, expected_frequency, avatar, created_at")
+      .select(
+        "id, name, class, expected_frequency, avatar, scheduled_days, created_at"
+      )
       .single();
 
     if (error || !data) {
@@ -73,11 +78,13 @@ export default function StudentsSection({
     className,
     expectedFrequency,
     avatar,
+    scheduledDays,
   }: {
     name: string;
     className: string;
     expectedFrequency: ExpectedFrequency;
     avatar: string | null;
+    scheduledDays: DayOfWeek[];
   }) {
     if (!editingStudent) return null;
 
@@ -89,9 +96,12 @@ export default function StudentsSection({
         class: className || null,
         expected_frequency: expectedFrequency,
         avatar,
+        scheduled_days: scheduledDays,
       })
       .eq("id", editingStudent.id)
-      .select("id, name, class, expected_frequency, avatar, created_at")
+      .select(
+        "id, name, class, expected_frequency, avatar, scheduled_days, created_at"
+      )
       .single();
 
     if (error || !data) {
