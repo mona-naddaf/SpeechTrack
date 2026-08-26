@@ -3,7 +3,7 @@ import { MessageCircleHeart, ArrowRight } from "lucide-react";
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-cream-50 via-cream-50 to-brand-50 px-6">
+    <main className="flex flex-1 flex-col items-center justify-center bg-gradient-to-b from-cream-50 via-cream-50 to-brand-50 px-6">
       <div className="text-center">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-100 shadow-sm">
           <MessageCircleHeart className="h-8 w-8 text-brand-600" strokeWidth={2} />

@@ -215,7 +215,7 @@ export default async function StudentDetailPage({
   );
 
   return (
-    <main className="min-h-screen bg-cream-50 px-4 py-8 sm:px-6 sm:py-10">
+    <main className="flex-1 bg-cream-50 px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-3xl">
         <Link
           href="/dashboard"

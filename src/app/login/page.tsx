@@ -133,7 +133,7 @@ export default function LoginPage() {
   const RoleIcon = ROLE_COPY[role].icon;
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-cream-50 via-cream-50 to-brand-50 px-6 py-12">
+    <main className="flex flex-1 items-center justify-center bg-gradient-to-b from-cream-50 via-cream-50 to-brand-50 px-6 py-12">
       <div className="w-full max-w-sm rounded-2xl border border-stone-200 bg-white p-8 shadow-lg">
         {view === "choose" ? (
           <Link

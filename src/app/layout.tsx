@@ -28,9 +28,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${baloo.variable} ${inter.variable}`}>
-      <body className="bg-cream-50 font-sans antialiased">
+      <body className="flex min-h-screen flex-col bg-cream-50 font-sans antialiased">
         {children}
-        <footer className="py-4 text-center text-xs text-stone-400">
+        <footer className="shrink-0 py-4 text-center text-xs text-stone-400">
           Created by Mouna Nadaf, SLP
         </footer>
       </body>
