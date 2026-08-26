@@ -3,16 +3,11 @@ import { ArrowLeft, TrendingUp } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/role";
-import { formatDateRange } from "@/lib/date";
-import { GOAL_STATUS_CLASSES, GOAL_STATUS_LABELS } from "@/lib/goal-status";
 import { buildGoalReport, type ProgressGoal, type ProgressTrial } from "@/lib/progress";
-// Reusing the SLP progress page's presentational pieces as-is — none of
-// them know about students/goals/areas specifically, they just render
-// whatever shape (LevelBreakdownEntry[], TrendPoint[], summary text)
+// Reusing the SLP progress page's card as-is — it doesn't know about
+// students/goals/areas specifically, it just renders whatever shape
 // buildGoalReport hands back, which is identical either side.
-import LevelBreakdownBars from "@/app/students/[id]/progress/level-breakdown-bars";
-import TrendChart from "@/app/students/[id]/progress/trend-chart";
-import CopySummaryButton from "@/app/students/[id]/progress/copy-summary-button";
+import GoalProgressCard from "@/app/students/[id]/progress/goal-progress-card";
 
 type RawTrial = {
   id: string;
@@ -137,76 +132,7 @@ export default async function TeacherStudentProgressPage({
 
         <div className="mt-6 space-y-4">
           {reports.map((report) => (
-            <div
-              key={report.goal.id}
-              className="rounded-2xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md p-4 sm:p-5"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  {report.goal.area && (
-                    <span className="rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-600">
-                      {report.goal.area.name}
-                    </span>
-                  )}
-                  <p className="mt-2 font-medium text-stone-900">
-                    {report.goal.text}
-                  </p>
-                </div>
-                <span
-                  className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${GOAL_STATUS_CLASSES[report.goal.status]}`}
-                >
-                  {GOAL_STATUS_LABELS[report.goal.status]}
-                </span>
-              </div>
-
-              <p className="mt-2 text-xs text-stone-500">
-                {report.totalTrials} trial{report.totalTrials === 1 ? "" : "s"}
-                {report.firstSessionDate && report.lastSessionDate && (
-                  <>
-                    {" "}
-                    ·{" "}
-                    {formatDateRange(
-                      report.firstSessionDate,
-                      report.lastSessionDate
-                    )}
-                  </>
-                )}
-              </p>
-
-              {report.totalTrials === 0 ? (
-                <p className="mt-4 rounded-lg border border-dashed border-stone-200 bg-cream-50 p-4 text-center text-sm text-stone-500">
-                  No sessions logged yet for this goal.
-                </p>
-              ) : (
-                <div className="mt-4 space-y-4">
-                  {report.isCueing && (
-                    <div>
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">
-                        Level breakdown
-                      </p>
-                      <LevelBreakdownBars entries={report.levelBreakdown} />
-                    </div>
-                  )}
-
-                  <div>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">
-                      {report.metricLabel} over time
-                    </p>
-                    <TrendChart
-                      points={report.trend}
-                      label={report.metricLabel}
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div className="mt-4 flex flex-wrap items-start justify-between gap-2 rounded-lg bg-cream-50 p-3">
-                <p className="flex-1 text-sm text-stone-700">
-                  {report.summary}
-                </p>
-                <CopySummaryButton text={report.summary} />
-              </div>
-            </div>
+            <GoalProgressCard key={report.goal.id} report={report} />
           ))}
         </div>
       </div>
