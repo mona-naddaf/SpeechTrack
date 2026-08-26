@@ -109,9 +109,14 @@ export default function GoalsSection({
 
     // Captured before the update so the celebration only fires on an actual
     // transition into "mastered" — re-saving an already-mastered goal (or
-    // any other edit) shouldn't retrigger it.
-    const justMastered =
-      values.status === "mastered" && editingGoal.status !== "mastered";
+    // any other edit) shouldn't retrigger it. mastered_at follows the same
+    // transition: set on the way in, cleared on the way back out, so the
+    // dashboard's "goals mastered in the last 30 days" stat only ever
+    // reflects goals still actually sitting at "mastered".
+    const wasMastered = editingGoal.status === "mastered";
+    const isNowMastered = values.status === "mastered";
+    const justMastered = isNowMastered && !wasMastered;
+    const justUnmastered = wasMastered && !isNowMastered;
 
     const supabase = createClient();
     const { error } = await supabase
@@ -123,6 +128,8 @@ export default function GoalsSection({
         baseline: values.baseline || null,
         target_percent: values.targetPercent,
         status: values.status,
+        ...(justMastered ? { mastered_at: new Date().toISOString() } : {}),
+        ...(justUnmastered ? { mastered_at: null } : {}),
       })
       .eq("id", editingGoal.id);
 

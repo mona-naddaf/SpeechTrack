@@ -7,6 +7,9 @@ export type Student = {
   name: string;
   class: string | null;
   expected_frequency: ExpectedFrequency;
+  /** A single emoji, picked from src/lib/avatar.ts's curated set — null
+   *  means not chosen yet, shown as a neutral placeholder icon instead. */
+  avatar: string | null;
   created_at: string;
 };
 
@@ -246,6 +249,9 @@ export type TeacherStudent = {
   name: string;
   class: string | null;
   expected_frequency: ExpectedFrequency;
+  /** A single emoji, picked from src/lib/avatar.ts's curated set — null
+   *  means not chosen yet, shown as a neutral placeholder icon instead. */
+  avatar: string | null;
   created_at: string;
 };
 

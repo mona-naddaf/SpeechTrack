@@ -35,8 +35,10 @@ function addDays(dateStr: string, days: number): string {
 }
 
 /** Monday of the calendar week containing `dateStr`, as a YYYY-MM-DD string
- *  — used as a stable per-week grouping key. */
-function weekStartOf(dateStr: string): string {
+ *  — used as a stable per-week grouping key. Exported for the "sessions
+ *  logged this week" caseload stat (src/lib/caseload.ts), which needs the
+ *  exact same week boundary the streak math uses. */
+export function weekStartOf(dateStr: string): string {
   const d = new Date(`${dateStr}T00:00:00`);
   const day = d.getDay(); // 0 = Sunday
   const diffToMonday = day === 0 ? -6 : 1 - day;
@@ -128,4 +130,48 @@ const NAMED_MILESTONES = [5, 10, 15, 20, 25, 30];
 export function isMilestoneStreak(streak: number): boolean {
   if (NAMED_MILESTONES.includes(streak)) return true;
   return streak > 30 && streak % 10 === 0;
+}
+
+/** Monday = 1 ... Sunday = 7, so "days left in the week after today"
+ *  is a simple subtraction from 7. */
+function daysRemainingInWeek(today: string): number {
+  const day = new Date(`${today}T00:00:00`).getDay(); // 0 = Sunday
+  const isoDay = day === 0 ? 7 : day;
+  return 7 - isoDay;
+}
+
+/**
+ * True when a student has an active streak that's genuinely about to
+ * break if nothing is logged soon — the basis for the dashboard's
+ * "streak at risk" nudge. Requires a real streak to protect (streak 0
+ * is never "at risk", there's nothing to lose yet):
+ *
+ * - "daily": today hasn't been logged yet. A whole day is urgent enough
+ *   on its own — this cadence is checked every day by definition.
+ * - "weekly" / "few_times_week": this calendar week hasn't met its quota
+ *   yet, AND there are 2 or fewer days left in it (Friday through
+ *   Sunday) — flagging every Monday a weekly-cadence student hasn't
+ *   logged yet would be noise, not a nudge.
+ */
+export function isStreakAtRisk(
+  dates: string[],
+  frequency: ExpectedFrequency,
+  today: string
+): boolean {
+  if (computeCadenceStreak(dates, frequency, today) === 0) return false;
+
+  if (frequency === "daily") {
+    return !new Set(dates).has(today);
+  }
+
+  const requiredPerWeek = frequency === "few_times_week" ? 2 : 1;
+  const currentWeekStart = weekStartOf(today);
+  // Distinct days, same as computeCadenceStreak's own per-week counting —
+  // two sessions on the same day still only count as one qualifying day.
+  const uniqueDatesThisWeek = new Set(
+    dates.filter((date) => weekStartOf(date) === currentWeekStart)
+  );
+  if (uniqueDatesThisWeek.size >= requiredPerWeek) return false;
+
+  return daysRemainingInWeek(today) <= 2;
 }

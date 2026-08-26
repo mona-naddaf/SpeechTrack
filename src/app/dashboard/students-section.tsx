@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronRight, UserPlus, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { ExpectedFrequency, Student } from "@/lib/types";
+import AvatarBadge from "@/components/avatar-badge";
 import StudentFormModal from "./student-form-modal";
 import DeleteConfirmModal from "./delete-confirm-modal";
 
@@ -38,10 +39,12 @@ export default function StudentsSection({
     name,
     className,
     expectedFrequency,
+    avatar,
   }: {
     name: string;
     className: string;
     expectedFrequency: ExpectedFrequency;
+    avatar: string | null;
   }) {
     const supabase = createClient();
     const { data, error } = await supabase
@@ -51,8 +54,9 @@ export default function StudentsSection({
         name,
         class: className || null,
         expected_frequency: expectedFrequency,
+        avatar,
       })
-      .select("id, name, class, expected_frequency, created_at")
+      .select("id, name, class, expected_frequency, avatar, created_at")
       .single();
 
     if (error || !data) {
@@ -68,10 +72,12 @@ export default function StudentsSection({
     name,
     className,
     expectedFrequency,
+    avatar,
   }: {
     name: string;
     className: string;
     expectedFrequency: ExpectedFrequency;
+    avatar: string | null;
   }) {
     if (!editingStudent) return null;
 
@@ -82,9 +88,10 @@ export default function StudentsSection({
         name,
         class: className || null,
         expected_frequency: expectedFrequency,
+        avatar,
       })
       .eq("id", editingStudent.id)
-      .select("id, name, class, expected_frequency, created_at")
+      .select("id, name, class, expected_frequency, avatar, created_at")
       .single();
 
     if (error || !data) {
@@ -156,8 +163,9 @@ export default function StudentsSection({
             >
               <Link
                 href={`/students/${student.id}`}
-                className="flex min-w-0 flex-1 items-center gap-2 py-3"
+                className="flex min-w-0 flex-1 items-center gap-3 py-3"
               >
+                <AvatarBadge avatar={student.avatar} size="sm" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-stone-900">
                     {student.name}

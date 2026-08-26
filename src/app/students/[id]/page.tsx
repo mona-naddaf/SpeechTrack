@@ -5,7 +5,6 @@ import {
   CalendarClock,
   PlayCircle,
   TrendingUp,
-  User,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type {
@@ -24,6 +23,7 @@ import {
 } from "@/lib/assessment";
 import { computeCadenceStreak, formatCadenceStreakLabel } from "@/lib/streaks";
 import StreakBadge from "@/components/streak-badge";
+import AvatarBadge from "@/components/avatar-badge";
 import GoalsSection from "./goals-section";
 import ExportButtons from "./export-buttons";
 import HomePracticeSection from "./home-practice-section";
@@ -53,7 +53,7 @@ export default async function StudentDetailPage({
   const { data: student } = await supabase
     .from("students")
     .select(
-      "id, name, class, parent_access_code, share_behavior_with_parent, expected_frequency, created_at"
+      "id, name, class, parent_access_code, share_behavior_with_parent, expected_frequency, avatar, created_at"
     )
     .eq("id", id)
     .maybeSingle();
@@ -235,9 +235,7 @@ export default async function StudentDetailPage({
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent-100">
-              <User className="h-6 w-6 text-accent-700" />
-            </div>
+            <AvatarBadge avatar={student.avatar} size="lg" />
             <div>
               <h1 className="text-2xl font-bold text-stone-900">
                 {student.name}

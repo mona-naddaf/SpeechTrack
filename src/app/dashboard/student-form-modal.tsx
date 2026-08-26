@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import type { ExpectedFrequency, Student } from "@/lib/types";
 import { EXPECTED_FREQUENCY_LABELS } from "@/lib/streaks";
+import AvatarPicker from "@/components/avatar-picker";
 
 type Props = {
   mode: "add" | "edit";
@@ -12,6 +13,7 @@ type Props = {
     name: string;
     className: string;
     expectedFrequency: ExpectedFrequency;
+    avatar: string | null;
   }) => Promise<string | null>;
 };
 
@@ -31,6 +33,9 @@ export default function StudentFormModal({
   const [className, setClassName] = useState(initialStudent?.class ?? "");
   const [expectedFrequency, setExpectedFrequency] =
     useState<ExpectedFrequency>(initialStudent?.expected_frequency ?? "weekly");
+  const [avatar, setAvatar] = useState<string | null>(
+    initialStudent?.avatar ?? null
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,6 +53,7 @@ export default function StudentFormModal({
       name: trimmedName,
       className: className.trim(),
       expectedFrequency,
+      avatar,
     });
     setLoading(false);
     if (result) {
@@ -57,7 +63,7 @@ export default function StudentFormModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/50 px-4">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
         <h2 className="text-lg font-bold text-stone-900">
           {mode === "add" ? "Add student" : "Edit student"}
         </h2>
@@ -122,6 +128,8 @@ export default function StudentFormModal({
               Used to track this student&apos;s session streak.
             </p>
           </div>
+
+          <AvatarPicker value={avatar} onChange={setAvatar} />
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 

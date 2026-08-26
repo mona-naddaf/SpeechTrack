@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { SessionGoal } from "@/lib/types";
+import AvatarBadge from "@/components/avatar-badge";
 import NewSessionForm from "./new-session-form";
 
 export default async function NewSessionPage({
@@ -22,7 +23,7 @@ export default async function NewSessionPage({
 
   const { data: student } = await supabase
     .from("students")
-    .select("id, name, class")
+    .select("id, name, class, avatar")
     .eq("id", id)
     .maybeSingle();
 
@@ -53,7 +54,10 @@ export default async function NewSessionPage({
         <h1 className="mt-4 text-2xl font-bold text-stone-900">
           New session
         </h1>
-        <p className="mt-1 text-stone-600">{student.name}</p>
+        <div className="mt-1 flex items-center gap-2">
+          <AvatarBadge avatar={student.avatar} size="sm" />
+          <p className="text-stone-600">{student.name}</p>
+        </div>
 
         {error && (
           <p className="mt-4 text-sm text-red-600">
