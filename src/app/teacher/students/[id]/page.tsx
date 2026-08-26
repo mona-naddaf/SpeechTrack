@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, CalendarClock, PlayCircle, User } from "lucide-react";
+import { ArrowLeft, CalendarClock, PlayCircle, TrendingUp, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/role";
 import { formatDate } from "@/lib/date";
 import type { BehaviorLogWithType, TeacherGoalWithRelations } from "@/lib/types";
 import GoalsSection from "./goals-section";
 import BehaviorSection from "./behavior-section";
+import ExportButtons from "./export-buttons";
 
 export default async function TeacherStudentDetailPage({
   params,
@@ -110,6 +111,17 @@ export default async function TeacherStudentDetailPage({
             </h1>
             <p className="text-stone-600">{student.class || "No class"}</p>
           </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <Link
+            href={`/teacher/students/${student.id}/progress`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md"
+          >
+            <TrendingUp className="h-4 w-4" />
+            View progress
+          </Link>
+          <ExportButtons studentId={student.id} studentName={student.name} />
         </div>
 
         <div className="mt-8">
