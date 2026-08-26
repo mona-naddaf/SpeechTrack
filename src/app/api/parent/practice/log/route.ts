@@ -5,6 +5,13 @@ import { PARENT_COOKIE_NAME, verifyParentSessionToken } from "@/lib/parent-sessi
 
 const VALID_HOW_IT_WENT = new Set(["great", "okay", "tricky"]);
 
+// Which tables to write to, keyed by the parent session's studentType —
+// keeps this route the single place that knows about both schemas.
+const TABLES = {
+  slp: { items: "home_practice_items", logs: "practice_logs" },
+  teacher: { items: "teacher_home_practice_items", logs: "teacher_practice_logs" },
+} as const;
+
 type RequestBody = {
   activities?: unknown;
   howItWent?: unknown;
@@ -56,12 +63,13 @@ export async function POST(request: Request) {
       : new Date().toISOString().slice(0, 10);
 
   const supabase = createServiceClient();
+  const tables = TABLES[session.studentType];
 
   // student_id always comes from the verified cookie, never from the
   // request body — this is the one line that keeps a parent scoped to
   // their own child no matter what a tampered request claims.
   const { data, error } = await supabase
-    .from("practice_logs")
+    .from(tables.logs)
     .insert({
       student_id: session.studentId,
       date,
@@ -81,7 +89,7 @@ export async function POST(request: Request) {
 
   if (activities.length > 0) {
     await supabase
-      .from("home_practice_items")
+      .from(tables.items)
       .update({ last_worked_date: date })
       .eq("student_id", session.studentId)
       .in(

@@ -12,6 +12,13 @@ import crypto from "node:crypto";
 export const PARENT_COOKIE_NAME = "parent_session";
 export const PARENT_COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
+/** Which set of tables a parent session's student_id resolves against —
+ *  "slp" means students/home_practice_items/practice_logs/praise, "teacher"
+ *  means teacher_students/teacher_home_practice_items/teacher_practice_logs/
+ *  teacher_praise. Defaults to "slp" wherever missing (tokens issued before
+ *  this field existed) so already-logged-in parents aren't signed out. */
+export type ParentStudentType = "slp" | "teacher";
+
 function getSecret(): string {
   const secret = process.env.PARENT_SESSION_SECRET;
   if (!secret) {
@@ -24,16 +31,19 @@ function sign(payload: string): string {
   return crypto.createHmac("sha256", getSecret()).update(payload).digest("base64url");
 }
 
-export function createParentSessionToken(studentId: string): string {
+export function createParentSessionToken(
+  studentId: string,
+  studentType: ParentStudentType = "slp"
+): string {
   const payload = Buffer.from(
-    JSON.stringify({ studentId, iat: Date.now() })
+    JSON.stringify({ studentId, studentType, iat: Date.now() })
   ).toString("base64url");
   return `${payload}.${sign(payload)}`;
 }
 
 export function verifyParentSessionToken(
   token: string | undefined | null
-): { studentId: string } | null {
+): { studentId: string; studentType: ParentStudentType } | null {
   if (!token) return null;
 
   const parts = token.split(".");
@@ -53,7 +63,9 @@ export function verifyParentSessionToken(
   try {
     const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
     if (typeof data.studentId !== "string" || !data.studentId) return null;
-    return { studentId: data.studentId };
+    const studentType: ParentStudentType =
+      data.studentType === "teacher" ? "teacher" : "slp";
+    return { studentId: data.studentId, studentType };
   } catch {
     return null;
   }

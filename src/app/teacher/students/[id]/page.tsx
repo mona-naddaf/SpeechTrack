@@ -4,9 +4,16 @@ import { ArrowLeft, CalendarClock, PlayCircle, TrendingUp, User } from "lucide-r
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/role";
 import { formatDate } from "@/lib/date";
-import type { BehaviorLogWithType, TeacherGoalWithRelations } from "@/lib/types";
+import type {
+  BehaviorLogWithType,
+  HomePracticeItem,
+  PracticeLogWithPraise,
+  TeacherGoalWithRelations,
+} from "@/lib/types";
 import GoalsSection from "./goals-section";
 import BehaviorSection from "./behavior-section";
+import HomePracticeSection from "./home-practice-section";
+import PracticeLogSection from "./practice-log-section";
 import ExportButtons from "./export-buttons";
 
 export default async function TeacherStudentDetailPage({
@@ -33,7 +40,7 @@ export default async function TeacherStudentDetailPage({
   // not an error.
   const { data: student } = await supabase
     .from("teacher_students")
-    .select("id, name, class, created_at")
+    .select("id, name, class, parent_access_code, created_at")
     .eq("id", id)
     .maybeSingle();
 
@@ -49,6 +56,8 @@ export default async function TeacherStudentDetailPage({
     behaviorLogsResult,
     behaviorTypesResult,
     sessionsResult,
+    homePracticeResult,
+    practiceLogsResult,
   ] = await Promise.all([
     supabase
       .from("teacher_goals")
@@ -85,6 +94,21 @@ export default async function TeacherStudentDetailPage({
     supabase
       .from("teacher_sessions")
       .select("id, student_id, date, note, created_at")
+      .eq("student_id", id)
+      .order("date", { ascending: false })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("teacher_home_practice_items")
+      .select(
+        "id, what_to_practice, how_to_practice, last_worked_date, created_at"
+      )
+      .eq("student_id", id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("teacher_practice_logs")
+      .select(
+        "id, date, activities, how_it_went, note, created_at, praise:teacher_praise(id, message, created_at)"
+      )
       .eq("student_id", id)
       .order("date", { ascending: false })
       .order("created_at", { ascending: false }),
@@ -134,6 +158,27 @@ export default async function TeacherStudentDetailPage({
             subjects={subjectsResult.data ?? []}
             responseFormats={formatsResult.data ?? []}
             bankGoals={bankGoalsResult.data ?? []}
+          />
+        </div>
+
+        <div className="mt-8">
+          <HomePracticeSection
+            studentId={student.id}
+            parentAccessCode={student.parent_access_code}
+            initialItems={
+              (homePracticeResult.data ?? []) as unknown as HomePracticeItem[]
+            }
+            initialError={homePracticeResult.error?.message ?? null}
+          />
+        </div>
+
+        <div className="mt-8">
+          <PracticeLogSection
+            initialLogs={
+              (practiceLogsResult.data ??
+                []) as unknown as PracticeLogWithPraise[]
+            }
+            initialError={practiceLogsResult.error?.message ?? null}
           />
         </div>
 

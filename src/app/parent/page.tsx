@@ -38,8 +38,26 @@ export default async function ParentPage() {
   }
 
   const supabase = createServiceClient();
+
+  // Which set of tables to read from depends on which kind of student this
+  // code belongs to (see ParentStudentType) — the UI below is identical
+  // either way, only the source tables differ.
+  const isTeacherStudent = session.studentType === "teacher";
+  const studentsTable = isTeacherStudent ? "teacher_students" : "students";
+  const itemsTable = isTeacherStudent
+    ? "teacher_home_practice_items"
+    : "home_practice_items";
+  const logsTable = isTeacherStudent
+    ? "teacher_practice_logs"
+    : "practice_logs";
+  // teacher_practice_logs' praise rows live in teacher_praise — aliased
+  // back to "praise" so both branches produce the same PracticeLogWithPraise shape.
+  const praiseEmbed = isTeacherStudent
+    ? "praise:teacher_praise(id, message, created_at)"
+    : "praise(id, message, created_at)";
+
   const { data: student } = await supabase
-    .from("students")
+    .from(studentsTable)
     .select("id, name")
     .eq("id", session.studentId)
     .maybeSingle();
@@ -51,15 +69,13 @@ export default async function ParentPage() {
 
   const [itemsResult, logsResult] = await Promise.all([
     supabase
-      .from("home_practice_items")
+      .from(itemsTable)
       .select("id, what_to_practice, how_to_practice, last_worked_date, created_at")
       .eq("student_id", student.id)
       .order("created_at", { ascending: false }),
     supabase
-      .from("practice_logs")
-      .select(
-        "id, date, activities, how_it_went, note, created_at, praise(id, message, created_at)"
-      )
+      .from(logsTable)
+      .select(`id, date, activities, how_it_went, note, created_at, ${praiseEmbed}`)
       .eq("student_id", student.id)
       .order("date", { ascending: false })
       .order("created_at", { ascending: false }),
