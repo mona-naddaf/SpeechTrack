@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { ResponseFormatOption, TeacherSubject } from "@/lib/types";
 import BankGoalFormModal, { type BankGoalFormValues } from "./bank-goal-form-modal";
 import DeleteBankGoalConfirmModal from "./delete-bank-goal-confirm-modal";
+import GoalExcelImport, { type ImportedBankGoal } from "@/components/goal-excel-import";
 
 /** A teacher goal-bank row (student_id is null) joined with its subject and
  *  default response format for display on the goal bank page. */
@@ -35,6 +36,9 @@ export default function GoalBankSection({
   responseFormats,
 }: Props) {
   const [goals, setGoals] = useState<TeacherBankGoalWithRelations[]>(initialGoals);
+  // Local copy so a newly-created subject (from an Excel upload) shows up
+  // in the group headings and the add/edit modal without a page reload.
+  const [subjectList, setSubjectList] = useState<TeacherSubject[]>(subjects);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingGoal, setEditingGoal] = useState<TeacherBankGoalWithRelations | null>(
     null
@@ -143,9 +147,21 @@ export default function GoalBankSection({
     return null;
   }
 
+  function handleImported(newGoals: ImportedBankGoal[], newSubjects: TeacherSubject[]) {
+    if (newSubjects.length > 0) {
+      setSubjectList((prev) => [...prev, ...newSubjects]);
+    }
+    if (newGoals.length > 0) {
+      setGoals((prev) => [
+        ...(newGoals as unknown as TeacherBankGoalWithRelations[]),
+        ...prev,
+      ]);
+    }
+  }
+
   return (
     <div>
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <h2 className="flex items-center gap-2 text-lg font-semibold text-stone-900">
           <ListChecks className="h-5 w-5 text-brand-500" />
           Bank goals
@@ -157,6 +173,18 @@ export default function GoalBankSection({
           <Plus className="h-4 w-4" />
           Add to bank
         </button>
+      </div>
+
+      <div className="mt-3">
+        <GoalExcelImport
+          categoryLabel="Subject"
+          categories={subjectList}
+          goalsTable="teacher_goals"
+          categoryTable="teacher_subjects"
+          categoryIdColumn="subject_id"
+          ownerColumn="teacher_id"
+          onImported={handleImported}
+        />
       </div>
 
       {goals.length === 0 && (
@@ -222,7 +250,7 @@ export default function GoalBankSection({
       {showAddModal && (
         <BankGoalFormModal
           mode="add"
-          subjects={subjects}
+          subjects={subjectList}
           responseFormats={responseFormats}
           onCancel={() => setShowAddModal(false)}
           onSubmit={handleAdd}
@@ -232,7 +260,7 @@ export default function GoalBankSection({
       {editingGoal && (
         <BankGoalFormModal
           mode="edit"
-          subjects={subjects}
+          subjects={subjectList}
           responseFormats={responseFormats}
           initialGoal={editingGoal}
           onCancel={() => setEditingGoal(null)}

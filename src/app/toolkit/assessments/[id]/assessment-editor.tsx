@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { ListChecks, Plus } from "lucide-react";
+import { useRef, useState, type ChangeEvent } from "react";
+import { Download, ListChecks, Plus, Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type {
   Area,
@@ -15,6 +15,8 @@ import {
   ASSESSMENT_KIND_LABELS,
   ASSESSMENT_RESPONSE_TYPE_LABELS,
 } from "@/lib/assessment";
+import { downloadXlsxTemplate, parseXlsxFile, type ImportSkip } from "@/lib/xlsx-import";
+import { parseQuestionImportRows } from "@/lib/question-import";
 import QuestionFormModal, { type QuestionFormValues } from "./question-form-modal";
 import DeleteQuestionConfirmModal from "./delete-question-confirm-modal";
 
@@ -55,6 +57,14 @@ export default function AssessmentEditor({
     null
   );
   const [reordering, setReordering] = useState(false);
+
+  const importFileInputRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importSummary, setImportSummary] = useState<{
+    addedCount: number;
+    skipped: ImportSkip[];
+  } | null>(null);
 
   async function saveName() {
     const trimmed = name.trim();
@@ -210,6 +220,77 @@ export default function AssessmentEditor({
     return null;
   }
 
+  async function handleDownloadQuestionTemplate() {
+    await downloadXlsxTemplate(
+      "assessment-questions-template.xlsx",
+      ["Prompt", "Response Type", "Expected Answer", "Notes"],
+      [
+        [
+          "Point to the picture of a dog.",
+          "right_wrong",
+          "",
+          "Show the animal picture card",
+        ],
+      ]
+    );
+  }
+
+  async function handleImportQuestions(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file after a fix
+    if (!file) return;
+
+    setImporting(true);
+    setImportError(null);
+    setImportSummary(null);
+
+    try {
+      const rows = await parseXlsxFile(file);
+      const { valid, skipped } = parseQuestionImportRows(rows);
+
+      let inserted: AssessmentQuestion[] = [];
+      if (valid.length > 0) {
+        const baseOrderIndex =
+          questions.length > 0
+            ? Math.max(...questions.map((q) => q.order_index)) + 1
+            : 0;
+
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from("assessment_questions")
+          .insert(
+            valid.map((row, i) => ({
+              assessment_id: assessment.id,
+              order_index: baseOrderIndex + i,
+              prompt: row.prompt,
+              response_type: row.responseType,
+              expected_answer: row.expectedAnswer,
+              notes: row.notes,
+            }))
+          )
+          .select(QUESTION_SELECT_COLUMNS);
+
+        if (error) {
+          setImportError(error.message);
+          return;
+        }
+
+        // Bulk-insert return order isn't guaranteed to match input order —
+        // order_index is what actually preserves file order, so sort by it.
+        inserted = ((data ?? []) as AssessmentQuestion[]).sort(
+          (a, b) => a.order_index - b.order_index
+        );
+        setQuestions((prev) => [...prev, ...inserted]);
+      }
+
+      setImportSummary({ addedCount: inserted.length, skipped });
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : "Could not read that file.");
+    } finally {
+      setImporting(false);
+    }
+  }
+
   async function moveQuestion(index: number, direction: -1 | 1) {
     const targetIndex = index + direction;
     if (targetIndex < 0 || targetIndex >= questions.length || reordering) return;
@@ -334,7 +415,7 @@ export default function AssessmentEditor({
         )}
       </div>
 
-      <div className="mt-6 flex items-center justify-between gap-4">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
         <h2 className="flex items-center gap-2 text-lg font-semibold text-stone-900">
           <ListChecks className="h-5 w-5 text-brand-500" />
           Questions ({questions.length})
@@ -346,6 +427,58 @@ export default function AssessmentEditor({
           <Plus className="h-4 w-4" />
           Add question
         </button>
+      </div>
+
+      <div className="mt-3 rounded-2xl border border-dashed border-brand-300 bg-brand-50/50 p-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">
+          Bulk import from Excel
+        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={handleDownloadQuestionTemplate}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-stone-600 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md"
+          >
+            <Download className="h-4 w-4" />
+            Download template
+          </button>
+          <button
+            type="button"
+            onClick={() => importFileInputRef.current?.click()}
+            disabled={importing}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-stone-600 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
+          >
+            <Upload className="h-4 w-4" />
+            {importing ? "Importing…" : "Upload from Excel"}
+          </button>
+          <input
+            ref={importFileInputRef}
+            type="file"
+            accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            onChange={handleImportQuestions}
+            className="hidden"
+          />
+        </div>
+
+        {importError && <p className="mt-2 text-sm text-red-600">{importError}</p>}
+
+        {importSummary && (
+          <div className="mt-2 rounded-lg bg-white p-3 text-sm text-stone-700">
+            <p className="font-medium">
+              {importSummary.addedCount} question
+              {importSummary.addedCount === 1 ? "" : "s"} added
+            </p>
+            {importSummary.skipped.length > 0 && (
+              <ul className="mt-1 list-inside list-disc text-stone-500">
+                {importSummary.skipped.map((s, i) => (
+                  <li key={i}>
+                    Row {s.rowNumber}: {s.reason}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
 
       {questions.length === 0 && (

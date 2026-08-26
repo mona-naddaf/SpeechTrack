@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Area, ResponseFormatOption } from "@/lib/types";
 import BankGoalFormModal, { type BankGoalFormValues } from "./bank-goal-form-modal";
 import DeleteBankGoalConfirmModal from "./delete-bank-goal-confirm-modal";
+import GoalExcelImport, { type ImportedBankGoal } from "@/components/goal-excel-import";
 
 /** A goal-bank row (student_id is null) joined with its area and default
  *  response format for display on the goal bank page. */
@@ -35,6 +36,9 @@ export default function GoalBankSection({
   responseFormats,
 }: Props) {
   const [goals, setGoals] = useState<BankGoalWithRelations[]>(initialGoals);
+  // Local copy so a newly-created area (from an Excel upload) shows up in
+  // the group headings and the add/edit modal without a page reload.
+  const [areaList, setAreaList] = useState<Area[]>(areas);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingGoal, setEditingGoal] = useState<BankGoalWithRelations | null>(
     null
@@ -143,9 +147,18 @@ export default function GoalBankSection({
     return null;
   }
 
+  function handleImported(newGoals: ImportedBankGoal[], newAreas: Area[]) {
+    if (newAreas.length > 0) {
+      setAreaList((prev) => [...prev, ...newAreas]);
+    }
+    if (newGoals.length > 0) {
+      setGoals((prev) => [...(newGoals as unknown as BankGoalWithRelations[]), ...prev]);
+    }
+  }
+
   return (
     <div>
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <h2 className="flex items-center gap-2 text-lg font-semibold text-stone-900">
           <Target className="h-5 w-5 text-brand-500" />
           Bank goals
@@ -157,6 +170,18 @@ export default function GoalBankSection({
           <Plus className="h-4 w-4" />
           Add to bank
         </button>
+      </div>
+
+      <div className="mt-3">
+        <GoalExcelImport
+          categoryLabel="Area"
+          categories={areaList}
+          goalsTable="goals"
+          categoryTable="areas"
+          categoryIdColumn="area_id"
+          ownerColumn="slp_id"
+          onImported={handleImported}
+        />
       </div>
 
       {goals.length === 0 && (
@@ -222,7 +247,7 @@ export default function GoalBankSection({
       {showAddModal && (
         <BankGoalFormModal
           mode="add"
-          areas={areas}
+          areas={areaList}
           responseFormats={responseFormats}
           onCancel={() => setShowAddModal(false)}
           onSubmit={handleAdd}
@@ -232,7 +257,7 @@ export default function GoalBankSection({
       {editingGoal && (
         <BankGoalFormModal
           mode="edit"
-          areas={areas}
+          areas={areaList}
           responseFormats={responseFormats}
           initialGoal={editingGoal}
           onCancel={() => setEditingGoal(null)}
