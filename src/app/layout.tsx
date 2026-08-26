@@ -17,7 +17,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "SpeechTrack",
+  title: "BloomTrack",
   description: "Track your students' speech therapy progress",
 };
 

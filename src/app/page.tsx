@@ -10,7 +10,7 @@ export default function Home() {
         </div>
 
         <h1 className="mt-6 text-4xl font-bold tracking-tight text-stone-900 sm:text-5xl">
-          SpeechTrack
+          BloomTrack
         </h1>
         <p className="mt-4 text-lg text-stone-600">
           Track and manage your students&apos; speech therapy progress.

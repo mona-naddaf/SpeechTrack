@@ -31,7 +31,7 @@ function LoginScreen() {
             <HeartHandshake className="h-7 w-7 text-brand-600" />
           </div>
           <h1 className="mt-4 text-2xl font-bold text-stone-900">
-            SpeechTrack
+            BloomTrack
           </h1>
           <p className="mt-1 text-stone-600">Home practice, made easy</p>
         </div>

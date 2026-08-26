@@ -1,4 +1,4 @@
-# SpeechTrack
+# BloomTrack
 
 Next.js (App Router) + Supabase + Tailwind starter.
 

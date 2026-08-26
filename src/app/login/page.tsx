@@ -160,7 +160,7 @@ export default function LoginPage() {
               <MessageCircleHeart className="h-6 w-6 text-brand-600" />
             </div>
             <h1 className="mt-4 text-2xl font-bold text-stone-900">
-              Welcome to SpeechTrack
+              Welcome to BloomTrack
             </h1>
             <p className="mt-1 text-sm text-stone-500">
               Who&apos;s signing in today?
