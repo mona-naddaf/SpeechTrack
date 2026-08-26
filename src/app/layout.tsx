@@ -18,7 +18,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "BloomTrack",
-  description: "Track your students' speech therapy progress",
+  description: "Growth you can track, progress you can see.",
 };
 
 export default function RootLayout({
@@ -28,7 +28,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${baloo.variable} ${inter.variable}`}>
-      <body className="bg-cream-50 font-sans antialiased">{children}</body>
+      <body className="bg-cream-50 font-sans antialiased">
+        {children}
+        <footer className="py-4 text-center text-xs text-stone-400">
+          Created by Mouna Nadaf, SLP
+        </footer>
+      </body>
     </html>
   );
 }

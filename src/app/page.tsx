@@ -13,7 +13,7 @@ export default function Home() {
           BloomTrack
         </h1>
         <p className="mt-4 text-lg text-stone-600">
-          Track and manage your students&apos; speech therapy progress.
+          Growth you can track, progress you can see.
         </p>
         <Link
           href="/login"
