@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ChevronRight, UserPlus, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import type { TeacherStudent } from "@/lib/types";
+import type { ExpectedFrequency, TeacherStudent } from "@/lib/types";
 import StudentFormModal from "./student-form-modal";
 import DeleteConfirmModal from "./delete-confirm-modal";
 
@@ -39,15 +39,22 @@ export default function StudentsSection({
   async function handleAdd({
     name,
     className,
+    expectedFrequency,
   }: {
     name: string;
     className: string;
+    expectedFrequency: ExpectedFrequency;
   }) {
     const supabase = createClient();
     const { data, error } = await supabase
       .from("teacher_students")
-      .insert({ teacher_id: teacherId, name, class: className || null })
-      .select("id, name, class, created_at")
+      .insert({
+        teacher_id: teacherId,
+        name,
+        class: className || null,
+        expected_frequency: expectedFrequency,
+      })
+      .select("id, name, class, expected_frequency, created_at")
       .single();
 
     if (error || !data) {
@@ -62,18 +69,24 @@ export default function StudentsSection({
   async function handleEdit({
     name,
     className,
+    expectedFrequency,
   }: {
     name: string;
     className: string;
+    expectedFrequency: ExpectedFrequency;
   }) {
     if (!editingStudent) return null;
 
     const supabase = createClient();
     const { data, error } = await supabase
       .from("teacher_students")
-      .update({ name, class: className || null })
+      .update({
+        name,
+        class: className || null,
+        expected_frequency: expectedFrequency,
+      })
       .eq("id", editingStudent.id)
-      .select("id, name, class, created_at")
+      .select("id, name, class, expected_frequency, created_at")
       .single();
 
     if (error || !data) {

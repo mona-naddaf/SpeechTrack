@@ -1,7 +1,12 @@
+/** How often the SLP/Teacher plans to log sessions for a student — drives
+ *  the streak cadence in src/lib/streaks.ts. */
+export type ExpectedFrequency = "daily" | "few_times_week" | "weekly";
+
 export type Student = {
   id: string;
   name: string;
   class: string | null;
+  expected_frequency: ExpectedFrequency;
   created_at: string;
 };
 
@@ -240,6 +245,7 @@ export type TeacherStudent = {
   id: string;
   name: string;
   class: string | null;
+  expected_frequency: ExpectedFrequency;
   created_at: string;
 };
 

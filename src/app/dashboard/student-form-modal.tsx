@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import type { Student } from "@/lib/types";
+import type { ExpectedFrequency, Student } from "@/lib/types";
+import { EXPECTED_FREQUENCY_LABELS } from "@/lib/streaks";
 
 type Props = {
   mode: "add" | "edit";
@@ -10,8 +11,15 @@ type Props = {
   onSubmit: (values: {
     name: string;
     className: string;
+    expectedFrequency: ExpectedFrequency;
   }) => Promise<string | null>;
 };
+
+const FREQUENCY_OPTIONS: ExpectedFrequency[] = [
+  "daily",
+  "few_times_week",
+  "weekly",
+];
 
 export default function StudentFormModal({
   mode,
@@ -21,6 +29,8 @@ export default function StudentFormModal({
 }: Props) {
   const [name, setName] = useState(initialStudent?.name ?? "");
   const [className, setClassName] = useState(initialStudent?.class ?? "");
+  const [expectedFrequency, setExpectedFrequency] =
+    useState<ExpectedFrequency>(initialStudent?.expected_frequency ?? "weekly");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,6 +47,7 @@ export default function StudentFormModal({
     const result = await onSubmit({
       name: trimmedName,
       className: className.trim(),
+      expectedFrequency,
     });
     setLoading(false);
     if (result) {
@@ -84,6 +95,32 @@ export default function StudentFormModal({
               onChange={(e) => setClassName(e.target.value)}
               className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
             />
+          </div>
+
+          <div>
+            <label
+              htmlFor="student-frequency"
+              className="block text-sm font-medium text-stone-700"
+            >
+              How often do you plan to log sessions?
+            </label>
+            <select
+              id="student-frequency"
+              value={expectedFrequency}
+              onChange={(e) =>
+                setExpectedFrequency(e.target.value as ExpectedFrequency)
+              }
+              className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            >
+              {FREQUENCY_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {EXPECTED_FREQUENCY_LABELS[option]}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-stone-500">
+              Used to track this student&apos;s session streak.
+            </p>
           </div>
 
           {error && <p className="text-sm text-red-600">{error}</p>}

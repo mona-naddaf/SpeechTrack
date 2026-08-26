@@ -16,12 +16,14 @@ import type {
   PracticeLogWithPraise,
   SlpBehaviorLogWithType,
 } from "@/lib/types";
-import { formatDate } from "@/lib/date";
+import { formatDate, getTodayLocalDateString } from "@/lib/date";
 import {
   computeAssessmentScore,
   flattenAssessmentAreas,
   type RawAssessmentWithAreasJoin,
 } from "@/lib/assessment";
+import { computeCadenceStreak, formatCadenceStreakLabel } from "@/lib/streaks";
+import StreakBadge from "@/components/streak-badge";
 import GoalsSection from "./goals-section";
 import ExportButtons from "./export-buttons";
 import HomePracticeSection from "./home-practice-section";
@@ -51,7 +53,7 @@ export default async function StudentDetailPage({
   const { data: student } = await supabase
     .from("students")
     .select(
-      "id, name, class, parent_access_code, share_behavior_with_parent, created_at"
+      "id, name, class, parent_access_code, share_behavior_with_parent, expected_frequency, created_at"
     )
     .eq("id", id)
     .maybeSingle();
@@ -214,6 +216,12 @@ export default async function StudentDetailPage({
     }
   );
 
+  const sessionStreak = computeCadenceStreak(
+    (sessionsResult.data ?? []).map((s) => s.date),
+    student.expected_frequency,
+    getTodayLocalDateString()
+  );
+
   return (
     <main className="flex-1 bg-cream-50 px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-3xl">
@@ -225,16 +233,26 @@ export default async function StudentDetailPage({
           Back to students
         </Link>
 
-        <div className="mt-4 flex items-center gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent-100">
-            <User className="h-6 w-6 text-accent-700" />
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent-100">
+              <User className="h-6 w-6 text-accent-700" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-stone-900">
+                {student.name}
+              </h1>
+              <p className="text-stone-600">{student.class || "No class"}</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-stone-900">
-              {student.name}
-            </h1>
-            <p className="text-stone-600">{student.class || "No class"}</p>
-          </div>
+          <StreakBadge
+            streak={sessionStreak}
+            storageKey={`slp-session-streak:${student.id}`}
+            label={formatCadenceStreakLabel(
+              sessionStreak,
+              student.expected_frequency
+            )}
+          />
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-3">

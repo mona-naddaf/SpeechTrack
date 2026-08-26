@@ -8,17 +8,24 @@ import { formatDate } from "@/lib/date";
 import { getHowItWentOption } from "@/lib/practice";
 import type { GoalProgressReport } from "@/lib/progress";
 import type { HomePracticeItem, HowItWent, PracticeLogWithPraise } from "@/lib/types";
+import StreakBadge from "@/components/streak-badge";
 import LogPracticeForm from "./log-practice-form";
 import LogoutButton from "./logout-button";
 import ProgressSection from "./progress-section";
 import BehaviorSection, { type BehaviorBreakdownEntry } from "./behavior-section";
 
 type Props = {
+  studentId: string;
   studentName: string;
   items: HomePracticeItem[];
   logs: PracticeLogWithPraise[];
   itemsError: string | null;
   logsError: string | null;
+  /** Consecutive calendar days with at least one practice log — today can
+   *  still be "pending" without breaking it (see computeCadenceStreak()
+   *  in src/lib/streaks.ts). 0 means nothing's been logged yet, or the
+   *  streak already broke; the badge just doesn't render in that case. */
+  practiceStreak: number;
   /** Only goals the SLP/Teacher has toggled visible_to_parent on. Empty
    *  when nothing's been shared yet — the section is hidden entirely
    *  rather than rendered empty, so nothing changes for existing parents
@@ -41,11 +48,13 @@ const MOOD_BADGE_CLASSES: Record<HowItWent, string> = {
 };
 
 export default function ParentDashboard({
+  studentId,
   studentName,
   items,
   logs,
   itemsError,
   logsError,
+  practiceStreak,
   progressReports,
   showBehaviorSection,
   behaviorBreakdown,
@@ -59,6 +68,15 @@ export default function ParentDashboard({
         </h1>
         <LogoutButton />
       </div>
+
+      {practiceStreak > 0 && (
+        <StreakBadge
+          streak={practiceStreak}
+          storageKey={`parent-practice-streak:${studentId}`}
+          label={`${practiceStreak} day streak!`}
+          className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-brand-100 to-accent-100 px-4 py-2.5 text-base font-bold text-stone-900 shadow-sm"
+        />
+      )}
 
       {itemsError && (
         <p className="text-sm text-red-600">

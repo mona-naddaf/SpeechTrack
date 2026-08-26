@@ -2,8 +2,9 @@ import { cookies } from "next/headers";
 import { HeartHandshake } from "lucide-react";
 import { createServiceClient } from "@/lib/supabase/service";
 import { PARENT_COOKIE_NAME, verifyParentSessionToken } from "@/lib/parent-session";
-import { daysAgoLocalDateString } from "@/lib/date";
+import { daysAgoLocalDateString, getTodayLocalDateString } from "@/lib/date";
 import { buildGoalReport, type ProgressGoal, type ProgressTrial } from "@/lib/progress";
+import { computeCadenceStreak } from "@/lib/streaks";
 import type { HomePracticeItem, PracticeLogWithPraise } from "@/lib/types";
 import type { BehaviorBreakdownEntry } from "./behavior-section";
 import ParentLoginForm from "./parent-login-form";
@@ -210,15 +211,27 @@ export default async function ParentPage() {
     (behaviorLogsResult.data ?? []) as unknown as RawBehaviorLog[]
   );
 
+  // Simple consecutive-calendar-days streak — the "daily" cadence in
+  // computeCadenceStreak() is exactly this, so no separate calculation is
+  // needed (see src/lib/streaks.ts).
+  const practiceLogs = (logsResult.data ?? []) as unknown as PracticeLogWithPraise[];
+  const practiceStreak = computeCadenceStreak(
+    practiceLogs.map((log) => log.date),
+    "daily",
+    getTodayLocalDateString()
+  );
+
   return (
     <main className="flex-1 bg-gradient-to-b from-cream-50 via-cream-50 to-brand-50 px-4 py-6 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-2xl">
         <ParentDashboard
+          studentId={student.id}
           studentName={student.name}
           items={(itemsResult.data ?? []) as unknown as HomePracticeItem[]}
-          logs={(logsResult.data ?? []) as unknown as PracticeLogWithPraise[]}
+          logs={practiceLogs}
           itemsError={itemsResult.error?.message ?? null}
           logsError={logsResult.error?.message ?? null}
+          practiceStreak={practiceStreak}
           progressReports={progressReports}
           showBehaviorSection={shareBehaviorWithParent}
           behaviorBreakdown={behaviorBreakdown}
