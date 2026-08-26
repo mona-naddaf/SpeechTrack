@@ -64,6 +64,8 @@ export type Goal = {
   baseline: string | null;
   target_percent: number | null;
   status: GoalStatus;
+  /** SLP-controlled: shows this goal's progress on the parent dashboard. */
+  visible_to_parent: boolean;
   created_at: string;
 };
 
@@ -255,6 +257,8 @@ export type TeacherGoal = {
   baseline: string | null;
   target_percent: number | null;
   status: GoalStatus;
+  /** Teacher-controlled: shows this goal's progress on the parent dashboard. */
+  visible_to_parent: boolean;
   created_at: string;
 };
 

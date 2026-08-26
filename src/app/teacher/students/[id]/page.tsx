@@ -40,7 +40,9 @@ export default async function TeacherStudentDetailPage({
   // not an error.
   const { data: student } = await supabase
     .from("teacher_students")
-    .select("id, name, class, parent_access_code, created_at")
+    .select(
+      "id, name, class, parent_access_code, share_behavior_with_parent, created_at"
+    )
     .eq("id", id)
     .maybeSingle();
 
@@ -190,6 +192,7 @@ export default async function TeacherStudentDetailPage({
             }
             initialLogsError={behaviorLogsResult.error?.message ?? null}
             behaviorTypes={behaviorTypesResult.data ?? []}
+            shareBehaviorWithParent={student.share_behavior_with_parent}
           />
         </div>
 

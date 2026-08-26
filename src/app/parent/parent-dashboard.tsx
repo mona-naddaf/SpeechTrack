@@ -6,9 +6,12 @@ import {
 } from "lucide-react";
 import { formatDate } from "@/lib/date";
 import { getHowItWentOption } from "@/lib/practice";
+import type { GoalProgressReport } from "@/lib/progress";
 import type { HomePracticeItem, HowItWent, PracticeLogWithPraise } from "@/lib/types";
 import LogPracticeForm from "./log-practice-form";
 import LogoutButton from "./logout-button";
+import ProgressSection from "./progress-section";
+import BehaviorSection, { type BehaviorBreakdownEntry } from "./behavior-section";
 
 type Props = {
   studentName: string;
@@ -16,6 +19,18 @@ type Props = {
   logs: PracticeLogWithPraise[];
   itemsError: string | null;
   logsError: string | null;
+  /** Only goals the SLP/Teacher has toggled visible_to_parent on. Empty
+   *  when nothing's been shared yet — the section is hidden entirely
+   *  rather than rendered empty, so nothing changes for existing parents
+   *  until their SLP/Teacher opts a goal in. */
+  progressReports: GoalProgressReport[];
+  /** Teacher-side only: whether the Teacher has turned behavior sharing on
+   *  for this student. Kept separate from behaviorBreakdown below because
+   *  "shared, but nothing logged recently" should still show the section
+   *  (with a friendly empty state) rather than hide it — only an actual
+   *  false here hides it. Always false on the SLP side. */
+  showBehaviorSection: boolean;
+  behaviorBreakdown: BehaviorBreakdownEntry[];
 };
 
 // Warm, distinct mood badge colors — matches the mood-picker in LogPracticeForm.
@@ -31,6 +46,9 @@ export default function ParentDashboard({
   logs,
   itemsError,
   logsError,
+  progressReports,
+  showBehaviorSection,
+  behaviorBreakdown,
 }: Props) {
   return (
     <div className="space-y-6">
@@ -177,6 +195,14 @@ export default function ParentDashboard({
           </div>
         )}
       </div>
+
+      {progressReports.length > 0 && (
+        <ProgressSection reports={progressReports} />
+      )}
+
+      {showBehaviorSection && (
+        <BehaviorSection breakdown={behaviorBreakdown} />
+      )}
     </div>
   );
 }

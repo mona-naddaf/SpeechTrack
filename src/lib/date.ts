@@ -7,6 +7,16 @@ export function getTodayLocalDateString(): string {
   return local.toISOString().slice(0, 10);
 }
 
+/** Local date N days before today, as a YYYY-MM-DD string — same
+ *  UTC-offset care as getTodayLocalDateString(), for "recent" cutoffs
+ *  like the parent-facing behavior summary's rolling window. */
+export function daysAgoLocalDateString(days: number): string {
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  local.setDate(local.getDate() - days);
+  return local.toISOString().slice(0, 10);
+}
+
 /** Formats a YYYY-MM-DD date string for display, without shifting the day
  *  due to UTC parsing. */
 export function formatDate(dateStr: string): string {

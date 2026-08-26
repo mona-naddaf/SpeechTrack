@@ -8,12 +8,14 @@ import { getColorOption } from "@/lib/colors";
 import { SEVERITY_CLASSES, SEVERITY_LABELS } from "@/lib/behavior";
 import type { BehaviorLogWithType, TeacherBehaviorType } from "@/lib/types";
 import LogBehaviorModal, { type LogBehaviorValues } from "./log-behavior-modal";
+import ShareBehaviorToggle from "./share-behavior-toggle";
 
 type Props = {
   studentId: string;
   initialLogs: BehaviorLogWithType[];
   initialLogsError: string | null;
   behaviorTypes: TeacherBehaviorType[];
+  shareBehaviorWithParent: boolean;
 };
 
 export default function BehaviorSection({
@@ -21,6 +23,7 @@ export default function BehaviorSection({
   initialLogs,
   initialLogsError,
   behaviorTypes,
+  shareBehaviorWithParent,
 }: Props) {
   const [logs, setLogs] = useState<BehaviorLogWithType[]>(initialLogs);
   const [listError] = useState<string | null>(initialLogsError);
@@ -91,13 +94,19 @@ export default function BehaviorSection({
           <Smile className="h-5 w-5 text-brand-500" />
           Behavior
         </h2>
-        <button
-          onClick={() => setShowLogModal(true)}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md"
-        >
-          <ClipboardPlus className="h-4 w-4" />
-          Log behavior
-        </button>
+        <div className="flex items-center gap-3">
+          <ShareBehaviorToggle
+            studentId={studentId}
+            initialShared={shareBehaviorWithParent}
+          />
+          <button
+            onClick={() => setShowLogModal(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md"
+          >
+            <ClipboardPlus className="h-4 w-4" />
+            Log behavior
+          </button>
+        </div>
       </div>
 
       {listError && (

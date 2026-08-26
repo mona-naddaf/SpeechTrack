@@ -14,7 +14,7 @@ import GoalFormModal, { type GoalFormValues } from "./goal-form-modal";
 import DeleteGoalConfirmModal from "./delete-goal-confirm-modal";
 
 const GOAL_SELECT_COLUMNS =
-  "id, student_id, subject_id, text, response_format_id, baseline, target_percent, status, created_at, subject:teacher_subjects(id, name), response_format:teacher_response_formats(id, name)";
+  "id, student_id, subject_id, text, response_format_id, baseline, target_percent, status, visible_to_parent, created_at, subject:teacher_subjects(id, name), response_format:teacher_response_formats(id, name)";
 
 type Props = {
   studentId: string;
@@ -42,6 +42,9 @@ export default function GoalsSection({
   const [deletingGoal, setDeletingGoal] = useState<TeacherGoalWithRelations | null>(
     null
   );
+  const [visibilityErrorByGoalId, setVisibilityErrorByGoalId] = useState<
+    Record<string, string>
+  >({});
 
   function sortByNewest(list: TeacherGoalWithRelations[]) {
     return [...list].sort(
@@ -146,6 +149,36 @@ export default function GoalsSection({
     return null;
   }
 
+  // Optimistic — flips the checkbox immediately, then persists in the
+  // background and rolls back with an inline error if the save fails.
+  async function handleToggleVisibleToParent(goal: TeacherGoalWithRelations) {
+    const nextValue = !goal.visible_to_parent;
+    setGoals((prev) =>
+      prev.map((g) =>
+        g.id === goal.id ? { ...g, visible_to_parent: nextValue } : g
+      )
+    );
+    setVisibilityErrorByGoalId((prev) => ({ ...prev, [goal.id]: "" }));
+
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("teacher_goals")
+      .update({ visible_to_parent: nextValue })
+      .eq("id", goal.id);
+
+    if (error) {
+      setGoals((prev) =>
+        prev.map((g) =>
+          g.id === goal.id ? { ...g, visible_to_parent: goal.visible_to_parent } : g
+        )
+      );
+      setVisibilityErrorByGoalId((prev) => ({
+        ...prev,
+        [goal.id]: error.message,
+      }));
+    }
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between gap-4">
@@ -206,6 +239,21 @@ export default function GoalsSection({
                   ? `Target: ${goal.target_percent}%`
                   : "No target set"}
               </p>
+
+              <label className="mt-3 flex items-center gap-2 text-xs font-medium text-stone-500">
+                <input
+                  type="checkbox"
+                  checked={goal.visible_to_parent}
+                  onChange={() => handleToggleVisibleToParent(goal)}
+                  className="h-3.5 w-3.5 rounded border-stone-300 text-brand-600 focus:ring-brand-500"
+                />
+                Show progress to parent
+              </label>
+              {visibilityErrorByGoalId[goal.id] && (
+                <p className="mt-1 text-xs text-red-600">
+                  {visibilityErrorByGoalId[goal.id]}
+                </p>
+              )}
 
               <div className="mt-3 flex justify-end gap-1">
                 <button
