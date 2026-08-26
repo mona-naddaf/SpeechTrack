@@ -2,14 +2,31 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { PartyPopper } from "lucide-react";
 import { getTodayLocalDateString } from "@/lib/date";
 import { HOW_IT_WENT_OPTIONS } from "@/lib/practice";
+import { fireCelebrationConfetti } from "@/lib/confetti";
+import CelebrationToast from "@/components/celebration-toast";
 import type { HomePracticeItem, HowItWent } from "@/lib/types";
 
 type Props = {
   items: HomePracticeItem[];
 };
+
+// A small friendly set, picked at random each time so the celebration
+// doesn't feel repetitive on days a parent logs practice more than once.
+const CELEBRATION_MESSAGES = [
+  "Great job practicing today! 🎉",
+  "Awesome work today! 🌟",
+  "Nice practice today — keep it up! 🎊",
+  "You two are doing great! 🎉",
+  "That's some great practice! 🌟",
+];
+
+function pickCelebrationMessage() {
+  return CELEBRATION_MESSAGES[
+    Math.floor(Math.random() * CELEBRATION_MESSAGES.length)
+  ];
+}
 
 // Warm, distinct colors per mood — selecting one should feel like a tap of
 // joy, not a form field. Kept local to this component since the SLP-side
@@ -28,7 +45,9 @@ export default function LogPracticeForm({ items }: Props) {
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [celebrationMessage, setCelebrationMessage] = useState<string | null>(
+    null
+  );
 
   function toggleItem(id: string) {
     setSelectedIds((prev) => {
@@ -48,7 +67,6 @@ export default function LogPracticeForm({ items }: Props) {
 
     setLoading(true);
     setError(null);
-    setSuccess(false);
 
     const activities = items
       .filter((item) => selectedIds.has(item.id))
@@ -74,7 +92,8 @@ export default function LogPracticeForm({ items }: Props) {
       setSelectedIds(new Set());
       setHowItWent(null);
       setNote("");
-      setSuccess(true);
+      setCelebrationMessage(pickCelebrationMessage());
+      fireCelebrationConfetti();
       router.refresh();
     } catch {
       setError(
@@ -156,11 +175,11 @@ export default function LogPracticeForm({ items }: Props) {
       </div>
 
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-      {success && (
-        <p className="mt-3 flex items-center gap-1.5 text-sm font-medium text-green-600">
-          <PartyPopper className="h-4 w-4" />
-          Saved! Great job today.
-        </p>
+      {celebrationMessage && (
+        <CelebrationToast
+          message={celebrationMessage}
+          onDone={() => setCelebrationMessage(null)}
+        />
       )}
 
       <button

@@ -10,6 +10,8 @@ import type {
   ResponseFormatOption,
 } from "@/lib/types";
 import { GOAL_STATUS_CLASSES, GOAL_STATUS_LABELS } from "@/lib/goal-status";
+import { fireCelebrationConfetti } from "@/lib/confetti";
+import CelebrationToast from "@/components/celebration-toast";
 import GoalFormModal, { type GoalFormValues } from "./goal-form-modal";
 import DeleteGoalConfirmModal from "./delete-goal-confirm-modal";
 
@@ -45,6 +47,7 @@ export default function GoalsSection({
   const [visibilityErrorByGoalId, setVisibilityErrorByGoalId] = useState<
     Record<string, string>
   >({});
+  const [showMasteryCelebration, setShowMasteryCelebration] = useState(false);
 
   function sortByNewest(list: GoalWithRelations[]) {
     return [...list].sort(
@@ -104,6 +107,12 @@ export default function GoalsSection({
   async function handleEdit(values: GoalFormValues) {
     if (!editingGoal) return null;
 
+    // Captured before the update so the celebration only fires on an actual
+    // transition into "mastered" — re-saving an already-mastered goal (or
+    // any other edit) shouldn't retrigger it.
+    const justMastered =
+      values.status === "mastered" && editingGoal.status !== "mastered";
+
     const supabase = createClient();
     const { error } = await supabase
       .from("goals")
@@ -128,6 +137,12 @@ export default function GoalsSection({
       );
     }
     setEditingGoal(null);
+
+    if (justMastered) {
+      setShowMasteryCelebration(true);
+      fireCelebrationConfetti();
+    }
+
     return null;
   }
 
@@ -302,6 +317,13 @@ export default function GoalsSection({
           goal={deletingGoal}
           onCancel={() => setDeletingGoal(null)}
           onConfirm={handleDelete}
+        />
+      )}
+
+      {showMasteryCelebration && (
+        <CelebrationToast
+          message="🎉 Goal mastered!"
+          onDone={() => setShowMasteryCelebration(false)}
         />
       )}
     </div>

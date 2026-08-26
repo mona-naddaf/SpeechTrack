@@ -19,3 +19,30 @@
     color: theme("colors.brand.900");
   }
 }
+
+/* Pop-in for CelebrationToast (goal mastery, parent practice log) — a
+   quick, playful entrance, then it just holds still until it unmounts. */
+@keyframes celebration-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.9);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(0) scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-celebration-pop {
+  animation: celebration-pop 0.4s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-celebration-pop {
+    animation: none;
+  }
+}
