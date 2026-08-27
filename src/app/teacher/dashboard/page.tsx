@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ListChecks, Sliders, Smile } from "lucide-react";
+import { Library, ListChecks, Sliders, Smile } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/role";
 import { daysAgoLocalDateString, getTodayLocalDateString } from "@/lib/date";
@@ -114,6 +114,13 @@ export default async function TeacherDashboardPage() {
             >
               <Smile className="h-4 w-4" />
               Behavior types
+            </Link>
+            <Link
+              href="/teacher/toolkit/materials"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
+            >
+              <Library className="h-4 w-4" />
+              Materials
             </Link>
             <SignOutButton />
           </div>

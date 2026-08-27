@@ -11,6 +11,10 @@ import type {
   PracticeLogWithPraise,
   SlpBehaviorLogWithType,
 } from "@/lib/types";
+import {
+  groupMaterialChipsByGoalId,
+  type RawGoalMaterialLink,
+} from "@/lib/materials";
 import { getTodayLocalDateString } from "@/lib/date";
 import {
   computeAssessmentScore,
@@ -149,6 +153,21 @@ export default async function StudentDetailPage({
       .order("date", { ascending: false })
       .order("created_at", { ascending: false }),
   ]);
+
+  // Materials linked to any of this student's goals, for the chips shown
+  // on each goal card — a follow-up query since it depends on the goal
+  // ids just fetched above.
+  const studentGoalIds = (goalsResult.data ?? []).map((g) => g.id);
+  const materialLinksResult =
+    studentGoalIds.length > 0
+      ? await supabase
+          .from("material_goals")
+          .select("goal_id, material:materials(id, title, url)")
+          .in("goal_id", studentGoalIds)
+      : { data: [] as RawGoalMaterialLink[] };
+  const materialsByGoalId = groupMaterialChipsByGoalId(
+    (materialLinksResult.data ?? []) as unknown as RawGoalMaterialLink[]
+  );
 
   // Assessment results need two more batched lookups (question counts per
   // assessment, and recorded answers per result) to show progress/score —
@@ -293,6 +312,7 @@ export default async function StudentDetailPage({
                   areas={areasResult.data ?? []}
                   responseFormats={formatsResult.data ?? []}
                   bankGoals={bankGoalsResult.data ?? []}
+                  materialsByGoalId={materialsByGoalId}
                 />
               ),
             },

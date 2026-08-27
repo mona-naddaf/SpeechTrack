@@ -105,6 +105,44 @@ export type BankGoal = {
   target_percent: number | null;
 };
 
+export type MaterialVisibility = "private" | "shared" | "for_sale";
+
+export type Material = {
+  id: string;
+  title: string;
+  url: string;
+  description: string | null;
+  area_id: string;
+  visibility: MaterialVisibility;
+  created_at: string;
+};
+
+/** A material row joined with its area and the ids of any goals it's
+ *  linked to (via material_goals) — for the materials toolkit page and
+ *  the goal-card link chips on a student page. */
+export type MaterialWithRelations = Material & {
+  area: { id: string; name: string } | null;
+  goal_ids: string[];
+};
+
+/** A goal option for the materials page's "link to goals" picker —
+ *  labeled by student (or left unset for a goal-bank template) plus
+ *  area, so goals with the same text across students stay distinct. */
+export type MaterialGoalOption = {
+  id: string;
+  text: string;
+  area: { id: string; name: string } | null;
+  student: { id: string; name: string } | null;
+};
+
+/** The minimal shape a goal card needs to render its linked-material
+ *  chips — see MaterialChips. */
+export type MaterialChip = {
+  id: string;
+  title: string;
+  url: string;
+};
+
 export type SessionRecord = {
   id: string;
   student_id: string;
@@ -322,6 +360,31 @@ export type TeacherBankGoal = {
   text: string;
   response_format_id: string | null;
   target_percent: number | null;
+};
+
+/** The Teacher equivalent of Material/MaterialWithRelations/MaterialGoalOption
+ *  above — subject_id/subject in place of area_id/area, teacher_students in
+ *  place of students. */
+export type TeacherMaterial = {
+  id: string;
+  title: string;
+  url: string;
+  description: string | null;
+  subject_id: string;
+  visibility: MaterialVisibility;
+  created_at: string;
+};
+
+export type TeacherMaterialWithRelations = TeacherMaterial & {
+  subject: { id: string; name: string } | null;
+  goal_ids: string[];
+};
+
+export type TeacherMaterialGoalOption = {
+  id: string;
+  text: string;
+  subject: { id: string; name: string } | null;
+  student: { id: string; name: string } | null;
 };
 
 /** A teacher goal as needed on the session-logging page — same shape as

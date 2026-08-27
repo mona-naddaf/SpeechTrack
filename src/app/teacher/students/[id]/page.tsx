@@ -11,6 +11,10 @@ import type {
   PracticeLogWithPraise,
   TeacherGoalWithRelations,
 } from "@/lib/types";
+import {
+  groupMaterialChipsByGoalId,
+  type RawGoalMaterialLink,
+} from "@/lib/materials";
 import { computeCadenceStreak, formatCadenceStreakLabel } from "@/lib/streaks";
 import { formatScheduledDays } from "@/lib/schedule";
 import StreakBadge from "@/components/streak-badge";
@@ -131,6 +135,21 @@ export default async function TeacherStudentDetailPage({
       .order("created_at", { ascending: false }),
   ]);
 
+  // Materials linked to any of this student's goals, for the chips shown
+  // on each goal card — a follow-up query since it depends on the goal
+  // ids just fetched above.
+  const studentGoalIds = (goalsResult.data ?? []).map((g) => g.id);
+  const materialLinksResult =
+    studentGoalIds.length > 0
+      ? await supabase
+          .from("teacher_material_goals")
+          .select("goal_id, material:teacher_materials(id, title, url)")
+          .in("goal_id", studentGoalIds)
+      : { data: [] as RawGoalMaterialLink[] };
+  const materialsByGoalId = groupMaterialChipsByGoalId(
+    (materialLinksResult.data ?? []) as unknown as RawGoalMaterialLink[]
+  );
+
   const sessionStreak = computeCadenceStreak(
     (sessionsResult.data ?? []).map((s) => s.date),
     student.expected_frequency,
@@ -202,6 +221,7 @@ export default async function TeacherStudentDetailPage({
                   subjects={subjectsResult.data ?? []}
                   responseFormats={formatsResult.data ?? []}
                   bankGoals={bankGoalsResult.data ?? []}
+                  materialsByGoalId={materialsByGoalId}
                 />
               ),
             },

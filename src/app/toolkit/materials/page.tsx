@@ -1,11 +1,12 @@
 import Link from "next/link";
+import { ArrowLeft, ClipboardList, Sliders, Smile, Target } from "lucide-react";
 import { redirect } from "next/navigation";
-import { ArrowLeft, ClipboardList, Library, Sliders, Target } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import type { BehaviorType } from "@/lib/types";
-import BehaviorTypesSection from "./behavior-types-section";
+import type { Area, MaterialGoalOption } from "@/lib/types";
+import { flattenMaterialJoins, type RawMaterialJoin } from "@/lib/materials";
+import MaterialsList from "./materials-list";
 
-export default async function BehaviorTypesPage() {
+export default async function MaterialsPage() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -15,10 +16,19 @@ export default async function BehaviorTypesPage() {
     redirect("/login");
   }
 
-  const { data: behaviorTypes, error } = await supabase
-    .from("behavior_types")
-    .select("id, name, color")
-    .order("name", { ascending: true });
+  const [materialsResult, areasResult, goalsResult] = await Promise.all([
+    supabase
+      .from("materials")
+      .select(
+        "id, title, url, description, area_id, visibility, created_at, area:areas(id, name), material_goals(goal_id)"
+      )
+      .order("created_at", { ascending: false }),
+    supabase.from("areas").select("id, name").order("name", { ascending: true }),
+    supabase
+      .from("goals")
+      .select("id, text, area_id, area:areas(id, name), student:students(id, name)")
+      .order("text", { ascending: true }),
+  ]);
 
   return (
     <main className="flex-1 bg-cream-50 px-4 py-8 sm:px-6 sm:py-10">
@@ -54,34 +64,39 @@ export default async function BehaviorTypesPage() {
               Response formats
             </Link>
             <Link
-              href="/toolkit/materials"
+              href="/toolkit/behavior-types"
               className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
             >
-              <Library className="h-4 w-4" />
-              Materials
+              <Smile className="h-4 w-4" />
+              Behavior types
             </Link>
           </div>
         </div>
 
         <div className="mt-4">
-          <h1 className="text-2xl font-bold text-stone-900">
-            Behavior types
-          </h1>
+          <h1 className="text-2xl font-bold text-stone-900">Material bank</h1>
           <p className="mt-1 text-stone-600">
-            These are the tags you can log against a student&apos;s
-            behavior, each with its own color.
+            Save links to the resources you use most — worksheets, videos,
+            decks — and optionally tie them to a goal so they show up right
+            on the student&apos;s page.
           </p>
         </div>
 
-        {error && (
+        {materialsResult.error && (
           <p className="mt-4 text-sm text-red-600">
-            Couldn&apos;t load behavior types: {error.message}
+            Couldn&apos;t load materials: {materialsResult.error.message}
           </p>
         )}
 
         <div className="mt-6">
-          <BehaviorTypesSection
-            initialBehaviorTypes={(behaviorTypes ?? []) as BehaviorType[]}
+          <MaterialsList
+            initialMaterials={flattenMaterialJoins(
+              (materialsResult.data ?? []) as unknown as RawMaterialJoin[]
+            )}
+            areas={(areasResult.data ?? []) as Area[]}
+            goalOptions={
+              (goalsResult.data ?? []) as unknown as MaterialGoalOption[]
+            }
           />
         </div>
       </div>

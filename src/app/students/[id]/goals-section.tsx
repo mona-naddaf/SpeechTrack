@@ -7,11 +7,13 @@ import type {
   Area,
   BankGoal,
   GoalWithRelations,
+  MaterialChip,
   ResponseFormatOption,
 } from "@/lib/types";
 import { GOAL_STATUS_CLASSES, GOAL_STATUS_LABELS } from "@/lib/goal-status";
 import { fireCelebrationConfetti } from "@/lib/confetti";
 import CelebrationToast from "@/components/celebration-toast";
+import MaterialChips from "@/components/material-chips";
 import SectionHeader from "@/components/section-header";
 import { useSectionPreferences } from "@/components/section-preferences";
 import GoalFormModal, { type GoalFormValues } from "./goal-form-modal";
@@ -27,6 +29,10 @@ type Props = {
   areas: Area[];
   responseFormats: ResponseFormatOption[];
   bankGoals: BankGoal[];
+  /** Materials linked to each goal (via material_goals), keyed by goal id —
+   *  shown as clickable chips right on the card. Missing entries render
+   *  no chips. */
+  materialsByGoalId: Record<string, MaterialChip[]>;
 };
 
 export default function GoalsSection({
@@ -36,6 +42,7 @@ export default function GoalsSection({
   areas,
   responseFormats,
   bankGoals,
+  materialsByGoalId,
 }: Props) {
   const [goals, setGoals] = useState<GoalWithRelations[]>(initialGoals);
   const [listError] = useState<string | null>(initialGoalsError);
@@ -279,6 +286,8 @@ export default function GoalsSection({
                   ? `Target: ${goal.target_percent}%`
                   : "No target set"}
               </p>
+
+              <MaterialChips materials={materialsByGoalId[goal.id] ?? []} />
 
               <label className="mt-3 flex items-center gap-2 text-xs font-medium text-stone-500">
                 <input

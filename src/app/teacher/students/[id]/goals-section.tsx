@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Plus, Target } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type {
+  MaterialChip,
   ResponseFormatOption,
   TeacherBankGoal,
   TeacherGoalWithRelations,
@@ -12,6 +13,7 @@ import type {
 import { GOAL_STATUS_CLASSES, GOAL_STATUS_LABELS } from "@/lib/goal-status";
 import { fireCelebrationConfetti } from "@/lib/confetti";
 import CelebrationToast from "@/components/celebration-toast";
+import MaterialChips from "@/components/material-chips";
 import SectionHeader from "@/components/section-header";
 import { useSectionPreferences } from "@/components/section-preferences";
 import GoalFormModal, { type GoalFormValues } from "./goal-form-modal";
@@ -27,6 +29,10 @@ type Props = {
   subjects: TeacherSubject[];
   responseFormats: ResponseFormatOption[];
   bankGoals: TeacherBankGoal[];
+  /** Materials linked to each goal (via teacher_material_goals), keyed by
+   *  goal id — shown as clickable chips right on the card. Missing
+   *  entries render no chips. */
+  materialsByGoalId: Record<string, MaterialChip[]>;
 };
 
 export default function GoalsSection({
@@ -36,6 +42,7 @@ export default function GoalsSection({
   subjects,
   responseFormats,
   bankGoals,
+  materialsByGoalId,
 }: Props) {
   const [goals, setGoals] = useState<TeacherGoalWithRelations[]>(initialGoals);
   const [listError] = useState<string | null>(initialGoalsError);
@@ -279,6 +286,8 @@ export default function GoalsSection({
                   ? `Target: ${goal.target_percent}%`
                   : "No target set"}
               </p>
+
+              <MaterialChips materials={materialsByGoalId[goal.id] ?? []} />
 
               <label className="mt-3 flex items-center gap-2 text-xs font-medium text-stone-500">
                 <input
