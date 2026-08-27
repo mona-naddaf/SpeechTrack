@@ -135,3 +135,30 @@ export function groupMaterialChipsByGoalId(
   }
   return byGoalId;
 }
+
+/** Resolves each goal's linked materials the way they're actually meant
+ *  to be found: a material linked directly to this exact goal row, OR
+ *  linked to the bank template this goal was created from
+ *  (`source_bank_goal_id`) — so a material tied to a bank goal on
+ *  /toolkit/materials shows up for every student who's been assigned
+ *  that bank goal, not just one specific student-goal row. Freehand
+ *  goals (no bank origin) only ever match on the direct link. Used by
+ *  both the goal-card chips (student page) and the session material
+ *  picker — same resolution either place. */
+export function resolveMaterialChipsByGoal(
+  goals: { id: string; source_bank_goal_id: string | null }[],
+  rows: RawGoalMaterialLink[]
+): Record<string, MaterialChip[]> {
+  const byLinkedGoalId = groupMaterialChipsByGoalId(rows);
+
+  const result: Record<string, MaterialChip[]> = {};
+  for (const goal of goals) {
+    const direct = byLinkedGoalId[goal.id] ?? [];
+    const viaBank = goal.source_bank_goal_id
+      ? (byLinkedGoalId[goal.source_bank_goal_id] ?? [])
+      : [];
+    const combined = [...direct, ...viaBank];
+    if (combined.length > 0) result[goal.id] = combined;
+  }
+  return result;
+}

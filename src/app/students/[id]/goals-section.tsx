@@ -105,6 +105,7 @@ export default function GoalsSection({
         baseline: values.baseline || null,
         target_percent: values.targetPercent,
         status: values.status,
+        source_bank_goal_id: values.sourceBankGoalId,
       })
       .select("id")
       .single();

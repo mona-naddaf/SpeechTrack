@@ -12,7 +12,7 @@ import type {
   TeacherGoalWithRelations,
 } from "@/lib/types";
 import {
-  groupMaterialChipsByGoalId,
+  resolveMaterialChipsByGoal,
   type RawGoalMaterialLink,
 } from "@/lib/materials";
 import { computeCadenceStreak, formatCadenceStreakLabel } from "@/lib/streaks";
@@ -77,7 +77,7 @@ export default async function TeacherStudentDetailPage({
     supabase
       .from("teacher_goals")
       .select(
-        "id, student_id, subject_id, text, response_format_id, baseline, target_percent, status, created_at, subject:teacher_subjects(id, name), response_format:teacher_response_formats(id, name)"
+        "id, student_id, subject_id, text, response_format_id, baseline, target_percent, status, source_bank_goal_id, created_at, subject:teacher_subjects(id, name), response_format:teacher_response_formats(id, name)"
       )
       .eq("student_id", id)
       .order("created_at", { ascending: false }),
@@ -137,16 +137,33 @@ export default async function TeacherStudentDetailPage({
 
   // Materials linked to any of this student's goals, for the chips shown
   // on each goal card — a follow-up query since it depends on the goal
-  // ids just fetched above.
-  const studentGoalIds = (goalsResult.data ?? []).map((g) => g.id);
+  // ids just fetched above. Also checks each goal's bank template
+  // (source_bank_goal_id), since a material can be linked at that level
+  // instead of to one specific student's goal row.
+  const studentGoals = (goalsResult.data ?? []) as unknown as {
+    id: string;
+    source_bank_goal_id: string | null;
+  }[];
+  const studentGoalIds = studentGoals.map((g) => g.id);
+  const studentBankGoalIds = Array.from(
+    new Set(
+      studentGoals
+        .map((g) => g.source_bank_goal_id)
+        .filter((bankId): bankId is string => Boolean(bankId))
+    )
+  );
+  const materialLookupGoalIds = Array.from(
+    new Set([...studentGoalIds, ...studentBankGoalIds])
+  );
   const materialLinksResult =
-    studentGoalIds.length > 0
+    materialLookupGoalIds.length > 0
       ? await supabase
           .from("teacher_material_goals")
           .select("goal_id, material:teacher_materials(id, title, url)")
-          .in("goal_id", studentGoalIds)
+          .in("goal_id", materialLookupGoalIds)
       : { data: [] as RawGoalMaterialLink[] };
-  const materialsByGoalId = groupMaterialChipsByGoalId(
+  const materialsByGoalId = resolveMaterialChipsByGoal(
+    studentGoals,
     (materialLinksResult.data ?? []) as unknown as RawGoalMaterialLink[]
   );
 

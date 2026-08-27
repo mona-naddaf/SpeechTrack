@@ -16,6 +16,9 @@ export type GoalFormValues = {
   baseline: string;
   targetPercent: number | null;
   status: GoalStatus;
+  /** Set only when this goal is being created by picking "From goal
+   *  bank" — the bank template's own id. Ignored on edit. */
+  sourceBankGoalId: string | null;
 };
 
 type TextSource = "write" | "bank";
@@ -112,6 +115,8 @@ export default function GoalFormModal({
       baseline: baseline.trim(),
       targetPercent: targetValue,
       status,
+      sourceBankGoalId:
+        textSource === "bank" ? selectedBankGoalId || null : null,
     });
     setLoading(false);
     if (result) {
@@ -162,7 +167,10 @@ export default function GoalFormModal({
                   type="radio"
                   name="text-source"
                   checked={textSource === "write"}
-                  onChange={() => setTextSource("write")}
+                  onChange={() => {
+                    setTextSource("write");
+                    setSelectedBankGoalId("");
+                  }}
                 />
                 Write new
               </label>

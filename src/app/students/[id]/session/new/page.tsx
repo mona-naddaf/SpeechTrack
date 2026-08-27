@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { SessionGoal } from "@/lib/types";
 import {
-  groupMaterialChipsByGoalId,
+  resolveMaterialChipsByGoal,
   type RawGoalMaterialLink,
 } from "@/lib/materials";
 import {
@@ -43,7 +43,7 @@ export default async function NewSessionPage({
   const { data: goals, error } = await supabase
     .from("goals")
     .select(
-      "id, text, area:areas(id, name), response_format:response_formats(id, name, type, config)"
+      "id, text, source_bank_goal_id, area:areas(id, name), response_format:response_formats(id, name, type, config)"
     )
     .eq("student_id", id)
     .eq("status", "active")
@@ -51,18 +51,29 @@ export default async function NewSessionPage({
 
   const sessionGoals = (goals ?? []) as unknown as SessionGoal[];
   const goalIds = sessionGoals.map((g) => g.id);
+  // A material linked to a bank goal (from /toolkit/materials) applies
+  // to every goal sourced from it, not just one student's row — so the
+  // material lookup below also needs to check each bank template id.
+  const bankGoalIds = Array.from(
+    new Set(
+      sessionGoals
+        .map((g) => g.source_bank_goal_id)
+        .filter((bankId): bankId is string => Boolean(bankId))
+    )
+  );
+  const materialLookupGoalIds = Array.from(new Set([...goalIds, ...bankGoalIds]));
 
   // Which materials each goal has linked (for the in-card picker), and
   // any past trials tagged with a material for these goals (to seed
   // "Last used" stats once one gets selected) — both follow-up queries
   // since they depend on the goal ids just fetched above.
   const [materialLinksResult, materialTrialsResult] =
-    goalIds.length > 0
+    materialLookupGoalIds.length > 0
       ? await Promise.all([
           supabase
             .from("material_goals")
             .select("goal_id, material:materials(id, title, url)")
-            .in("goal_id", goalIds),
+            .in("goal_id", materialLookupGoalIds),
           supabase
             .from("trials")
             .select("goal_id, material_id, value, session:sessions(date)")
@@ -71,7 +82,8 @@ export default async function NewSessionPage({
         ])
       : [{ data: [] as RawGoalMaterialLink[] }, { data: [] as RawMaterialTrialJoin[] }];
 
-  const materialsByGoalId = groupMaterialChipsByGoalId(
+  const materialsByGoalId = resolveMaterialChipsByGoal(
+    sessionGoals,
     (materialLinksResult.data ?? []) as unknown as RawGoalMaterialLink[]
   );
   const lastUsedByGoalId = computeLastUsedStatsByGoalAndMaterial(

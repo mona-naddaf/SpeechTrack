@@ -35,11 +35,17 @@ export default async function TeacherMaterialsPage() {
       .from("teacher_subjects")
       .select("id, name")
       .order("name", { ascending: true }),
+    // Only bank templates and freehand (never-from-bank) goals — a goal
+    // created "from bank" isn't offered here, since materials for it
+    // should be linked at the bank-template level so they apply to
+    // every student assigned that same bank goal (see
+    // resolveMaterialChipsByGoal).
     supabase
       .from("teacher_goals")
       .select(
         "id, text, subject_id, subject:teacher_subjects(id, name), student:teacher_students(id, name)"
       )
+      .is("source_bank_goal_id", null)
       .order("text", { ascending: true }),
   ]);
 

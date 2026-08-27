@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/role";
 import type { TeacherSessionGoal } from "@/lib/types";
 import {
-  groupMaterialChipsByGoalId,
+  resolveMaterialChipsByGoal,
   type RawGoalMaterialLink,
 } from "@/lib/materials";
 import {
@@ -48,7 +48,7 @@ export default async function NewTeacherSessionPage({
   const { data: goals, error } = await supabase
     .from("teacher_goals")
     .select(
-      "id, text, subject:teacher_subjects(id, name), response_format:teacher_response_formats(id, name, type, config)"
+      "id, text, source_bank_goal_id, subject:teacher_subjects(id, name), response_format:teacher_response_formats(id, name, type, config)"
     )
     .eq("student_id", id)
     .eq("status", "active")
@@ -56,18 +56,30 @@ export default async function NewTeacherSessionPage({
 
   const sessionGoals = (goals ?? []) as unknown as TeacherSessionGoal[];
   const goalIds = sessionGoals.map((g) => g.id);
+  // A material linked to a bank goal (from /teacher/toolkit/materials)
+  // applies to every goal sourced from it, not just one student's row —
+  // so the material lookup below also needs to check each bank
+  // template id.
+  const bankGoalIds = Array.from(
+    new Set(
+      sessionGoals
+        .map((g) => g.source_bank_goal_id)
+        .filter((bankId): bankId is string => Boolean(bankId))
+    )
+  );
+  const materialLookupGoalIds = Array.from(new Set([...goalIds, ...bankGoalIds]));
 
   // Which materials each goal has linked (for the in-card picker), and
   // any past trials tagged with a material for these goals (to seed
   // "Last used" stats once one gets selected) — both follow-up queries
   // since they depend on the goal ids just fetched above.
   const [materialLinksResult, materialTrialsResult] =
-    goalIds.length > 0
+    materialLookupGoalIds.length > 0
       ? await Promise.all([
           supabase
             .from("teacher_material_goals")
             .select("goal_id, material:teacher_materials(id, title, url)")
-            .in("goal_id", goalIds),
+            .in("goal_id", materialLookupGoalIds),
           supabase
             .from("teacher_trials")
             .select("goal_id, material_id, value, session:teacher_sessions(date)")
@@ -76,7 +88,8 @@ export default async function NewTeacherSessionPage({
         ])
       : [{ data: [] as RawGoalMaterialLink[] }, { data: [] as RawMaterialTrialJoin[] }];
 
-  const materialsByGoalId = groupMaterialChipsByGoalId(
+  const materialsByGoalId = resolveMaterialChipsByGoal(
+    sessionGoals,
     (materialLinksResult.data ?? []) as unknown as RawGoalMaterialLink[]
   );
   // buildGoalReport only cares about a goal's text/status/response_format —

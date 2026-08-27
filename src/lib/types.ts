@@ -164,6 +164,12 @@ export type SessionGoal = {
   id: string;
   text: string;
   area: { id: string; name: string } | null;
+  /** Set when this goal was created by picking "From goal bank" —
+   *  points at the bank template it came from. Null for freehand goals
+   *  and for any goal created before this column existed. Lets the
+   *  session material picker resolve linked materials through the bank
+   *  template, not just this one student's specific goal row. */
+  source_bank_goal_id: string | null;
   response_format: {
     id: string;
     name: string;
@@ -393,6 +399,12 @@ export type TeacherSessionGoal = {
   id: string;
   text: string;
   subject: { id: string; name: string } | null;
+  /** Set when this goal was created by picking "From goal bank" —
+   *  points at the bank template it came from. Null for freehand goals
+   *  and for any goal created before this column existed. Lets the
+   *  session material picker resolve linked materials through the bank
+   *  template, not just this one student's specific goal row. */
+  source_bank_goal_id: string | null;
   response_format: {
     id: string;
     name: string;

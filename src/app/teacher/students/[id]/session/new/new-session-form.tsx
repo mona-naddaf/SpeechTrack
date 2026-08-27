@@ -180,9 +180,14 @@ export default function NewSessionForm({
       return { error: error?.message ?? "Could not add that material." };
     }
 
-    const { error: linkError } = await supabase
-      .from("teacher_material_goals")
-      .insert({ material_id: data.id, goal_id: goal.id });
+    // Link to the goal's bank template when it has one, rather than this
+    // one student's specific goal row, so the new material shows up for
+    // every student assigned that same bank goal — same rule the
+    // Toolkit materials page follows (see resolveMaterialChipsByGoal).
+    const { error: linkError } = await supabase.from("teacher_material_goals").insert({
+      material_id: data.id,
+      goal_id: goal.source_bank_goal_id ?? goal.id,
+    });
     if (linkError) return { error: linkError.message };
 
     setMaterialsByGoalId((prev) => ({
