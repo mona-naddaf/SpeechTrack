@@ -4,15 +4,24 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getTodayLocalDateString } from "@/lib/date";
-import type { SessionGoal, Trial } from "@/lib/types";
+import type { MaterialChip, SessionGoal, Trial } from "@/lib/types";
+import type { MaterialUsageSummary } from "@/lib/progress";
 import GoalTrialCard from "./goal-trial-card";
+import type { AddMaterialResult } from "./goal-material-section";
 
 type Props = {
   studentId: string;
   goals: SessionGoal[];
+  initialMaterialsByGoalId: Record<string, MaterialChip[]>;
+  lastUsedByGoalId: Record<string, Record<string, MaterialUsageSummary>>;
 };
 
-export default function NewSessionForm({ studentId, goals }: Props) {
+export default function NewSessionForm({
+  studentId,
+  goals,
+  initialMaterialsByGoalId,
+  lastUsedByGoalId,
+}: Props) {
   const router = useRouter();
   const [date, setDate] = useState(getTodayLocalDateString());
   const [note, setNote] = useState("");
@@ -20,6 +29,18 @@ export default function NewSessionForm({ studentId, goals }: Props) {
   const [trialsByGoal, setTrialsByGoal] = useState<Record<string, Trial[]>>(
     {}
   );
+  // Session-scoped only — never persisted on its own, just tagged onto
+  // whichever trials get logged for that goal from here on. Starts empty
+  // even if a goal has just one linked material; she still picks it.
+  const [activeMaterialByGoal, setActiveMaterialByGoal] = useState<
+    Record<string, string | null>
+  >({});
+  // Seeded from the server, then grows in place as she adds a new
+  // material inline mid-session (so it shows up in that goal's picker
+  // without a page reload).
+  const [materialsByGoalId, setMaterialsByGoalId] = useState<
+    Record<string, MaterialChip[]>
+  >(initialMaterialsByGoalId);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -82,6 +103,7 @@ export default function NewSessionForm({ studentId, goals }: Props) {
         goal_id: goal.id,
         response_format_type: goal.response_format?.type ?? "correct_incorrect",
         value,
+        material_id: activeMaterialByGoal[goal.id] ?? null,
       })
       .select("id, goal_id, value, created_at")
       .single();
@@ -117,6 +139,59 @@ export default function NewSessionForm({ studentId, goals }: Props) {
       ...prev,
       [goalId]: (prev[goalId] ?? []).slice(0, -1),
     }));
+  }
+
+  function handleSelectMaterial(goalId: string, materialId: string | null) {
+    setActiveMaterialByGoal((prev) => ({ ...prev, [goalId]: materialId }));
+  }
+
+  // Creates a new material bank entry tagged with this goal's area,
+  // links it to the goal (so it shows up here again next session and on
+  // the goal card back on the student page), and selects it immediately.
+  async function handleAddMaterial(
+    goal: SessionGoal,
+    title: string,
+    url: string
+  ): Promise<AddMaterialResult> {
+    if (!goal.area) {
+      return { error: "This goal has no category, so a material can't be filed under one." };
+    }
+
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: "You need to be signed in." };
+
+    const { data, error } = await supabase
+      .from("materials")
+      .insert({
+        slp_id: user.id,
+        title,
+        url,
+        description: null,
+        area_id: goal.area.id,
+        visibility: "private",
+      })
+      .select("id, title, url")
+      .single();
+
+    if (error || !data) {
+      return { error: error?.message ?? "Could not add that material." };
+    }
+
+    const { error: linkError } = await supabase
+      .from("material_goals")
+      .insert({ material_id: data.id, goal_id: goal.id });
+    if (linkError) return { error: linkError.message };
+
+    setMaterialsByGoalId((prev) => ({
+      ...prev,
+      [goal.id]: [...(prev[goal.id] ?? []), data],
+    }));
+    handleSelectMaterial(goal.id, data.id);
+
+    return { material: data };
   }
 
   async function handleSave() {
@@ -191,6 +266,17 @@ export default function NewSessionForm({ studentId, goals }: Props) {
             trials={trialsByGoal[goal.id] ?? []}
             onLogTrial={(value) => logTrial(goal, value)}
             onUndo={() => undoLast(goal.id)}
+            materials={materialsByGoalId[goal.id] ?? []}
+            activeMaterialId={activeMaterialByGoal[goal.id] ?? null}
+            lastUsedStats={
+              (activeMaterialByGoal[goal.id] &&
+                lastUsedByGoalId[goal.id]?.[activeMaterialByGoal[goal.id]!]) ||
+              null
+            }
+            onSelectMaterial={(materialId) =>
+              handleSelectMaterial(goal.id, materialId)
+            }
+            onAddMaterial={(title, url) => handleAddMaterial(goal, title, url)}
           />
         ))}
       </div>

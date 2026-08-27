@@ -4,6 +4,15 @@ import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/role";
 import type { TeacherSessionGoal } from "@/lib/types";
+import {
+  groupMaterialChipsByGoalId,
+  type RawGoalMaterialLink,
+} from "@/lib/materials";
+import {
+  computeLastUsedStatsByGoalAndMaterial,
+  type ProgressGoal,
+  type RawMaterialTrialJoin,
+} from "@/lib/progress";
 import AvatarBadge from "@/components/avatar-badge";
 import NewSessionForm from "./new-session-form";
 
@@ -45,6 +54,48 @@ export default async function NewTeacherSessionPage({
     .eq("status", "active")
     .order("created_at", { ascending: false });
 
+  const sessionGoals = (goals ?? []) as unknown as TeacherSessionGoal[];
+  const goalIds = sessionGoals.map((g) => g.id);
+
+  // Which materials each goal has linked (for the in-card picker), and
+  // any past trials tagged with a material for these goals (to seed
+  // "Last used" stats once one gets selected) — both follow-up queries
+  // since they depend on the goal ids just fetched above.
+  const [materialLinksResult, materialTrialsResult] =
+    goalIds.length > 0
+      ? await Promise.all([
+          supabase
+            .from("teacher_material_goals")
+            .select("goal_id, material:teacher_materials(id, title, url)")
+            .in("goal_id", goalIds),
+          supabase
+            .from("teacher_trials")
+            .select("goal_id, material_id, value, session:teacher_sessions(date)")
+            .in("goal_id", goalIds)
+            .not("material_id", "is", null),
+        ])
+      : [{ data: [] as RawGoalMaterialLink[] }, { data: [] as RawMaterialTrialJoin[] }];
+
+  const materialsByGoalId = groupMaterialChipsByGoalId(
+    (materialLinksResult.data ?? []) as unknown as RawGoalMaterialLink[]
+  );
+  // buildGoalReport only cares about a goal's text/status/response_format —
+  // "subject" fills the same slot "area" does on the SLP side (same
+  // adapter as the teacher progress page).
+  const lastUsedByGoalId = computeLastUsedStatsByGoalAndMaterial(
+    sessionGoals.map(
+      (g) =>
+        ({
+          id: g.id,
+          text: g.text,
+          status: "active",
+          area: g.subject,
+          response_format: g.response_format,
+        }) as ProgressGoal
+    ),
+    (materialTrialsResult.data ?? []) as unknown as RawMaterialTrialJoin[]
+  );
+
   return (
     <main className="flex-1 bg-cream-50 px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-3xl">
@@ -73,7 +124,9 @@ export default async function NewTeacherSessionPage({
         <div className="mt-6">
           <NewSessionForm
             studentId={student.id}
-            goals={(goals ?? []) as unknown as TeacherSessionGoal[]}
+            goals={sessionGoals}
+            initialMaterialsByGoalId={materialsByGoalId}
+            lastUsedByGoalId={lastUsedByGoalId}
           />
         </div>
       </div>

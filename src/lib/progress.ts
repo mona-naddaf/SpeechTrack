@@ -208,6 +208,112 @@ function computeTrendDirection(values: number[]): TrendDirection {
   return "flat";
 }
 
+// ============================================================
+// Material usage — "Last used: X%" on the session page, once a material
+// is selected on a goal. Reuses buildGoalReport's per-session-date trend
+// (rather than re-deriving the cueing/rating/correct percent math) by
+// calling it with the trial list narrowed to just that material.
+// ============================================================
+
+export type MaterialUsageSummary = {
+  /** The metric from the most recent session this material was used in
+   *  for this goal — see computeLastUsedMaterialStats for why "most
+   *  recent" rather than an all-time average. */
+  percent: number;
+  /** e.g. "% independent", "% correct", "% of max rating (out of 4)" —
+   *  same wording buildGoalReport uses, so it reads consistently with
+   *  the Progress page. */
+  metricLabel: string;
+  sessionDate: string;
+  trialCount: number;
+};
+
+/** "Last used" stats for one material on one goal, from the most recent
+ *  session in which a trial was logged against that material — not an
+ *  all-time average across every session it's ever been used in. A
+ *  material might have been introduced months ago when cueing looked
+ *  very different, or used once on an off day; blending all of that into
+ *  one running average would wash out exactly the signal she's checking
+ *  for in the moment ("is this still working for this student?"). The
+ *  most recent session answers that question directly. */
+export function computeLastUsedMaterialStats(
+  goal: ProgressGoal,
+  materialTrials: ProgressTrial[]
+): MaterialUsageSummary | null {
+  if (materialTrials.length === 0) return null;
+
+  const report = buildGoalReport(goal, materialTrials);
+  if (report.trend.length === 0) return null;
+
+  const lastPoint = report.trend[report.trend.length - 1];
+  const trialCount = materialTrials.filter(
+    (t) => t.session_date === lastPoint.date
+  ).length;
+
+  return {
+    percent: lastPoint.percent,
+    metricLabel: report.metricLabel,
+    sessionDate: lastPoint.date,
+    trialCount,
+  };
+}
+
+/** Raw shape of a `trials`/`teacher_trials` row selected with a nested
+ *  `session:sessions(date)` (or `teacher_sessions(date)`) join — the
+ *  session page fetches exactly this (filtered to `material_id is not
+ *  null` for the goals being logged) to seed "Last used" for every
+ *  material on every goal in one query. */
+export type RawMaterialTrialJoin = {
+  goal_id: string;
+  material_id: string | null;
+  value: Record<string, unknown>;
+  session: { date: string } | { date: string }[] | null;
+};
+
+/** Groups raw material-tagged trial rows by goal, then by material, and
+ *  reduces each group down to its MaterialUsageSummary — everything the
+ *  session page needs to show "Last used: ..." under whichever material
+ *  ends up selected on each goal. */
+export function computeLastUsedStatsByGoalAndMaterial(
+  goals: ProgressGoal[],
+  rows: RawMaterialTrialJoin[]
+): Record<string, Record<string, MaterialUsageSummary>> {
+  const goalById = new Map(goals.map((g) => [g.id, g]));
+  const trialsByGoalAndMaterial = new Map<string, Map<string, ProgressTrial[]>>();
+
+  for (const row of rows) {
+    if (!row.material_id) continue;
+    const session = Array.isArray(row.session) ? row.session[0] : row.session;
+    if (!session) continue;
+
+    const byMaterial =
+      trialsByGoalAndMaterial.get(row.goal_id) ?? new Map<string, ProgressTrial[]>();
+    const list = byMaterial.get(row.material_id) ?? [];
+    list.push({
+      id: "",
+      goal_id: row.goal_id,
+      value: row.value,
+      session_date: session.date,
+    });
+    byMaterial.set(row.material_id, list);
+    trialsByGoalAndMaterial.set(row.goal_id, byMaterial);
+  }
+
+  const result: Record<string, Record<string, MaterialUsageSummary>> = {};
+  for (const [goalId, byMaterial] of trialsByGoalAndMaterial) {
+    const goal = goalById.get(goalId);
+    if (!goal) continue;
+
+    const perMaterial: Record<string, MaterialUsageSummary> = {};
+    for (const [materialId, trials] of byMaterial) {
+      const stats = computeLastUsedMaterialStats(goal, trials);
+      if (stats) perMaterial[materialId] = stats;
+    }
+    result[goalId] = perMaterial;
+  }
+  return result;
+}
+
 function buildSummary(
   goal: ProgressGoal,
   stats: {

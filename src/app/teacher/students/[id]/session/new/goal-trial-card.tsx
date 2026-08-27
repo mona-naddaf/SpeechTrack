@@ -2,14 +2,23 @@
 
 import { useState } from "react";
 import { Check, Undo2, X } from "lucide-react";
-import type { TeacherSessionGoal, Trial } from "@/lib/types";
+import type { MaterialChip, TeacherSessionGoal, Trial } from "@/lib/types";
+import type { MaterialUsageSummary } from "@/lib/progress";
 import { getColorOption } from "@/lib/colors";
+import GoalMaterialSection, {
+  type AddMaterialResult,
+} from "./goal-material-section";
 
 type Props = {
   goal: TeacherSessionGoal;
   trials: Trial[];
   onLogTrial: (value: Record<string, unknown>) => Promise<void> | void;
   onUndo: () => Promise<void> | void;
+  materials: MaterialChip[];
+  activeMaterialId: string | null;
+  lastUsedStats: MaterialUsageSummary | null;
+  onSelectMaterial: (materialId: string | null) => void;
+  onAddMaterial: (title: string, url: string) => Promise<AddMaterialResult>;
 };
 
 export default function GoalTrialCard({
@@ -17,6 +26,11 @@ export default function GoalTrialCard({
   trials,
   onLogTrial,
   onUndo,
+  materials,
+  activeMaterialId,
+  lastUsedStats,
+  onSelectMaterial,
+  onAddMaterial,
 }: Props) {
   const [logging, setLogging] = useState(false);
   const [undoing, setUndoing] = useState(false);
@@ -66,6 +80,13 @@ export default function GoalTrialCard({
           <p className="mt-2 text-sm font-medium text-stone-900">
             {goal.text}
           </p>
+          <GoalMaterialSection
+            materials={materials}
+            activeMaterialId={activeMaterialId}
+            lastUsedStats={lastUsedStats}
+            onSelect={onSelectMaterial}
+            onAddMaterial={onAddMaterial}
+          />
         </div>
         <span className="shrink-0 text-xs text-stone-400">
           {trials.length} trial{trials.length === 1 ? "" : "s"}

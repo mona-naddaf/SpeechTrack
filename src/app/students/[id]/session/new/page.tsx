@@ -3,6 +3,15 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { SessionGoal } from "@/lib/types";
+import {
+  groupMaterialChipsByGoalId,
+  type RawGoalMaterialLink,
+} from "@/lib/materials";
+import {
+  computeLastUsedStatsByGoalAndMaterial,
+  type ProgressGoal,
+  type RawMaterialTrialJoin,
+} from "@/lib/progress";
 import AvatarBadge from "@/components/avatar-badge";
 import NewSessionForm from "./new-session-form";
 
@@ -40,6 +49,36 @@ export default async function NewSessionPage({
     .eq("status", "active")
     .order("created_at", { ascending: false });
 
+  const sessionGoals = (goals ?? []) as unknown as SessionGoal[];
+  const goalIds = sessionGoals.map((g) => g.id);
+
+  // Which materials each goal has linked (for the in-card picker), and
+  // any past trials tagged with a material for these goals (to seed
+  // "Last used" stats once one gets selected) — both follow-up queries
+  // since they depend on the goal ids just fetched above.
+  const [materialLinksResult, materialTrialsResult] =
+    goalIds.length > 0
+      ? await Promise.all([
+          supabase
+            .from("material_goals")
+            .select("goal_id, material:materials(id, title, url)")
+            .in("goal_id", goalIds),
+          supabase
+            .from("trials")
+            .select("goal_id, material_id, value, session:sessions(date)")
+            .in("goal_id", goalIds)
+            .not("material_id", "is", null),
+        ])
+      : [{ data: [] as RawGoalMaterialLink[] }, { data: [] as RawMaterialTrialJoin[] }];
+
+  const materialsByGoalId = groupMaterialChipsByGoalId(
+    (materialLinksResult.data ?? []) as unknown as RawGoalMaterialLink[]
+  );
+  const lastUsedByGoalId = computeLastUsedStatsByGoalAndMaterial(
+    sessionGoals.map((g) => ({ ...g, status: "active" }) as ProgressGoal),
+    (materialTrialsResult.data ?? []) as unknown as RawMaterialTrialJoin[]
+  );
+
   return (
     <main className="flex-1 bg-cream-50 px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-3xl">
@@ -68,7 +107,9 @@ export default async function NewSessionPage({
         <div className="mt-6">
           <NewSessionForm
             studentId={student.id}
-            goals={(goals ?? []) as unknown as SessionGoal[]}
+            goals={sessionGoals}
+            initialMaterialsByGoalId={materialsByGoalId}
+            lastUsedByGoalId={lastUsedByGoalId}
           />
         </div>
       </div>
