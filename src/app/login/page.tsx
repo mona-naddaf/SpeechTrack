@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -35,8 +35,18 @@ const ROLE_COPY: Record<
 };
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
-  const [view, setView] = useState<View>("choose");
+  const searchParams = useSearchParams();
+  const resetSucceeded = searchParams.get("reset") === "success";
+  const [view, setView] = useState<View>(resetSucceeded ? "form" : "choose");
   const [mode, setMode] = useState<Mode>("sign-in");
   const [role, setRole] = useState<Role>("slp");
   const [fullName, setFullName] = useState("");
@@ -44,7 +54,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(
+    resetSucceeded ? "Your password has been updated. Please sign in." : null
+  );
 
   function enterForm(chosenRole: Role) {
     setRole(chosenRole);
@@ -322,6 +334,16 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
                 />
+                {mode === "sign-in" && (
+                  <div className="mt-1.5 text-right">
+                    <Link
+                      href="/forgot-password"
+                      className="text-sm font-medium text-brand-700 underline underline-offset-2 hover:text-brand-800"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
+                )}
               </div>
 
               {error && <p className="text-sm text-red-600">{error}</p>}
