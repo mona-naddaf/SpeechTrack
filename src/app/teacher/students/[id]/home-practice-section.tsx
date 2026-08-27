@@ -130,7 +130,7 @@ export default function HomePracticeSection({
   }
 
   return (
-    <div>
+    <div data-tour="student-home-practice">
       <SectionHeader
         icon={Home}
         title="Home practice"

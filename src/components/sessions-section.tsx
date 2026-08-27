@@ -45,6 +45,7 @@ export default function SessionsSection({
         actions={
           <Link
             href={newSessionHref}
+            data-tour="student-start-session"
             className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md"
           >
             <PlayCircle className="h-4 w-4" />

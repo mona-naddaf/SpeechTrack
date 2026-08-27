@@ -10,8 +10,10 @@ import {
   findAtRiskStreaks,
   groupDatesByStudent,
 } from "@/lib/caseload";
+import { buildTeacherDashboardSteps } from "@/lib/onboarding-tour";
 import CaseloadWinsCard from "@/components/caseload-wins-card";
 import StreakRiskNudges from "@/components/streak-risk-nudges";
+import DashboardTour from "@/components/dashboard-tour";
 import SignOutButton from "./sign-out-button";
 import StudentsSection from "./students-section";
 
@@ -96,6 +98,7 @@ export default async function TeacherDashboardPage() {
           <div className="flex flex-wrap items-center gap-3">
             <Link
               href="/teacher/toolkit/goals"
+              data-tour="toolkit-nav"
               className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
             >
               <ListChecks className="h-4 w-4" />
@@ -122,6 +125,14 @@ export default async function TeacherDashboardPage() {
               <Library className="h-4 w-4" />
               Materials
             </Link>
+            <DashboardTour
+              role="teacher"
+              steps={buildTeacherDashboardSteps((students ?? []).length > 0)}
+              autoStart={user.user_metadata?.has_seen_tour !== true}
+              continueHref={
+                students?.[0] ? `/teacher/students/${students[0].id}` : null
+              }
+            />
             <SignOutButton />
           </div>
         </div>

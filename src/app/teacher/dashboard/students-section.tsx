@@ -134,13 +134,14 @@ export default function StudentsSection({
   }
 
   return (
-    <div>
+    <div data-tour="dashboard-students">
       <div className="flex items-center justify-between gap-4">
         <h2 className="flex items-center gap-2 text-lg font-semibold text-stone-900">
           <Users className="h-5 w-5 text-brand-500" />
           Students
         </h2>
         <button
+          data-tour="dashboard-add-student"
           onClick={() => setShowAddModal(true)}
           className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md"
         >

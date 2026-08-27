@@ -220,7 +220,7 @@ export default function GoalsSection({
   }
 
   return (
-    <div>
+    <div data-tour="student-goals-section">
       <SectionHeader
         icon={Target}
         title="Goals"

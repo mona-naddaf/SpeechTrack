@@ -17,11 +17,13 @@ import {
 } from "@/lib/materials";
 import { computeCadenceStreak, formatCadenceStreakLabel } from "@/lib/streaks";
 import { formatScheduledDays } from "@/lib/schedule";
+import { TEACHER_STUDENT_TOUR_STEPS } from "@/lib/onboarding-tour";
 import StreakBadge from "@/components/streak-badge";
 import AvatarBadge from "@/components/avatar-badge";
 import AttendanceSection from "@/components/attendance-section";
 import SessionsSection from "@/components/sessions-section";
 import SectionPreferencesProvider from "@/components/section-preferences";
+import StudentTour from "@/components/student-tour";
 import GoalsSection from "./goals-section";
 import BehaviorSection from "./behavior-section";
 import HomePracticeSection from "./home-practice-section";
@@ -176,6 +178,7 @@ export default async function TeacherStudentDetailPage({
 
   return (
     <main className="flex-1 bg-cream-50 px-4 py-8 sm:px-6 sm:py-10">
+      <StudentTour role="teacher" steps={TEACHER_STUDENT_TOUR_STEPS} />
       <div className="mx-auto max-w-3xl">
         <Link
           href="/teacher/dashboard"
@@ -213,6 +216,7 @@ export default async function TeacherStudentDetailPage({
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <Link
             href={`/teacher/students/${student.id}/progress`}
+            data-tour="student-view-progress"
             className="inline-flex items-center gap-1.5 rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md"
           >
             <TrendingUp className="h-4 w-4" />
