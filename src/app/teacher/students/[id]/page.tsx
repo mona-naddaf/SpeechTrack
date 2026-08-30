@@ -22,6 +22,7 @@ import { TEACHER_STUDENT_TOUR_STEPS } from "@/lib/onboarding-tour";
 import StreakBadge from "@/components/streak-badge";
 import AvatarBadge from "@/components/avatar-badge";
 import AttendanceSection from "@/components/attendance-section";
+import GenerateReportButton from "@/components/generate-report-button";
 import SessionsSection from "@/components/sessions-section";
 import SectionPreferencesProvider from "@/components/section-preferences";
 import StudentTour from "@/components/student-tour";
@@ -225,6 +226,7 @@ export default async function TeacherStudentDetailPage({
             View progress
           </Link>
           <ExportButtons studentId={student.id} studentName={student.name} />
+          <GenerateReportButton studentId={student.id} studentName={student.name} />
         </div>
 
         <SectionPreferencesProvider
