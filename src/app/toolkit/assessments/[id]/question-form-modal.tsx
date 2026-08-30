@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { Plus, X } from "lucide-react";
 import type { AssessmentQuestion, AssessmentQuestionResponseType } from "@/lib/types";
 import { ASSESSMENT_RESPONSE_TYPE_LABELS } from "@/lib/assessment";
 
@@ -9,6 +10,9 @@ export type QuestionFormValues = {
   responseType: AssessmentQuestionResponseType;
   expectedAnswer: string;
   notes: string;
+  /** Only meaningful (and required, 2-4 non-empty) when responseType is
+   *  "custom_choice" — null otherwise. */
+  choices: string[] | null;
 };
 
 type Props = {
@@ -22,7 +26,11 @@ const RESPONSE_TYPES: AssessmentQuestionResponseType[] = [
   "right_wrong",
   "transcription",
   "free_text",
+  "custom_choice",
 ];
+
+const MIN_CHOICES = 2;
+const MAX_CHOICES = 4;
 
 export default function QuestionFormModal({
   mode,
@@ -38,14 +46,42 @@ export default function QuestionFormModal({
     initialQuestion?.expected_answer ?? ""
   );
   const [notes, setNotes] = useState(initialQuestion?.notes ?? "");
+  const [choices, setChoices] = useState<string[]>(
+    initialQuestion?.choices && initialQuestion.choices.length > 0
+      ? initialQuestion.choices
+      : ["", ""]
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function updateChoice(index: number, value: string) {
+    setChoices((prev) => prev.map((c, i) => (i === index ? value : c)));
+  }
+
+  function addChoice() {
+    setChoices((prev) => (prev.length >= MAX_CHOICES ? prev : [...prev, ""]));
+  }
+
+  function removeChoice(index: number) {
+    setChoices((prev) =>
+      prev.length <= MIN_CHOICES ? prev : prev.filter((_, i) => i !== index)
+    );
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!prompt.trim()) {
       setError("Please enter the question prompt.");
       return;
+    }
+
+    let trimmedChoices: string[] | null = null;
+    if (responseType === "custom_choice") {
+      trimmedChoices = choices.map((c) => c.trim()).filter(Boolean);
+      if (trimmedChoices.length < MIN_CHOICES) {
+        setError(`Please enter at least ${MIN_CHOICES} choices.`);
+        return;
+      }
     }
 
     setLoading(true);
@@ -55,6 +91,7 @@ export default function QuestionFormModal({
       responseType,
       expectedAnswer: expectedAnswer.trim(),
       notes: notes.trim(),
+      choices: trimmedChoices,
     });
     setLoading(false);
     if (result) {
@@ -110,6 +147,46 @@ export default function QuestionFormModal({
               ))}
             </select>
           </div>
+
+          {responseType === "custom_choice" && (
+            <div>
+              <span className="block text-sm font-medium text-stone-700">
+                Choices <span className="text-stone-400">(2-4)</span>
+              </span>
+              <div className="mt-1 space-y-2">
+                {choices.map((choice, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={choice}
+                      onChange={(e) => updateChoice(i, e.target.value)}
+                      placeholder={`Option ${i + 1}`}
+                      className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeChoice(i)}
+                      disabled={choices.length <= MIN_CHOICES}
+                      aria-label="Remove choice"
+                      className="shrink-0 rounded-lg p-2 text-stone-400 transition-colors hover:bg-stone-100 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {choices.length < MAX_CHOICES && (
+                <button
+                  type="button"
+                  onClick={addChoice}
+                  className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-brand-700 hover:text-brand-800"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add choice
+                </button>
+              )}
+            </div>
+          )}
 
           <div>
             <label

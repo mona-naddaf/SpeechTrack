@@ -224,7 +224,8 @@ export type PracticeLogWithPraise = PracticeLog & {
 export type AssessmentQuestionResponseType =
   | "right_wrong"
   | "transcription"
-  | "free_text";
+  | "free_text"
+  | "custom_choice";
 
 export type AssessmentKind = "screening" | "assessment";
 export type AssessmentFormality = "formal" | "informal";
@@ -252,6 +253,9 @@ export type AssessmentQuestion = {
   response_type: AssessmentQuestionResponseType;
   expected_answer: string | null;
   notes: string | null;
+  /** Custom option labels for a "custom_choice" question (e.g. ["Present",
+   *  "Emerging", "Absent"]) — null/unused for every other response_type. */
+  choices: string[] | null;
   created_at: string;
 };
 
@@ -276,7 +280,9 @@ export type AssessmentResultWithAssessment = AssessmentResult & {
 /** Answer value shapes, by response type:
  *  - right_wrong: {correct: boolean}
  *  - transcription: {text: string, tag?: "correct" | "approx" | "incorrect"}
- *  - free_text: {text: string} */
+ *  - free_text: {text: string}
+ *  - custom_choice: {text: string} — the selected label, verbatim from the
+ *    question's own `choices` list */
 export type AssessmentAnswerValue = {
   correct?: boolean;
   text?: string;

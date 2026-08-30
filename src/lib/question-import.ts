@@ -16,10 +16,28 @@ const RESPONSE_TYPE_ALIASES: Record<string, AssessmentQuestionResponseType> = {
   transcription: "transcription",
   free_text: "free_text",
   "free text": "free_text",
+  custom_choice: "custom_choice",
+  "custom choice": "custom_choice",
+  "custom choices": "custom_choice",
 };
 
 function normalizeResponseType(raw: string): AssessmentQuestionResponseType | null {
   return RESPONSE_TYPE_ALIASES[raw.trim().toLowerCase()] ?? null;
+}
+
+const MIN_CHOICES = 2;
+const MAX_CHOICES = 4;
+
+/** Splits a "Choices" cell into individual option labels. Accepts either
+ *  a comma or a semicolon as the separator (whichever reads cleaner for a
+ *  given set of labels — e.g. options that themselves contain commas can
+ *  use semicolons instead), trims each one, and drops empties. */
+function parseChoicesCell(raw: string): string[] {
+  const separator = raw.includes(";") ? ";" : ",";
+  return raw
+    .split(separator)
+    .map((c) => c.trim())
+    .filter(Boolean);
 }
 
 export type ParsedQuestionImportRow = {
@@ -28,6 +46,8 @@ export type ParsedQuestionImportRow = {
   responseType: AssessmentQuestionResponseType;
   expectedAnswer: string | null;
   notes: string | null;
+  /** Only set (2-4 labels) when responseType is "custom_choice". */
+  choices: string[] | null;
 };
 
 export type QuestionImportParseResult = {
@@ -56,9 +76,24 @@ export function parseQuestionImportRows(rows: XlsxRow[]): QuestionImportParseRes
         rowNumber: row.rowNumber,
         reason: `Invalid response type "${
           rawType || "(blank)"
-        }" — must be right_wrong, transcription, or free_text`,
+        }" — must be right_wrong, transcription, free_text, or custom_choice`,
       });
       continue;
+    }
+
+    let choices: string[] | null = null;
+    if (responseType === "custom_choice") {
+      choices = parseChoicesCell(row.get("Choices"));
+      if (choices.length < MIN_CHOICES) {
+        skipped.push({
+          rowNumber: row.rowNumber,
+          reason: `Custom choice questions need a "Choices" column with at least ${MIN_CHOICES} options, separated by commas or semicolons`,
+        });
+        continue;
+      }
+      if (choices.length > MAX_CHOICES) {
+        choices = choices.slice(0, MAX_CHOICES);
+      }
     }
 
     valid.push({
@@ -67,6 +102,7 @@ export function parseQuestionImportRows(rows: XlsxRow[]): QuestionImportParseRes
       responseType,
       expectedAnswer: row.get("Expected Answer", "Expected") || null,
       notes: row.get("Notes") || null,
+      choices,
     });
   }
 

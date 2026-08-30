@@ -54,7 +54,7 @@ export default async function AssessmentResultPage({
     supabase
       .from("assessment_questions")
       .select(
-        "id, assessment_id, order_index, prompt, response_type, expected_answer, notes, created_at"
+        "id, assessment_id, order_index, prompt, response_type, expected_answer, notes, choices, created_at"
       )
       .eq("assessment_id", result.assessment_id)
       .order("order_index", { ascending: true })

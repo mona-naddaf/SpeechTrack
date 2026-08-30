@@ -16,6 +16,7 @@ export const ASSESSMENT_RESPONSE_TYPE_LABELS: Record<
   right_wrong: "Correct/Incorrect",
   transcription: "Transcription",
   free_text: "Free text",
+  custom_choice: "Custom choices",
 };
 
 export const ASSESSMENT_KIND_LABELS: Record<AssessmentKind, string> = {
@@ -84,6 +85,7 @@ export function isAssessmentAnswered(
   if (responseType === "right_wrong") return typeof value.correct === "boolean";
   if (responseType === "transcription")
     return Boolean(value.tag) || Boolean(value.text?.trim());
+  // free_text and custom_choice both just store {text}.
   return Boolean(value.text?.trim());
 }
 
@@ -105,7 +107,7 @@ export function formatAssessmentAnswer(
     return `"${value.text.trim()}"${tag}`;
   }
 
-  // free_text
+  // free_text and custom_choice
   return value.text?.trim() || "Not answered";
 }
 
@@ -120,7 +122,8 @@ export type AssessmentScore = {
   /** Transcription answers tagged "approx" — counted separately, not toward `correct`. */
   approx: number;
   /** Total answers that count toward the score at all (right_wrong answered +
-   *  transcription answered with a tag). free_text never counts. */
+   *  transcription answered with a tag). free_text and custom_choice never count —
+   *  they aren't inherently right or wrong. */
   total: number;
 };
 
@@ -143,7 +146,7 @@ export function computeAssessmentScore(answers: AnswerForScoring[]): AssessmentS
       if (answer.value.tag === "correct") correct += 1;
       if (answer.value.tag === "approx") approx += 1;
     }
-    // free_text is never scored.
+    // free_text and custom_choice are never scored — not inherently right/wrong.
   }
 
   return { correct, approx, total };

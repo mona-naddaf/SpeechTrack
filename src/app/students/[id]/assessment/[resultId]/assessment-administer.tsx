@@ -138,6 +138,12 @@ export default function AssessmentAdminister({
     setDrafts((prev) => ({ ...prev, [questionId]: text }));
   }
 
+  function handleChoiceSelect(question: AssessmentQuestion, choice: string) {
+    const current = answers[question.id] ?? {};
+    const nextText = current.text === choice ? "" : choice;
+    persist(question, { ...current, text: nextText });
+  }
+
   function handleTextBlur(question: AssessmentQuestion) {
     const text = drafts[question.id] ?? "";
     const current = answers[question.id] ?? {};
@@ -320,6 +326,26 @@ export default function AssessmentAdminister({
                       disabled={saving}
                       className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:opacity-50"
                     />
+                  )}
+
+                  {question.response_type === "custom_choice" && (
+                    <div className="flex flex-wrap gap-2">
+                      {(question.choices ?? []).map((choice) => (
+                        <button
+                          key={choice}
+                          type="button"
+                          onClick={() => handleChoiceSelect(question, choice)}
+                          disabled={saving}
+                          className={`rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors disabled:opacity-50 ${
+                            value?.text === choice
+                              ? "bg-brand-700 text-white"
+                              : "bg-stone-100 text-stone-700 hover:bg-stone-200"
+                          }`}
+                        >
+                          {choice}
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
               </li>

@@ -21,7 +21,7 @@ import QuestionFormModal, { type QuestionFormValues } from "./question-form-moda
 import DeleteQuestionConfirmModal from "./delete-question-confirm-modal";
 
 const QUESTION_SELECT_COLUMNS =
-  "id, assessment_id, order_index, prompt, response_type, expected_answer, notes, created_at";
+  "id, assessment_id, order_index, prompt, response_type, expected_answer, notes, choices, created_at";
 
 const KINDS: AssessmentKind[] = ["screening", "assessment"];
 const FORMALITIES: AssessmentFormality[] = ["formal", "informal"];
@@ -162,6 +162,7 @@ export default function AssessmentEditor({
         response_type: values.responseType,
         expected_answer: values.expectedAnswer || null,
         notes: values.notes || null,
+        choices: values.choices,
       })
       .select(QUESTION_SELECT_COLUMNS)
       .single();
@@ -186,6 +187,7 @@ export default function AssessmentEditor({
         response_type: values.responseType,
         expected_answer: values.expectedAnswer || null,
         notes: values.notes || null,
+        choices: values.choices,
       })
       .eq("id", editingQuestion.id)
       .select(QUESTION_SELECT_COLUMNS)
@@ -223,13 +225,21 @@ export default function AssessmentEditor({
   async function handleDownloadQuestionTemplate() {
     await downloadXlsxTemplate(
       "assessment-questions-template.xlsx",
-      ["Prompt", "Response Type", "Expected Answer", "Notes"],
+      ["Prompt", "Response Type", "Expected Answer", "Notes", "Choices"],
       [
         [
           "Point to the picture of a dog.",
           "right_wrong",
           "",
           "Show the animal picture card",
+          "",
+        ],
+        [
+          "Rate use of target sound in conversation.",
+          "custom_choice",
+          "",
+          "",
+          "Present, Emerging, Absent",
         ],
       ]
     );
@@ -266,6 +276,7 @@ export default function AssessmentEditor({
               response_type: row.responseType,
               expected_answer: row.expectedAnswer,
               notes: row.notes,
+              choices: row.choices,
             }))
           )
           .select(QUESTION_SELECT_COLUMNS);
@@ -516,6 +527,13 @@ export default function AssessmentEditor({
                     Expected: {question.expected_answer}
                   </p>
                 )}
+                {question.response_type === "custom_choice" &&
+                  question.choices &&
+                  question.choices.length > 0 && (
+                    <p className="mt-1 text-sm text-stone-500">
+                      Choices: {question.choices.join(", ")}
+                    </p>
+                  )}
                 {question.notes && (
                   <p className="mt-1 text-sm text-stone-400">
                     {question.notes}
