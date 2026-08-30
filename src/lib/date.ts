@@ -43,3 +43,19 @@ export function formatDateRange(first: string, last: string): string {
     ? formatDate(first)
     : `${formatDate(first)} – ${formatDate(last)}`;
 }
+
+/** Age in whole years, computed live from a YYYY-MM-DD date of birth
+ *  against today's local date — deliberately never stored, so it's
+ *  always correct without a birthday-crossing background job. */
+export function computeAge(dateOfBirth: string): number {
+  const today = new Date(`${getTodayLocalDateString()}T00:00:00`);
+  const dob = new Date(`${dateOfBirth}T00:00:00`);
+  let age = today.getFullYear() - dob.getFullYear();
+  const hasHadBirthdayThisYear =
+    today.getMonth() > dob.getMonth() ||
+    (today.getMonth() === dob.getMonth() && today.getDate() >= dob.getDate());
+  if (!hasHadBirthdayThisYear) {
+    age--;
+  }
+  return age;
+}

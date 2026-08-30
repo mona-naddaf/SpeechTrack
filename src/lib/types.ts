@@ -25,6 +25,21 @@ export type Student = {
   created_at: string;
 };
 
+/** A student's extended info — date of birth, homeroom teacher, parent
+ *  emails, plus any custom label/value pairs. Deliberately not part of
+ *  `Student` above: the dashboard list/add/edit-student modal never
+ *  fetches or edits any of this, only the student page's own "Student
+ *  info" section/edit modal does (see student-info-section.tsx), so its
+ *  query types this data on its own rather than through the `Student`
+ *  shape the dashboard uses. */
+export type StudentCustomField = {
+  id: string;
+  student_id: string;
+  label: string;
+  value: string;
+  created_at: string;
+};
+
 export type ResponseFormatType =
   | "cueing_hierarchy"
   | "correct_incorrect"
@@ -316,6 +331,16 @@ export type TeacherStudent = {
   avatar: string | null;
   /** Which weekdays sessions are scheduled for — empty array means not set. */
   scheduled_days: DayOfWeek[];
+  created_at: string;
+};
+
+/** Teacher-side mirror of StudentCustomField above — same "not part of
+ *  TeacherStudent" reasoning applies. */
+export type TeacherStudentCustomField = {
+  id: string;
+  student_id: string;
+  label: string;
+  value: string;
   created_at: string;
 };
 

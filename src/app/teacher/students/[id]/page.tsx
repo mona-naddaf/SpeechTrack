@@ -10,6 +10,7 @@ import type {
   HomePracticeItem,
   PracticeLogWithPraise,
   TeacherGoalWithRelations,
+  TeacherStudentCustomField,
 } from "@/lib/types";
 import {
   resolveMaterialChipsByGoal,
@@ -24,6 +25,7 @@ import AttendanceSection from "@/components/attendance-section";
 import SessionsSection from "@/components/sessions-section";
 import SectionPreferencesProvider from "@/components/section-preferences";
 import StudentTour from "@/components/student-tour";
+import StudentInfoSection from "./student-info-section";
 import GoalsSection from "./goals-section";
 import BehaviorSection from "./behavior-section";
 import HomePracticeSection from "./home-practice-section";
@@ -55,7 +57,7 @@ export default async function TeacherStudentDetailPage({
   const { data: student } = await supabase
     .from("teacher_students")
     .select(
-      "id, name, class, parent_access_code, share_behavior_with_parent, expected_frequency, avatar, scheduled_days, created_at"
+      "id, name, class, parent_access_code, share_behavior_with_parent, expected_frequency, avatar, scheduled_days, created_at, date_of_birth, mother_email, father_email, homeroom_teacher, custom_fields:teacher_student_custom_fields(id, student_id, label, value, created_at)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -228,6 +230,26 @@ export default async function TeacherStudentDetailPage({
         <SectionPreferencesProvider
           storageKey="bloomtrack:student-page-sections:teacher"
           sections={[
+            {
+              key: "student_info",
+              defaultCollapsed: false,
+              node: (
+                <StudentInfoSection
+                  studentId={student.id}
+                  studentClass={student.class}
+                  initialValues={{
+                    dateOfBirth: student.date_of_birth,
+                    motherEmail: student.mother_email,
+                    fatherEmail: student.father_email,
+                    homeroomTeacher: student.homeroom_teacher,
+                  }}
+                  initialCustomFields={
+                    (student.custom_fields ??
+                      []) as unknown as TeacherStudentCustomField[]
+                  }
+                />
+              ),
+            },
             {
               key: "goals",
               defaultCollapsed: false,
