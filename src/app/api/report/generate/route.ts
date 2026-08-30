@@ -97,7 +97,15 @@ export async function POST(request: Request) {
 
   // The account's role — never trust a client-provided role, since RLS on
   // the teacher_*/slp tables is what actually keeps the two sides apart.
+  // Supervisors have no caseload of their own, so they have no reports to
+  // generate here — this route is SLP/Teacher-only.
   const role = getUserRole(user);
+  if (role === "supervisor") {
+    return NextResponse.json(
+      { error: "Supervisor accounts don't generate reports." },
+      { status: 403 }
+    );
+  }
   const tables = TABLES[role];
   const areaSelect =
     role === "teacher" ? "subject:teacher_subjects(id, name)" : "area:areas(id, name)";

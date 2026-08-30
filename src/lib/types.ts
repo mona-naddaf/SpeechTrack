@@ -501,3 +501,32 @@ export type SlpBehaviorLog = {
 export type SlpBehaviorLogWithType = SlpBehaviorLog & {
   behavior_type: { id: string; name: string; color: string } | null;
 };
+
+// ============================================================
+// Supervisor role — step 1: invite codes + links only. A Supervisor's
+// read-only caseload view of a linked SLP/Teacher is a later step.
+// ============================================================
+
+export type SupervisorInviteCode = {
+  id: string;
+  supervisor_id: string;
+  code: string;
+  created_at: string;
+  used_by: string | null;
+  used_at: string | null;
+};
+
+export type SupervisorMemberRole = "slp" | "teacher";
+
+export type SupervisorLink = {
+  id: string;
+  supervisor_id: string;
+  member_id: string;
+  member_role: SupervisorMemberRole;
+  /** Snapshot of the member's display name taken when the link was
+   *  created (see redeem_supervisor_invite_code() in
+   *  0021_supervisor_role_and_links.sql) — not kept in sync with later
+   *  name changes. */
+  member_name: string;
+  created_at: string;
+};

@@ -1,4 +1,4 @@
-export type Role = "slp" | "teacher";
+export type Role = "slp" | "teacher" | "supervisor";
 
 /** Reads the account's role from Supabase auth user_metadata. Accounts
  *  created before this field existed (or anything malformed) default to
@@ -6,5 +6,8 @@ export type Role = "slp" | "teacher";
 export function getUserRole(
   user: { user_metadata?: Record<string, unknown> | null } | null | undefined
 ): Role {
-  return user?.user_metadata?.role === "teacher" ? "teacher" : "slp";
+  const role = user?.user_metadata?.role;
+  if (role === "teacher") return "teacher";
+  if (role === "supervisor") return "supervisor";
+  return "slp";
 }

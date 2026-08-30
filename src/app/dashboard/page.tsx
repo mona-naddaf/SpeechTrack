@@ -14,6 +14,7 @@ import { buildSlpDashboardSteps } from "@/lib/onboarding-tour";
 import CaseloadWinsCard from "@/components/caseload-wins-card";
 import StreakRiskNudges from "@/components/streak-risk-nudges";
 import DashboardTour from "@/components/dashboard-tour";
+import LinkSupervisorButton from "@/components/link-supervisor-button";
 import SignOutButton from "./sign-out-button";
 import StudentsSection from "./students-section";
 import NamePromptModal from "./name-prompt-modal";
@@ -139,6 +140,7 @@ export default async function DashboardPage() {
               autoStart={user.user_metadata?.has_seen_tour !== true}
               continueHref={students?.[0] ? `/students/${students[0].id}` : null}
             />
+            <LinkSupervisorButton />
             <SignOutButton />
           </div>
         </div>

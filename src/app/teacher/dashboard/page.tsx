@@ -14,6 +14,7 @@ import { buildTeacherDashboardSteps } from "@/lib/onboarding-tour";
 import CaseloadWinsCard from "@/components/caseload-wins-card";
 import StreakRiskNudges from "@/components/streak-risk-nudges";
 import DashboardTour from "@/components/dashboard-tour";
+import LinkSupervisorButton from "@/components/link-supervisor-button";
 import SignOutButton from "./sign-out-button";
 import StudentsSection from "./students-section";
 
@@ -133,6 +134,7 @@ export default async function TeacherDashboardPage() {
                 students?.[0] ? `/teacher/students/${students[0].id}` : null
               }
             />
+            <LinkSupervisorButton />
             <SignOutButton />
           </div>
         </div>

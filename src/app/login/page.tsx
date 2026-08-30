@@ -9,6 +9,7 @@ import {
   GraduationCap,
   HeartHandshake,
   MessageCircleHeart,
+  Users,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getUserRole, type Role } from "@/lib/role";
@@ -31,6 +32,12 @@ const ROLE_COPY: Record<
     label: "Teacher",
     signInSubtitle: "Sign in to your Teacher account.",
     signUpSubtitle: "Let's get your classroom set up.",
+  },
+  supervisor: {
+    icon: Users,
+    label: "Supervisor",
+    signInSubtitle: "Sign in to your Supervisor account.",
+    signUpSubtitle: "Let's get you connected to your team.",
   },
 };
 
@@ -72,7 +79,13 @@ function LoginForm() {
   }
 
   function routeForRole(accountRole: Role) {
-    router.push(accountRole === "teacher" ? "/teacher/dashboard" : "/dashboard");
+    const path =
+      accountRole === "teacher"
+        ? "/teacher/dashboard"
+        : accountRole === "supervisor"
+          ? "/supervisor/dashboard"
+          : "/dashboard";
+    router.push(path);
     router.refresh();
   }
 
@@ -213,6 +226,25 @@ function LoginForm() {
                 <ArrowRight className="h-4 w-4 shrink-0 text-stone-300" />
               </button>
 
+              <button
+                type="button"
+                onClick={() => enterForm("supervisor")}
+                className="flex w-full items-center gap-3 rounded-xl border border-stone-200 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-100">
+                  <Users className="h-5 w-5 text-indigo-600" />
+                </div>
+                <span className="flex-1">
+                  <span className="block font-semibold text-stone-900">
+                    Supervisor
+                  </span>
+                  <span className="block text-sm text-stone-500">
+                    Oversee SLPs and Teachers
+                  </span>
+                </span>
+                <ArrowRight className="h-4 w-4 shrink-0 text-stone-300" />
+              </button>
+
               <Link
                 href="/parent"
                 className="flex w-full items-center gap-3 rounded-xl border border-stone-200 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-md"
@@ -269,9 +301,10 @@ function LoginForm() {
 
                   <div>
                     <span className="block text-sm font-medium text-stone-700">
-                      Are you a Speech-Language Pathologist or a Teacher?
+                      Are you a Speech-Language Pathologist, a Teacher, or a
+                      Supervisor?
                     </span>
-                    <div className="mt-1 flex gap-4 text-sm text-stone-600">
+                    <div className="mt-1 flex flex-wrap gap-4 text-sm text-stone-600">
                       <label className="flex items-center gap-1.5">
                         <input
                           type="radio"
@@ -289,6 +322,15 @@ function LoginForm() {
                           onChange={() => setRole("teacher")}
                         />
                         Teacher
+                      </label>
+                      <label className="flex items-center gap-1.5">
+                        <input
+                          type="radio"
+                          name="role"
+                          checked={role === "supervisor"}
+                          onChange={() => setRole("supervisor")}
+                        />
+                        Supervisor
                       </label>
                     </div>
                   </div>
