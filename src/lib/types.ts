@@ -67,6 +67,11 @@ export type CorrectIncorrectConfig = {
   incorrectLabel?: string;
 };
 
+/** "shared" doesn't mean browsable by anyone yet (that's a later step) —
+ *  right now it's just a flag that marks an item ready for when that
+ *  ships, same as MaterialVisibility's "shared" below. */
+export type ShareVisibility = "private" | "shared";
+
 export type ResponseFormat = {
   id: string;
   name: string;
@@ -74,6 +79,7 @@ export type ResponseFormat = {
   config: { levels?: CueingLevel[] } & Partial<RatingScaleConfig> &
     CorrectIncorrectConfig &
     Record<string, unknown>;
+  visibility: ShareVisibility;
   created_at: string;
 };
 
@@ -120,7 +126,7 @@ export type BankGoal = {
   target_percent: number | null;
 };
 
-export type MaterialVisibility = "private" | "shared" | "for_sale";
+export type MaterialVisibility = ShareVisibility | "for_sale";
 
 export type Material = {
   id: string;

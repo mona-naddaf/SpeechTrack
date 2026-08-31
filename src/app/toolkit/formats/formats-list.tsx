@@ -3,14 +3,25 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import type { CueingLevel, ResponseFormat, ResponseFormatType } from "@/lib/types";
+import type {
+  CueingLevel,
+  ResponseFormat,
+  ResponseFormatType,
+  ShareVisibility,
+} from "@/lib/types";
 import { RESPONSE_FORMAT_TYPE_LABELS } from "@/lib/response-format-types";
 import { getColorOption } from "@/lib/colors";
+import VisibilityField from "@/components/visibility-field";
 import CueingHierarchyEditorModal from "./cueing-hierarchy-editor-modal";
 import CorrectIncorrectEditorModal from "./correct-incorrect-editor-modal";
 import RatingScaleEditorModal from "./rating-scale-editor-modal";
 import NewFormatModal from "./new-format-modal";
 import DeleteFormatConfirmModal from "./delete-format-confirm-modal";
+
+const VISIBILITY_OPTIONS = [
+  { value: "private" as const, label: "Private" },
+  { value: "shared" as const, label: "Shared" },
+];
 
 // Types the SLP can create a custom version of from scratch on this page.
 // Anything else in RESPONSE_FORMAT_TYPE_LABELS is still "coming soon".
@@ -50,6 +61,26 @@ export default function FormatsList({ initialFormats }: Props) {
     if (openEditor) {
       setEditingFormat(created);
     }
+  }
+
+  async function handleChangeVisibility(
+    format: ResponseFormat,
+    visibility: ShareVisibility
+  ) {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("response_formats")
+      .update({ visibility })
+      .eq("id", format.id);
+
+    if (error) {
+      setInUseMessage(error.message);
+      return;
+    }
+
+    setFormats((prev) =>
+      prev.map((f) => (f.id === format.id ? { ...f, visibility } : f))
+    );
   }
 
   async function handleDeleteRequest(format: ResponseFormat) {
@@ -188,6 +219,15 @@ export default function FormatsList({ initialFormats }: Props) {
               Editing for this format type is coming soon.
             </p>
           )}
+
+          <div className="mt-4 border-t border-stone-100 pt-4">
+            <VisibilityField
+              value={format.visibility}
+              onChange={(v) => handleChangeVisibility(format, v)}
+              options={VISIBILITY_OPTIONS}
+              gatedValue="shared"
+            />
+          </div>
         </div>
       ))}
 

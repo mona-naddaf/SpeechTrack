@@ -1,14 +1,21 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import type { Area, ResponseFormatOption } from "@/lib/types";
+import type { Area, ResponseFormatOption, ShareVisibility } from "@/lib/types";
+import VisibilityField from "@/components/visibility-field";
 import type { BankGoalWithRelations } from "./goal-bank-section";
+
+const VISIBILITY_OPTIONS = [
+  { value: "private" as const, label: "Private" },
+  { value: "shared" as const, label: "Shared" },
+];
 
 export type BankGoalFormValues = {
   areaId: string;
   text: string;
   responseFormatId: string | null;
   targetPercent: number | null;
+  visibility: ShareVisibility;
 };
 
 type Props = {
@@ -40,6 +47,9 @@ export default function BankGoalFormModal({
       initialGoal?.target_percent !== null
       ? String(initialGoal.target_percent)
       : ""
+  );
+  const [visibility, setVisibility] = useState<ShareVisibility>(
+    initialGoal?.visibility ?? "private"
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,6 +83,7 @@ export default function BankGoalFormModal({
       text: text.trim(),
       responseFormatId: responseFormatId || null,
       targetPercent: targetValue,
+      visibility,
     });
     setLoading(false);
     if (result) {
@@ -168,6 +179,13 @@ export default function BankGoalFormModal({
               />
             </div>
           </div>
+
+          <VisibilityField
+            value={visibility}
+            onChange={setVisibility}
+            options={VISIBILITY_OPTIONS}
+            gatedValue="shared"
+          />
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 

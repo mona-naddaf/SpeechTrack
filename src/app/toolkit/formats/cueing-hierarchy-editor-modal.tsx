@@ -66,7 +66,7 @@ export default function CueingHierarchyEditorModal({
       .from("response_formats")
       .update({ name: name.trim(), config: { ...format.config, levels } })
       .eq("id", format.id)
-      .select("id, name, type, config, created_at")
+      .select("id, name, type, config, visibility, created_at")
       .single();
 
     setLoading(false);

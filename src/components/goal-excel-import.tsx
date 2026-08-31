@@ -154,7 +154,7 @@ export default function GoalExcelImport({
         const { data, error: goalsError } = await (supabase.from(goalsTable) as any)
           .insert(insertRows)
           .select(
-            `id, student_id, ${categoryIdColumn}, text, response_format_id, target_percent, created_at, ${categoryAlias}:${categoryTable}(id, name), response_format:${responseFormatTable}(id, name)`
+            `id, student_id, ${categoryIdColumn}, text, response_format_id, target_percent, visibility, created_at, ${categoryAlias}:${categoryTable}(id, name), response_format:${responseFormatTable}(id, name)`
           );
 
         if (goalsError) {

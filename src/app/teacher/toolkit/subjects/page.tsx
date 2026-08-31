@@ -28,7 +28,7 @@ export default async function TeacherSubjectsPage() {
       .order("name", { ascending: true }),
     supabase
       .from("teacher_response_formats")
-      .select("id, name, type, config, created_at")
+      .select("id, name, type, config, visibility, created_at")
       .order("created_at", { ascending: true }),
   ]);
 

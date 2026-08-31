@@ -16,7 +16,7 @@ export default async function ResponseFormatsPage() {
 
   const { data: formats, error } = await supabase
     .from("response_formats")
-    .select("id, name, type, config, created_at")
+    .select("id, name, type, config, visibility, created_at")
     .order("created_at", { ascending: true });
 
   return (

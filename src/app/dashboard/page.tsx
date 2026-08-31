@@ -1,6 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ClipboardList, Library, Sliders, Smile, Target } from "lucide-react";
+import {
+  ClipboardList,
+  Library,
+  Settings,
+  Sliders,
+  Smile,
+  Target,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/role";
 import { daysAgoLocalDateString, getTodayLocalDateString } from "@/lib/date";
@@ -140,6 +147,13 @@ export default async function DashboardPage() {
               autoStart={user.user_metadata?.has_seen_tour !== true}
               continueHref={students?.[0] ? `/students/${students[0].id}` : null}
             />
+            <Link
+              href="/settings"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
+            >
+              <Settings className="h-4 w-4" />
+              Settings
+            </Link>
             <LinkSupervisorButton />
             <SignOutButton />
           </div>

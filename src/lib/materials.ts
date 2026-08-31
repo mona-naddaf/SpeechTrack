@@ -21,12 +21,14 @@ export const MATERIAL_VISIBILITY_CLASSES: Record<MaterialVisibility, string> = {
   for_sale: "bg-stone-100 text-stone-400",
 };
 
-/** Only "private" actually does anything right now — "shared" and
- *  "for_sale" are shown in the visibility picker so she can see what's
- *  ahead, but aren't selectable yet and are saved as "private" either way. */
+/** "for_sale" is still a future phase — shown in the visibility picker so
+ *  she can see what's ahead, but not selectable yet. "shared" is real:
+ *  it's just not browsable/discoverable by anyone else yet (that's a
+ *  later step), so picking it only marks the item ready for when that
+ *  ships. See src/components/visibility-field.tsx for the picker itself. */
 export const MATERIAL_VISIBILITY_COMING_SOON: Record<MaterialVisibility, boolean> = {
   private: false,
-  shared: true,
+  shared: false,
   for_sale: true,
 };
 

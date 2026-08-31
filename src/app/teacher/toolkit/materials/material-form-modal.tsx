@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import type {
+  MaterialVisibility,
   TeacherMaterialGoalOption,
   TeacherMaterialWithRelations,
   TeacherSubject,
@@ -13,6 +14,13 @@ import {
   formatGoalOptionLabel,
   isLikelyHttpUrl,
 } from "@/lib/materials";
+import VisibilityField from "@/components/visibility-field";
+
+const VISIBILITY_FIELD_OPTIONS = MATERIAL_VISIBILITY_OPTIONS.map((value) => ({
+  value,
+  label: MATERIAL_VISIBILITY_LABELS[value],
+  comingSoon: MATERIAL_VISIBILITY_COMING_SOON[value],
+}));
 
 export type MaterialFormValues = {
   title: string;
@@ -20,6 +28,7 @@ export type MaterialFormValues = {
   description: string | null;
   subjectId: string;
   goalIds: string[];
+  visibility: MaterialVisibility;
 };
 
 type Props = {
@@ -49,6 +58,9 @@ export default function MaterialFormModal({
   );
   const [goalIds, setGoalIds] = useState<Set<string>>(
     new Set(initialMaterial?.goal_ids ?? [])
+  );
+  const [visibility, setVisibility] = useState<MaterialVisibility>(
+    initialMaterial?.visibility ?? "private"
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -91,6 +103,7 @@ export default function MaterialFormModal({
       description: description.trim() || null,
       subjectId,
       goalIds: Array.from(goalIds),
+      visibility,
     });
     setLoading(false);
     if (result) {
@@ -204,40 +217,12 @@ export default function MaterialFormModal({
             </div>
           )}
 
-          <div>
-            <span className="block text-sm font-medium text-stone-700">
-              Visibility
-            </span>
-            <div className="mt-1 space-y-1.5 text-sm">
-              {MATERIAL_VISIBILITY_OPTIONS.map((option) => {
-                const comingSoon = MATERIAL_VISIBILITY_COMING_SOON[option];
-                return (
-                  <label
-                    key={option}
-                    className={`flex items-center gap-1.5 ${
-                      comingSoon
-                        ? "cursor-not-allowed text-stone-400"
-                        : "text-stone-600"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="material-visibility"
-                      checked={option === "private"}
-                      disabled={comingSoon}
-                      onChange={() => {}}
-                    />
-                    {MATERIAL_VISIBILITY_LABELS[option]}
-                    {comingSoon && (
-                      <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-400">
-                        Coming soon
-                      </span>
-                    )}
-                  </label>
-                );
-              })}
-            </div>
-          </div>
+          <VisibilityField
+            value={visibility}
+            onChange={setVisibility}
+            options={VISIBILITY_FIELD_OPTIONS}
+            gatedValue="shared"
+          />
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 

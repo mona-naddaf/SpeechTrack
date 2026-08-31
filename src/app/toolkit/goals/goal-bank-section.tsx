@@ -3,26 +3,40 @@
 import { useMemo, useState } from "react";
 import { Plus, Target } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import type { Area, ResponseFormatOption } from "@/lib/types";
+import type { Area, ResponseFormatOption, ShareVisibility } from "@/lib/types";
 import BankGoalFormModal, { type BankGoalFormValues } from "./bank-goal-form-modal";
 import DeleteBankGoalConfirmModal from "./delete-bank-goal-confirm-modal";
 import GoalExcelImport, { type ImportedBankGoal } from "@/components/goal-excel-import";
 
+const VISIBILITY_LABELS: Record<ShareVisibility, string> = {
+  private: "Private",
+  shared: "Shared",
+};
+
+const VISIBILITY_CLASSES: Record<ShareVisibility, string> = {
+  private: "bg-stone-100 text-stone-600",
+  shared: "bg-accent-100 text-accent-700",
+};
+
 /** A goal-bank row (student_id is null) joined with its area and default
- *  response format for display on the goal bank page. */
+ *  response format for display on the goal bank page. Bank goals are the
+ *  only goals that can ever be "shared" — an assigned student goal is
+ *  tied to a real child, so goals-section.tsx (student page) never touches
+ *  visibility at all; the DB enforces that too (see 0024_community_sharing.sql). */
 export type BankGoalWithRelations = {
   id: string;
   area_id: string;
   text: string;
   response_format_id: string | null;
   target_percent: number | null;
+  visibility: ShareVisibility;
   created_at: string;
   area: { id: string; name: string } | null;
   response_format: { id: string; name: string } | null;
 };
 
 const BANK_GOAL_SELECT_COLUMNS =
-  "id, student_id, area_id, text, response_format_id, target_percent, created_at, area:areas(id, name), response_format:response_formats(id, name)";
+  "id, student_id, area_id, text, response_format_id, target_percent, visibility, created_at, area:areas(id, name), response_format:response_formats(id, name)";
 
 type Props = {
   initialGoals: BankGoalWithRelations[];
@@ -87,6 +101,7 @@ export default function GoalBankSection({
         text: values.text,
         response_format_id: values.responseFormatId,
         target_percent: values.targetPercent,
+        visibility: values.visibility,
       })
       .select("id")
       .single();
@@ -114,6 +129,7 @@ export default function GoalBankSection({
         text: values.text,
         response_format_id: values.responseFormatId,
         target_percent: values.targetPercent,
+        visibility: values.visibility,
       })
       .eq("id", editingGoal.id);
 
@@ -209,9 +225,16 @@ export default function GoalBankSection({
                     key={goal.id}
                     className="flex flex-col rounded-2xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md p-4"
                   >
-                    <p className="flex-1 text-sm text-stone-900">
-                      {goal.text}
-                    </p>
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="flex-1 text-sm text-stone-900">
+                        {goal.text}
+                      </p>
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${VISIBILITY_CLASSES[goal.visibility]}`}
+                      >
+                        {VISIBILITY_LABELS[goal.visibility]}
+                      </span>
+                    </div>
 
                     <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-stone-500">
                       {goal.response_format && (

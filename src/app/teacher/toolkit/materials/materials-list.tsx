@@ -87,7 +87,7 @@ export default function MaterialsList({
         url: values.url,
         description: values.description,
         subject_id: values.subjectId,
-        visibility: "private",
+        visibility: values.visibility,
       })
       .select("id")
       .single();
@@ -127,6 +127,7 @@ export default function MaterialsList({
         url: values.url,
         description: values.description,
         subject_id: values.subjectId,
+        visibility: values.visibility,
       })
       .eq("id", editingMaterial.id);
 

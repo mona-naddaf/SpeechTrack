@@ -19,7 +19,7 @@ export default async function GoalBankPage() {
     supabase
       .from("goals")
       .select(
-        "id, student_id, area_id, text, response_format_id, target_percent, created_at, area:areas(id, name), response_format:response_formats(id, name)"
+        "id, student_id, area_id, text, response_format_id, target_percent, visibility, created_at, area:areas(id, name), response_format:response_formats(id, name)"
       )
       .is("student_id", null)
       .order("created_at", { ascending: false }),

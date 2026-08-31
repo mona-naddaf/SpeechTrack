@@ -26,7 +26,7 @@ export default async function TeacherGoalBankPage() {
     supabase
       .from("teacher_goals")
       .select(
-        "id, student_id, subject_id, text, response_format_id, target_percent, created_at, subject:teacher_subjects(id, name), response_format:teacher_response_formats(id, name)"
+        "id, student_id, subject_id, text, response_format_id, target_percent, visibility, created_at, subject:teacher_subjects(id, name), response_format:teacher_response_formats(id, name)"
       )
       .is("student_id", null)
       .order("created_at", { ascending: false }),

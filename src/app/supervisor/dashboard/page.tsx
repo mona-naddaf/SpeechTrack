@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { GraduationCap, MessageCircleHeart } from "lucide-react";
+import { GraduationCap, MessageCircleHeart, Settings } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/role";
 import SignOutButton from "./sign-out-button";
@@ -55,6 +55,13 @@ export default async function SupervisorDashboardPage() {
             Welcome, {displayName} <span aria-hidden>👋</span>
           </h1>
           <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/settings"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
+            >
+              <Settings className="h-4 w-4" />
+              Settings
+            </Link>
             <SignOutButton />
           </div>
         </div>

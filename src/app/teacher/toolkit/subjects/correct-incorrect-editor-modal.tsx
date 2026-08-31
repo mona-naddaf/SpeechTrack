@@ -50,7 +50,7 @@ export default function CorrectIncorrectEditorModal({
         },
       })
       .eq("id", format.id)
-      .select("id, name, type, config, created_at")
+      .select("id, name, type, config, visibility, created_at")
       .single();
 
     setLoading(false);

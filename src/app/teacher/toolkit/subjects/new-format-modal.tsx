@@ -2,7 +2,13 @@
 
 import { useState, type FormEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { ResponseFormat } from "@/lib/types";
+import type { ResponseFormat, ShareVisibility } from "@/lib/types";
+import VisibilityField from "@/components/visibility-field";
+
+const VISIBILITY_OPTIONS = [
+  { value: "private" as const, label: "Private" },
+  { value: "shared" as const, label: "Shared" },
+];
 
 type CreatableType = "correct_incorrect" | "rating_scale" | "cueing_hierarchy";
 
@@ -36,6 +42,7 @@ export default function NewFormatModal({ onCancel, onCreated }: Props) {
   const [incorrectLabel, setIncorrectLabel] = useState("Incorrect");
   const [min, setMin] = useState("0");
   const [max, setMax] = useState("4");
+  const [visibility, setVisibility] = useState<ShareVisibility>("private");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -109,8 +116,9 @@ export default function NewFormatModal({ onCancel, onCreated }: Props) {
         name: trimmedName,
         type,
         config,
+        visibility,
       })
-      .select("id, name, type, config, created_at")
+      .select("id, name, type, config, visibility, created_at")
       .single();
 
     setLoading(false);
@@ -260,6 +268,13 @@ export default function NewFormatModal({ onCancel, onCreated }: Props) {
               or recolor them right after creating it.
             </p>
           )}
+
+          <VisibilityField
+            value={visibility}
+            onChange={setVisibility}
+            options={VISIBILITY_OPTIONS}
+            gatedValue="shared"
+          />
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 
