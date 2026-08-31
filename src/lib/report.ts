@@ -1,14 +1,23 @@
 import {
   AlignmentType,
+  BorderStyle,
   Document,
+  Footer,
   HeadingLevel,
+  ImageRun,
   Packer,
+  PageNumber,
   Paragraph,
   TextRun,
 } from "docx";
 import { formatDate } from "./date";
 import { EXPECTED_FREQUENCY_LABELS } from "./streaks";
 import { ATTENDANCE_REASON_LABELS } from "./attendance";
+import {
+  buildLevelBreakdownSvg,
+  buildTrendChartSvg,
+  renderSvgToPng,
+} from "./report-charts";
 import type { GoalProgressReport, TrendDirection } from "./progress";
 import type { AttendanceReason, ExpectedFrequency } from "./types";
 
@@ -68,20 +77,33 @@ const TREND_LABELS: Record<TrendDirection, string> = {
 
 const BODY_COLOR = "3F3B36";
 const MUTED_COLOR = "78716C";
+const HEADING_COLOR = "A32F16"; // brand-800
+const BRAND_COLOR = "CC3B1A"; // brand-700
+const RULE_COLOR = "D6D3D1"; // stone-300
+
+// Chart SVGs are authored at 320x{140 or dynamic} (see report-charts.ts) —
+// displayed here at 1.25x so they read clearly on a printed page without
+// dominating it. renderSvgToPng always rasterizes well above this display
+// size (4x density) so the embedded PNG stays crisp either way.
+const CHART_SCALE = 1.25;
+const TREND_DISPLAY = { width: Math.round(320 * CHART_SCALE), height: Math.round(140 * CHART_SCALE) };
 
 function sectionHeading(text: string): Paragraph {
   return new Paragraph({
     heading: HeadingLevel.HEADING_1,
-    spacing: { before: 320, after: 120 },
-    children: [new TextRun({ text, bold: true })],
+    spacing: { before: 360, after: 160 },
+    border: {
+      bottom: { style: BorderStyle.SINGLE, size: 4, color: RULE_COLOR, space: 4 },
+    },
+    children: [new TextRun({ text, bold: true, color: HEADING_COLOR })],
   });
 }
 
 function goalHeading(text: string): Paragraph {
   return new Paragraph({
     heading: HeadingLevel.HEADING_2,
-    spacing: { before: 200, after: 80 },
-    children: [new TextRun({ text, bold: true })],
+    spacing: { before: 280, after: 100 },
+    children: [new TextRun({ text, bold: true, color: BODY_COLOR })],
   });
 }
 
@@ -106,34 +128,89 @@ function bulletLine(text: string): Paragraph {
   });
 }
 
-/** Builds the .docx report as a Buffer — plain, professional formatting
- *  (title, section headings, readable body text) with no styling clever
- *  enough to fight a parent editing it afterward in Word. */
+function chartCaption(text: string): Paragraph {
+  return new Paragraph({
+    spacing: { before: 120, after: 60 },
+    children: [
+      new TextRun({
+        text: text.toUpperCase(),
+        size: 15,
+        bold: true,
+        color: MUTED_COLOR,
+        characterSpacing: 12,
+      }),
+    ],
+  });
+}
+
+async function chartImage(
+  svg: string,
+  display: { width: number; height: number }
+): Promise<Paragraph> {
+  const { buffer } = await renderSvgToPng(svg, display);
+  return new Paragraph({
+    spacing: { after: 160 },
+    children: [
+      new ImageRun({
+        type: "png",
+        data: buffer,
+        transformation: display,
+      }),
+    ],
+  });
+}
+
+/** Builds the .docx report as a Buffer — a polished but plain-enough
+ *  layout (title block, bordered section headings, embedded progress
+ *  charts, footer with page numbers) that still won't fight a parent
+ *  editing it afterward in Word. */
 export async function buildStudentReportDocx(
   data: StudentReportData
 ): Promise<Buffer> {
   const children: Paragraph[] = [];
 
-  // ---- Title ----
+  // ---- Title block ----
+  children.push(
+    new Paragraph({
+      spacing: { after: 60 },
+      children: [
+        new TextRun({
+          text: "BLOOMTRACK",
+          bold: true,
+          size: 20,
+          color: BRAND_COLOR,
+          characterSpacing: 24,
+        }),
+      ],
+    })
+  );
   children.push(
     new Paragraph({
       heading: HeadingLevel.TITLE,
-      alignment: AlignmentType.LEFT,
       spacing: { after: 40 },
-      children: [new TextRun({ text: "BloomTrack Progress Report", bold: true })],
+      children: [new TextRun({ text: "Progress Report", bold: true, color: BODY_COLOR })],
     })
   );
   children.push(
     new Paragraph({
       spacing: { after: 40 },
-      children: [new TextRun({ text: data.studentName, bold: true, size: 28 })],
+      children: [new TextRun({ text: data.studentName, bold: true, size: 28, color: BODY_COLOR })],
     })
   );
   children.push(
-    bodyLine(
-      `${formatDate(data.startDate)} – ${formatDate(data.endDate)}`,
-      { muted: true }
-    )
+    new Paragraph({
+      spacing: { after: 200 },
+      border: {
+        bottom: { style: BorderStyle.SINGLE, size: 8, color: BRAND_COLOR, space: 8 },
+      },
+      children: [
+        new TextRun({
+          text: `${formatDate(data.startDate)} – ${formatDate(data.endDate)}`,
+          color: MUTED_COLOR,
+          italics: true,
+        }),
+      ],
+    })
   );
 
   // ---- Student information ----
@@ -153,7 +230,8 @@ export async function buildStudentReportDocx(
     children.push(bodyLine("No activity recorded in this period.", { muted: true }));
   } else {
     for (const entry of data.goalEntries) {
-      children.push(goalHeading(entry.report.goal.text));
+      const { report } = entry;
+      children.push(goalHeading(report.goal.text));
       children.push(
         bodyLine(
           `Area: ${entry.areaName}` +
@@ -162,8 +240,32 @@ export async function buildStudentReportDocx(
               : "")
         )
       );
-      children.push(bodyLine(entry.report.summary));
-      children.push(bodyLine(`Trend: ${TREND_LABELS[entry.report.trendDirection]}`));
+      children.push(bodyLine(`Trend: ${TREND_LABELS[report.trendDirection]}`));
+
+      if (report.totalTrials > 0) {
+        if (report.isCueing && report.levelBreakdown.length > 0) {
+          const levelSvg = buildLevelBreakdownSvg(report.levelBreakdown);
+          const levelHeight = Math.round(
+            (report.levelBreakdown.length * 34 + 4) * CHART_SCALE
+          );
+          children.push(chartCaption("Level breakdown"));
+          children.push(
+            await chartImage(levelSvg, { width: TREND_DISPLAY.width, height: levelHeight })
+          );
+        }
+
+        children.push(chartCaption(`${report.metricLabel} over time`));
+        children.push(
+          await chartImage(buildTrendChartSvg(report.trend), TREND_DISPLAY)
+        );
+      }
+
+      children.push(
+        new Paragraph({
+          spacing: { after: 240 },
+          children: [new TextRun({ text: report.summary, color: BODY_COLOR, italics: true })],
+        })
+      );
     }
   }
 
@@ -203,6 +305,24 @@ export async function buildStudentReportDocx(
     }
   }
 
+  const generatedOn = formatDate(new Date().toISOString().slice(0, 10));
+  const footer = new Footer({
+    children: [
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        border: {
+          top: { style: BorderStyle.SINGLE, size: 4, color: RULE_COLOR, space: 6 },
+        },
+        children: [
+          new TextRun({ text: `BloomTrack · Generated ${generatedOn} · Page `, size: 16, color: MUTED_COLOR }),
+          new TextRun({ children: [PageNumber.CURRENT], size: 16, color: MUTED_COLOR }),
+          new TextRun({ text: " of ", size: 16, color: MUTED_COLOR }),
+          new TextRun({ children: [PageNumber.TOTAL_PAGES], size: 16, color: MUTED_COLOR }),
+        ],
+      }),
+    ],
+  });
+
   const doc = new Document({
     styles: {
       default: {
@@ -211,7 +331,7 @@ export async function buildStudentReportDocx(
         },
       },
     },
-    sections: [{ children }],
+    sections: [{ footers: { default: footer }, children }],
   });
 
   return Packer.toBuffer(doc);
