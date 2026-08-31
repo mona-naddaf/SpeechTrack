@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 type Props = {
@@ -16,7 +16,18 @@ type Props = {
  *  display name set yet. Persists to Supabase auth user_metadata under
  *  `display_name` — same storage pattern as `full_name` (NamePromptModal),
  *  just a separate field: full_name is private (greetings only),
- *  display_name is the one ever shown to someone else. */
+ *  display_name is the one ever shown to someone else.
+ *
+ *  Deliberately NOT a <form>: SetDisplayNameModal renders this nested
+ *  inside whatever add/edit form triggered the "set a name first" gate
+ *  (MaterialFormModal, BankGoalFormModal, NewFormatModal all wrap
+ *  VisibilityField in their own <form>). A nested <form> is invalid
+ *  HTML — the "submit" event from this inner form's button bubbles up
+ *  through the DOM and can trigger the OUTER form's native submit
+ *  (a full-page GET reload) before this component's own async save
+ *  ever finishes, silently discarding both the typed name and whatever
+ *  else was mid-flight. A plain button + onClick sidesteps the whole
+ *  form-nesting problem regardless of where this ends up mounted. */
 export default function DisplayNameForm({
   initialValue,
   submitLabel = "Save",
@@ -27,8 +38,7 @@ export default function DisplayNameForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
+  async function handleSubmit() {
     const trimmed = value.trim();
     if (!trimmed) {
       setError("Please enter a display name.");
@@ -52,7 +62,7 @@ export default function DisplayNameForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
+    <div className="space-y-3">
       <div>
         <label
           htmlFor="display-name-input"
@@ -66,6 +76,12 @@ export default function DisplayNameForm({
           autoFocus={autoFocus}
           value={value}
           onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              handleSubmit();
+            }
+          }}
           placeholder="e.g. Ms. Rivera, SLP"
           className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
         />
@@ -79,13 +95,14 @@ export default function DisplayNameForm({
 
       <div className="flex justify-end">
         <button
-          type="submit"
+          type="button"
+          onClick={handleSubmit}
           disabled={loading}
           className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
         >
           {loading ? "Saving…" : submitLabel}
         </button>
       </div>
-    </form>
+    </div>
   );
 }
