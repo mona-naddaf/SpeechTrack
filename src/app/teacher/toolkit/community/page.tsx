@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/role";
 import type {
   CommunityAuthor,
+  CommunityRatingRow,
   TeacherSharedGoalRow,
   TeacherSharedMaterialRow,
   TeacherSharedResponseFormatRow,
@@ -52,6 +53,9 @@ export default async function TeacherCommunityPage() {
     copiedGoalsResult,
     copiedFormatsResult,
     copiedMaterialsResult,
+    goalRatingsResult,
+    formatRatingsResult,
+    materialRatingsResult,
   ] = await Promise.all([
     supabase
       .from("teacher_goals")
@@ -88,6 +92,24 @@ export default async function TeacherCommunityPage() {
       .select("copied_from_id")
       .eq("teacher_id", user.id)
       .not("copied_from_id", "is", null),
+    // Ratings on every goal/format/material she can see. No item_id
+    // filter needed: community_ratings' own SELECT policy
+    // (community_item_is_visible, 0027_community_ratings.sql) already
+    // scopes this to exactly the same "owns it or it's shared"
+    // universe as the three queries above, so this can't return a
+    // rating for anything not already shown on this page.
+    supabase
+      .from("community_ratings")
+      .select("item_id, rater_id, rating")
+      .eq("item_type", "teacher_goal"),
+    supabase
+      .from("community_ratings")
+      .select("item_id, rater_id, rating")
+      .eq("item_type", "teacher_response_format"),
+    supabase
+      .from("community_ratings")
+      .select("item_id, rater_id, rating")
+      .eq("item_type", "teacher_material"),
   ]);
 
   const rawGoals = (goalsResult.data ?? []) as unknown as (TeacherSharedGoalRow & {
@@ -176,6 +198,14 @@ export default async function TeacherCommunityPage() {
     (copiedMaterialsResult.data ?? []) as { copied_from_id: string }[]
   ).map((r) => r.copied_from_id);
 
+  const mapRatingRows = (
+    rows: { item_id: string; rater_id: string; rating: number }[] | null
+  ): CommunityRatingRow[] =>
+    (rows ?? []).map((r) => ({ itemId: r.item_id, raterId: r.rater_id, rating: r.rating }));
+  const goalRatings = mapRatingRows(goalRatingsResult.data);
+  const formatRatings = mapRatingRows(formatRatingsResult.data);
+  const materialRatings = mapRatingRows(materialRatingsResult.data);
+
   return (
     <main className="flex-1 bg-cream-50 px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-3xl">
@@ -245,6 +275,12 @@ export default async function TeacherCommunityPage() {
             alreadyCopiedGoalIds={alreadyCopiedGoalIds}
             alreadyCopiedFormatIds={alreadyCopiedFormatIds}
             alreadyCopiedMaterialIds={alreadyCopiedMaterialIds}
+            goalRatings={goalRatings}
+            formatRatings={formatRatings}
+            materialRatings={materialRatings}
+            goalItemType="teacher_goal"
+            formatItemType="teacher_response_format"
+            materialItemType="teacher_material"
             myCategories={(subjectsResult.data ?? []) as TeacherSubject[]}
             goalsTable="teacher_goals"
             formatsTable="teacher_response_formats"

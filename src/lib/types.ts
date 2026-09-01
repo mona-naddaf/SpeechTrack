@@ -624,3 +624,27 @@ export type TeacherSharedMaterialRow = {
   created_at: string;
   subject: { id: string; name: string } | null;
 };
+
+/** The six item_type values a community_ratings row can carry — see
+ *  0027_community_ratings.sql. One shared table for both sides:
+ *  item_type itself disambiguates SLP content from Teacher content,
+ *  so a 'goal' item_id and a 'teacher_goal' item_id never collide in
+ *  meaning even though both are plain uuids. */
+export type CommunityItemType =
+  | "goal"
+  | "response_format"
+  | "material"
+  | "teacher_goal"
+  | "teacher_response_format"
+  | "teacher_material";
+
+/** One rating row, camelCased for the client — see
+ *  src/components/community-browse.tsx, which fetches one array of
+ *  these per tab (all sharing the same item_type within an array, so
+ *  it isn't repeated per row) and derives each item's average/count/
+ *  "my rating" from it. */
+export type CommunityRatingRow = {
+  itemId: string;
+  raterId: string;
+  rating: number;
+};

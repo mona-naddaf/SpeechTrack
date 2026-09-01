@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState, type ReactElement } from "react";
-import { Check, ExternalLink, Library, Plus, Sliders, Target } from "lucide-react";
+import { useMemo, useState, type Dispatch, type ReactElement, type SetStateAction } from "react";
+import { Check, ExternalLink, Library, Plus, Sliders, Star, Target } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import type { ResponseFormatType } from "@/lib/types";
+import type { CommunityItemType, CommunityRatingRow, ResponseFormatType } from "@/lib/types";
 import { RESPONSE_FORMAT_TYPE_LABELS } from "@/lib/response-format-types";
 
 type Category = { id: string; name: string };
@@ -66,6 +66,19 @@ type Props = {
   alreadyCopiedGoalIds: string[];
   alreadyCopiedFormatIds: string[];
   alreadyCopiedMaterialIds: string[];
+  /** Every rating on any goal/format/material she can see (one array per
+   *  tab — see 0027_community_ratings.sql and the two page.tsx callers).
+   *  Used both to show each item's average/count and to seed her own
+   *  star picker with whatever she's already rated it. */
+  goalRatings: CommunityRatingRow[];
+  formatRatings: CommunityRatingRow[];
+  materialRatings: CommunityRatingRow[];
+  /** The community_ratings.item_type value each tab's rows are stored
+   *  under — "goal"/"response_format"/"material" on the SLP side,
+   *  "teacher_goal"/etc. on the Teacher side. */
+  goalItemType: "goal" | "teacher_goal";
+  formatItemType: "response_format" | "teacher_response_format";
+  materialItemType: "material" | "teacher_material";
   /** Her own areas/subjects, for find-or-create-by-name when copying a
    *  goal or material into her bank (same matching logic
    *  GoalExcelImport already uses for bulk import). */
@@ -77,6 +90,35 @@ type Props = {
   categoryIdColumn: "area_id" | "subject_id";
   ownerColumn: "slp_id" | "teacher_id";
 };
+
+/** One item's rating summary, derived from a CommunityRatingRow[] — see
+ *  summarizeRatings() below. */
+type RatingSummary = { average: number; count: number; myRating: number | null };
+
+/** Groups a flat rating list by item id into per-item average/count/
+ *  "my rating" — used once per tab (goals/formats/materials each carry
+ *  their own item_type, so their rating lists never mix). */
+function summarizeRatings(
+  rows: CommunityRatingRow[],
+  currentUserId: string
+): Map<string, RatingSummary> {
+  const byItem = new Map<string, number[]>();
+  for (const row of rows) {
+    const list = byItem.get(row.itemId) ?? [];
+    list.push(row.rating);
+    byItem.set(row.itemId, list);
+  }
+  const summaries = new Map<string, RatingSummary>();
+  for (const [itemId, values] of byItem) {
+    const mine = rows.find((r) => r.itemId === itemId && r.raterId === currentUserId);
+    summaries.set(itemId, {
+      average: values.reduce((sum, v) => sum + v, 0) / values.length,
+      count: values.length,
+      myRating: mine ? mine.rating : null,
+    });
+  }
+  return summaries;
+}
 
 const TABS: { key: Tab; label: string; icon: typeof Target }[] = [
   { key: "goals", label: "Goals", icon: Target },
@@ -106,6 +148,12 @@ export default function CommunityBrowse({
   alreadyCopiedGoalIds,
   alreadyCopiedFormatIds,
   alreadyCopiedMaterialIds,
+  goalRatings,
+  formatRatings,
+  materialRatings,
+  goalItemType,
+  formatItemType,
+  materialItemType,
   myCategories,
   goalsTable,
   formatsTable,
@@ -138,6 +186,66 @@ export default function CommunityBrowse({
   const [justAddedIds, setJustAddedIds] = useState<Set<string>>(new Set());
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Local, mutable copies of the server-fetched rating lists — updated
+  // optimistically the moment a rating upsert succeeds, so the average/
+  // count and her own star picker reflect it immediately.
+  const [goalRatingsState, setGoalRatingsState] = useState<CommunityRatingRow[]>(goalRatings);
+  const [formatRatingsState, setFormatRatingsState] =
+    useState<CommunityRatingRow[]>(formatRatings);
+  const [materialRatingsState, setMaterialRatingsState] =
+    useState<CommunityRatingRow[]>(materialRatings);
+  const [ratingPendingId, setRatingPendingId] = useState<string | null>(null);
+
+  const goalRatingSummaries = useMemo(
+    () => summarizeRatings(goalRatingsState, currentUserId),
+    [goalRatingsState, currentUserId]
+  );
+  const formatRatingSummaries = useMemo(
+    () => summarizeRatings(formatRatingsState, currentUserId),
+    [formatRatingsState, currentUserId]
+  );
+  const materialRatingSummaries = useMemo(
+    () => summarizeRatings(materialRatingsState, currentUserId),
+    [materialRatingsState, currentUserId]
+  );
+
+  /** Submits (or updates) her rating on one item — upserted on the same
+   *  (item_type, item_id, rater_id) uniqueness constraint the DB
+   *  enforces, so re-rating always updates her existing row rather than
+   *  creating a second one. RLS (community_item_is_ratable,
+   *  0027_community_ratings.sql) independently blocks this for her own
+   *  items, but the UI never renders a picker there to begin with (see
+   *  RatingControl below) — belt-and-braces, not the only guard. */
+  async function handleRate(
+    itemType: CommunityItemType,
+    itemId: string,
+    rating: number,
+    setLocal: Dispatch<SetStateAction<CommunityRatingRow[]>>
+  ) {
+    setRatingPendingId(itemId);
+    setError(null);
+    const supabase = createClient();
+
+    const { error: rateError } = await supabase.from("community_ratings").upsert(
+      { item_type: itemType, item_id: itemId, rater_id: currentUserId, rating },
+      { onConflict: "item_type,item_id,rater_id" }
+    );
+
+    setRatingPendingId(null);
+    if (rateError) {
+      setError(rateError.message);
+      return;
+    }
+    setLocal((prev) => {
+      const idx = prev.findIndex(
+        (r) => r.itemId === itemId && r.raterId === currentUserId
+      );
+      if (idx === -1) return [...prev, { itemId, raterId: currentUserId, rating }];
+      const next = [...prev];
+      next[idx] = { itemId, raterId: currentUserId, rating };
+      return next;
+    });
+  }
 
   function switchTab(next: Tab) {
     setTab(next);
@@ -417,6 +525,64 @@ export default function CommunityBrowse({
     );
   }
 
+  /** The average/count summary (always shown when there's at least one
+   *  rating) plus, for someone else's item, her own 1-5 star picker —
+   *  clicking a star submits immediately, same instant-persist pattern
+   *  the rest of this app uses (e.g. VisibilityField). `interactive`
+   *  false on her own shared items: RLS would reject the insert anyway
+   *  (community_item_is_ratable excludes the owner), but the picker
+   *  simply isn't rendered there rather than rendering it disabled or
+   *  letting a click surface a confusing permissions error. */
+  function RatingControl({
+    itemId,
+    summary,
+    interactive,
+    onRate,
+  }: {
+    itemId: string;
+    summary: RatingSummary | undefined;
+    interactive: boolean;
+    onRate: (rating: number) => void;
+  }) {
+    const average = summary?.average ?? 0;
+    const count = summary?.count ?? 0;
+    const myRating = summary?.myRating ?? null;
+    const pending = ratingPendingId === itemId;
+
+    return (
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <span className="inline-flex items-center gap-1 text-xs text-stone-500">
+          <StarGlyphs filled={Math.round(average)} />
+          {count > 0
+            ? `${average.toFixed(1)} (${count} rating${count === 1 ? "" : "s"})`
+            : "No ratings yet"}
+        </span>
+        {interactive && (
+          <span className="inline-flex items-center gap-0.5">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                type="button"
+                disabled={pending}
+                onClick={() => onRate(n)}
+                aria-label={`Rate ${n} star${n === 1 ? "" : "s"}`}
+                className="rounded p-0.5 transition-transform hover:scale-110 disabled:opacity-50"
+              >
+                <Star
+                  className={`h-4 w-4 ${
+                    myRating !== null && n <= myRating
+                      ? "fill-amber-400 text-amber-400"
+                      : "text-stone-300"
+                  }`}
+                />
+              </button>
+            ))}
+          </span>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="flex flex-wrap gap-2">
@@ -472,6 +638,11 @@ export default function CommunityBrowse({
           authorName={authorName}
           onAdd={handleAddGoal}
           AddButton={AddButton}
+          ratingSummaries={goalRatingSummaries}
+          onRate={(itemId, rating) =>
+            handleRate(goalItemType, itemId, rating, setGoalRatingsState)
+          }
+          RatingControl={RatingControl}
         />
       )}
       {tab === "formats" && (
@@ -481,6 +652,11 @@ export default function CommunityBrowse({
           authorName={authorName}
           onAdd={handleAddFormat}
           AddButton={AddButton}
+          ratingSummaries={formatRatingSummaries}
+          onRate={(itemId, rating) =>
+            handleRate(formatItemType, itemId, rating, setFormatRatingsState)
+          }
+          RatingControl={RatingControl}
         />
       )}
       {tab === "materials" && (
@@ -490,6 +666,11 @@ export default function CommunityBrowse({
           authorName={authorName}
           onAdd={handleAddMaterial}
           AddButton={AddButton}
+          ratingSummaries={materialRatingSummaries}
+          onRate={(itemId, rating) =>
+            handleRate(materialItemType, itemId, rating, setMaterialRatingsState)
+          }
+          RatingControl={RatingControl}
         />
       )}
     </div>
@@ -497,6 +678,27 @@ export default function CommunityBrowse({
 }
 
 type AddButtonComponent = (props: { id: string; onClick: () => void }) => ReactElement;
+type RatingControlComponent = (props: {
+  itemId: string;
+  summary: RatingSummary | undefined;
+  interactive: boolean;
+  onRate: (rating: number) => void;
+}) => ReactElement;
+
+/** Five static stars, `filled` of them solid — the read-only average
+ *  display (as opposed to RatingControl's clickable picker). */
+function StarGlyphs({ filled }: { filled: number }) {
+  return (
+    <span className="inline-flex">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <Star
+          key={n}
+          className={`h-3.5 w-3.5 ${n <= filled ? "fill-amber-400 text-amber-400" : "text-stone-300"}`}
+        />
+      ))}
+    </span>
+  );
+}
 
 function EmptyState({ label }: { label: string }) {
   return (
@@ -512,12 +714,18 @@ function GoalsTab({
   authorName,
   onAdd,
   AddButton,
+  ratingSummaries,
+  onRate,
+  RatingControl,
 }: {
   goals: CommonSharedGoal[];
   currentUserId: string;
   authorName: (ownerId: string) => string;
   onAdd: (goal: CommonSharedGoal) => void;
   AddButton: AddButtonComponent;
+  ratingSummaries: Map<string, RatingSummary>;
+  onRate: (itemId: string, rating: number) => void;
+  RatingControl: RatingControlComponent;
 }) {
   const others = goals.filter((g) => g.ownerId !== currentUserId);
   const mine = goals.filter((g) => g.ownerId === currentUserId);
@@ -549,6 +757,12 @@ function GoalsTab({
                     <span>Target: {goal.targetPercent}%</span>
                   )}
                 </div>
+                <RatingControl
+                  itemId={goal.id}
+                  summary={ratingSummaries.get(goal.id)}
+                  interactive
+                  onRate={(rating) => onRate(goal.id, rating)}
+                />
                 <div className="mt-3 flex items-center justify-between gap-2">
                   <span className="text-xs text-stone-400">
                     Shared by {authorName(goal.ownerId)}
@@ -579,6 +793,12 @@ function GoalsTab({
                   {goal.categoryName}
                 </span>
                 <p className="mt-2 text-sm text-stone-700">{goal.text}</p>
+                <RatingControl
+                  itemId={goal.id}
+                  summary={ratingSummaries.get(goal.id)}
+                  interactive={false}
+                  onRate={() => {}}
+                />
               </div>
             ))}
           </div>
@@ -594,12 +814,18 @@ function FormatsTab({
   authorName,
   onAdd,
   AddButton,
+  ratingSummaries,
+  onRate,
+  RatingControl,
 }: {
   formats: CommonSharedFormat[];
   currentUserId: string;
   authorName: (ownerId: string) => string;
   onAdd: (format: CommonSharedFormat) => void;
   AddButton: AddButtonComponent;
+  ratingSummaries: Map<string, RatingSummary>;
+  onRate: (itemId: string, rating: number) => void;
+  RatingControl: RatingControlComponent;
 }) {
   const others = formats.filter((f) => f.ownerId !== currentUserId);
   const mine = formats.filter((f) => f.ownerId === currentUserId);
@@ -623,6 +849,12 @@ function FormatsTab({
                 <p className="mt-1 text-xs text-stone-400">
                   {formatTypeLabel(format.type)}
                 </p>
+                <RatingControl
+                  itemId={format.id}
+                  summary={ratingSummaries.get(format.id)}
+                  interactive
+                  onRate={(rating) => onRate(format.id, rating)}
+                />
                 <div className="mt-3 flex items-center justify-between gap-2">
                   <span className="text-xs text-stone-400">
                     Shared by {authorName(format.ownerId)}
@@ -653,6 +885,12 @@ function FormatsTab({
                 <p className="mt-1 text-xs text-stone-400">
                   {formatTypeLabel(format.type)}
                 </p>
+                <RatingControl
+                  itemId={format.id}
+                  summary={ratingSummaries.get(format.id)}
+                  interactive={false}
+                  onRate={() => {}}
+                />
               </div>
             ))}
           </div>
@@ -668,12 +906,18 @@ function MaterialsTab({
   authorName,
   onAdd,
   AddButton,
+  ratingSummaries,
+  onRate,
+  RatingControl,
 }: {
   materials: CommonSharedMaterial[];
   currentUserId: string;
   authorName: (ownerId: string) => string;
   onAdd: (material: CommonSharedMaterial) => void;
   AddButton: AddButtonComponent;
+  ratingSummaries: Map<string, RatingSummary>;
+  onRate: (itemId: string, rating: number) => void;
+  RatingControl: RatingControlComponent;
 }) {
   const others = materials.filter((m) => m.ownerId !== currentUserId);
   const mine = materials.filter((m) => m.ownerId === currentUserId);
@@ -708,6 +952,12 @@ function MaterialsTab({
                 {material.description && (
                   <p className="mt-1 text-sm text-stone-500">{material.description}</p>
                 )}
+                <RatingControl
+                  itemId={material.id}
+                  summary={ratingSummaries.get(material.id)}
+                  interactive
+                  onRate={(rating) => onRate(material.id, rating)}
+                />
                 <div className="mt-3 flex items-center justify-between gap-2">
                   <span className="text-xs text-stone-400">
                     Shared by {authorName(material.ownerId)}
@@ -743,6 +993,12 @@ function MaterialsTab({
                 {material.description && (
                   <p className="mt-1 text-sm text-stone-500">{material.description}</p>
                 )}
+                <RatingControl
+                  itemId={material.id}
+                  summary={ratingSummaries.get(material.id)}
+                  interactive={false}
+                  onRate={() => {}}
+                />
               </div>
             ))}
           </div>

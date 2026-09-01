@@ -2,7 +2,14 @@ import Link from "next/link";
 import { ArrowLeft, ClipboardList, Sliders, Smile, Target, Library } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { Area, CommunityAuthor, SharedGoalRow, SharedMaterialRow, SharedResponseFormatRow } from "@/lib/types";
+import type {
+  Area,
+  CommunityAuthor,
+  CommunityRatingRow,
+  SharedGoalRow,
+  SharedMaterialRow,
+  SharedResponseFormatRow,
+} from "@/lib/types";
 import CommunityBrowse, {
   type CommonSharedFormat,
   type CommonSharedGoal,
@@ -41,6 +48,9 @@ export default async function CommunityPage() {
     copiedGoalsResult,
     copiedFormatsResult,
     copiedMaterialsResult,
+    goalRatingsResult,
+    formatRatingsResult,
+    materialRatingsResult,
   ] = await Promise.all([
     supabase
       .from("goals")
@@ -77,6 +87,18 @@ export default async function CommunityPage() {
       .select("copied_from_id")
       .eq("slp_id", user.id)
       .not("copied_from_id", "is", null),
+    // Ratings on every goal/format/material she can see. No item_id
+    // filter needed: community_ratings' own SELECT policy
+    // (community_item_is_visible, 0027_community_ratings.sql) already
+    // scopes this to exactly the same "owns it or it's shared"
+    // universe as the three queries above, so this can't return a
+    // rating for anything not already shown on this page.
+    supabase.from("community_ratings").select("item_id, rater_id, rating").eq("item_type", "goal"),
+    supabase
+      .from("community_ratings")
+      .select("item_id, rater_id, rating")
+      .eq("item_type", "response_format"),
+    supabase.from("community_ratings").select("item_id, rater_id, rating").eq("item_type", "material"),
   ]);
 
   const rawGoals = (goalsResult.data ?? []) as unknown as (SharedGoalRow & {
@@ -164,6 +186,14 @@ export default async function CommunityPage() {
     (copiedMaterialsResult.data ?? []) as { copied_from_id: string }[]
   ).map((r) => r.copied_from_id);
 
+  const mapRatingRows = (
+    rows: { item_id: string; rater_id: string; rating: number }[] | null
+  ): CommunityRatingRow[] =>
+    (rows ?? []).map((r) => ({ itemId: r.item_id, raterId: r.rater_id, rating: r.rating }));
+  const goalRatings = mapRatingRows(goalRatingsResult.data);
+  const formatRatings = mapRatingRows(formatRatingsResult.data);
+  const materialRatings = mapRatingRows(materialRatingsResult.data);
+
   return (
     <main className="flex-1 bg-cream-50 px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-3xl">
@@ -240,6 +270,12 @@ export default async function CommunityPage() {
             alreadyCopiedGoalIds={alreadyCopiedGoalIds}
             alreadyCopiedFormatIds={alreadyCopiedFormatIds}
             alreadyCopiedMaterialIds={alreadyCopiedMaterialIds}
+            goalRatings={goalRatings}
+            formatRatings={formatRatings}
+            materialRatings={materialRatings}
+            goalItemType="goal"
+            formatItemType="response_format"
+            materialItemType="material"
             myCategories={(areasResult.data ?? []) as Area[]}
             goalsTable="goals"
             formatsTable="response_formats"
