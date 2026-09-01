@@ -39,7 +39,7 @@ export default async function TeacherDashboardPage() {
   const { data: students, error } = await supabase
     .from("teacher_students")
     .select(
-      "id, name, class, expected_frequency, avatar, scheduled_days, created_at"
+      "id, name, class, expected_frequency, avatar, scheduled_days, schedule_end_date, created_at"
     )
     .order("created_at", { ascending: false });
 

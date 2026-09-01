@@ -4,7 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { ChevronRight, UserPlus, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import type { DayOfWeek, ExpectedFrequency, TeacherStudent } from "@/lib/types";
+import type {
+  ExpectedFrequency,
+  ScheduledDayTime,
+  TeacherStudent,
+} from "@/lib/types";
 import AvatarBadge from "@/components/avatar-badge";
 import StudentFormModal from "./student-form-modal";
 import DeleteConfirmModal from "./delete-confirm-modal";
@@ -43,12 +47,14 @@ export default function StudentsSection({
     expectedFrequency,
     avatar,
     scheduledDays,
+    scheduleEndDate,
   }: {
     name: string;
     className: string;
     expectedFrequency: ExpectedFrequency;
     avatar: string | null;
-    scheduledDays: DayOfWeek[];
+    scheduledDays: ScheduledDayTime[];
+    scheduleEndDate: string | null;
   }) {
     const supabase = createClient();
     const { data, error } = await supabase
@@ -60,9 +66,10 @@ export default function StudentsSection({
         expected_frequency: expectedFrequency,
         avatar,
         scheduled_days: scheduledDays,
+        schedule_end_date: scheduleEndDate,
       })
       .select(
-        "id, name, class, expected_frequency, avatar, scheduled_days, created_at"
+        "id, name, class, expected_frequency, avatar, scheduled_days, schedule_end_date, created_at"
       )
       .single();
 
@@ -81,12 +88,14 @@ export default function StudentsSection({
     expectedFrequency,
     avatar,
     scheduledDays,
+    scheduleEndDate,
   }: {
     name: string;
     className: string;
     expectedFrequency: ExpectedFrequency;
     avatar: string | null;
-    scheduledDays: DayOfWeek[];
+    scheduledDays: ScheduledDayTime[];
+    scheduleEndDate: string | null;
   }) {
     if (!editingStudent) return null;
 
@@ -99,10 +108,11 @@ export default function StudentsSection({
         expected_frequency: expectedFrequency,
         avatar,
         scheduled_days: scheduledDays,
+        schedule_end_date: scheduleEndDate,
       })
       .eq("id", editingStudent.id)
       .select(
-        "id, name, class, expected_frequency, avatar, scheduled_days, created_at"
+        "id, name, class, expected_frequency, avatar, scheduled_days, schedule_end_date, created_at"
       )
       .single();
 

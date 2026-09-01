@@ -17,7 +17,7 @@ import {
   type RawGoalMaterialLink,
 } from "@/lib/materials";
 import { computeCadenceStreak, formatCadenceStreakLabel } from "@/lib/streaks";
-import { formatScheduledDays } from "@/lib/schedule";
+import { formatSchedule } from "@/lib/schedule";
 import { TEACHER_STUDENT_TOUR_STEPS } from "@/lib/onboarding-tour";
 import StreakBadge from "@/components/streak-badge";
 import AvatarBadge from "@/components/avatar-badge";
@@ -58,7 +58,7 @@ export default async function TeacherStudentDetailPage({
   const { data: student } = await supabase
     .from("teacher_students")
     .select(
-      "id, name, class, parent_access_code, share_behavior_with_parent, expected_frequency, avatar, scheduled_days, created_at, date_of_birth, mother_email, father_email, homeroom_teacher, custom_fields:teacher_student_custom_fields(id, student_id, label, value, created_at)"
+      "id, name, class, parent_access_code, share_behavior_with_parent, expected_frequency, avatar, scheduled_days, schedule_end_date, created_at, date_of_birth, mother_email, father_email, homeroom_teacher, custom_fields:teacher_student_custom_fields(id, student_id, label, value, created_at)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -208,7 +208,11 @@ export default async function TeacherStudentDetailPage({
               <p className="text-stone-600">{student.class || "No class"}</p>
               {student.scheduled_days.length > 0 && (
                 <p className="mt-0.5 text-xs text-stone-400">
-                  Scheduled: {formatScheduledDays(student.scheduled_days)}
+                  Scheduled:{" "}
+                  {formatSchedule(
+                    student.scheduled_days,
+                    student.schedule_end_date
+                  )}
                 </p>
               )}
             </div>

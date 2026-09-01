@@ -24,7 +24,7 @@ import {
 import { getTodayLocalDateString } from "@/lib/date";
 import { computeAssessmentScore } from "@/lib/assessment";
 import { computeCadenceStreak, formatCadenceStreakLabel } from "@/lib/streaks";
-import { formatScheduledDays } from "@/lib/schedule";
+import { formatSchedule } from "@/lib/schedule";
 import StreakBadge from "@/components/streak-badge";
 import AvatarBadge from "@/components/avatar-badge";
 import SectionPreferencesProvider from "@/components/section-preferences";
@@ -74,7 +74,7 @@ export default async function SupervisorStudentDetailPage({
     const { data: student } = await supabase
       .from("teacher_students")
       .select(
-        "id, teacher_id, name, class, expected_frequency, avatar, scheduled_days, date_of_birth, mother_email, father_email, homeroom_teacher, custom_fields:teacher_student_custom_fields(id, student_id, label, value, created_at)"
+        "id, teacher_id, name, class, expected_frequency, avatar, scheduled_days, schedule_end_date, date_of_birth, mother_email, father_email, homeroom_teacher, custom_fields:teacher_student_custom_fields(id, student_id, label, value, created_at)"
       )
       .eq("id", studentId)
       .maybeSingle();
@@ -208,7 +208,11 @@ export default async function SupervisorStudentDetailPage({
                 <p className="text-stone-600">{student.class || "No class"}</p>
                 {student.scheduled_days.length > 0 && (
                   <p className="mt-0.5 text-xs text-stone-400">
-                    Scheduled: {formatScheduledDays(student.scheduled_days)}
+                    Scheduled:{" "}
+                    {formatSchedule(
+                      student.scheduled_days,
+                      student.schedule_end_date
+                    )}
                   </p>
                 )}
               </div>
@@ -312,7 +316,7 @@ export default async function SupervisorStudentDetailPage({
   const { data: student } = await supabase
     .from("students")
     .select(
-      "id, slp_id, name, class, expected_frequency, avatar, scheduled_days, date_of_birth, mother_email, father_email, homeroom_teacher, custom_fields:student_custom_fields(id, student_id, label, value, created_at)"
+      "id, slp_id, name, class, expected_frequency, avatar, scheduled_days, schedule_end_date, date_of_birth, mother_email, father_email, homeroom_teacher, custom_fields:student_custom_fields(id, student_id, label, value, created_at)"
     )
     .eq("id", studentId)
     .maybeSingle();
@@ -518,7 +522,11 @@ export default async function SupervisorStudentDetailPage({
               <p className="text-stone-600">{student.class || "No class"}</p>
               {student.scheduled_days.length > 0 && (
                 <p className="mt-0.5 text-xs text-stone-400">
-                  Scheduled: {formatScheduledDays(student.scheduled_days)}
+                  Scheduled:{" "}
+                  {formatSchedule(
+                    student.scheduled_days,
+                    student.schedule_end_date
+                  )}
                 </p>
               )}
             </div>

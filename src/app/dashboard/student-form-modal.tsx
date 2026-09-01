@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import type { DayOfWeek, ExpectedFrequency, Student } from "@/lib/types";
+import type {
+  ExpectedFrequency,
+  ScheduledDayTime,
+  Student,
+} from "@/lib/types";
 import { EXPECTED_FREQUENCY_LABELS } from "@/lib/streaks";
 import AvatarPicker from "@/components/avatar-picker";
 import SchedulePicker from "@/components/schedule-picker";
@@ -15,7 +19,8 @@ type Props = {
     className: string;
     expectedFrequency: ExpectedFrequency;
     avatar: string | null;
-    scheduledDays: DayOfWeek[];
+    scheduledDays: ScheduledDayTime[];
+    scheduleEndDate: string | null;
   }) => Promise<string | null>;
 };
 
@@ -38,8 +43,11 @@ export default function StudentFormModal({
   const [avatar, setAvatar] = useState<string | null>(
     initialStudent?.avatar ?? null
   );
-  const [scheduledDays, setScheduledDays] = useState<DayOfWeek[]>(
+  const [scheduledDays, setScheduledDays] = useState<ScheduledDayTime[]>(
     initialStudent?.scheduled_days ?? []
+  );
+  const [scheduleEndDate, setScheduleEndDate] = useState<string | null>(
+    initialStudent?.schedule_end_date ?? null
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +68,7 @@ export default function StudentFormModal({
       expectedFrequency,
       avatar,
       scheduledDays,
+      scheduleEndDate,
     });
     setLoading(false);
     if (result) {
@@ -138,7 +147,12 @@ export default function StudentFormModal({
 
             <AvatarPicker value={avatar} onChange={setAvatar} />
 
-            <SchedulePicker value={scheduledDays} onChange={setScheduledDays} />
+            <SchedulePicker
+              value={scheduledDays}
+              onChange={setScheduledDays}
+              endDate={scheduleEndDate}
+              onEndDateChange={setScheduleEndDate}
+            />
 
             {error && <p className="text-sm text-red-600">{error}</p>}
 

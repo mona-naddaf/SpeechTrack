@@ -47,7 +47,7 @@ export default async function DashboardPage() {
   const { data: students, error } = await supabase
     .from("students")
     .select(
-      "id, name, class, expected_frequency, avatar, scheduled_days, created_at"
+      "id, name, class, expected_frequency, avatar, scheduled_days, schedule_end_date, created_at"
     )
     .order("created_at", { ascending: false });
 

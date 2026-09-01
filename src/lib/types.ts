@@ -2,7 +2,8 @@
  *  the streak cadence in src/lib/streaks.ts. */
 export type ExpectedFrequency = "daily" | "few_times_week" | "weekly";
 
-/** Lowercase day names, matching what's stored in scheduled_days. */
+/** Lowercase day names, matching what's stored in each scheduled_days
+ *  entry's "day" field. */
 export type DayOfWeek =
   | "monday"
   | "tuesday"
@@ -12,6 +13,15 @@ export type DayOfWeek =
   | "saturday"
   | "sunday";
 
+/** One scheduled day + time, e.g. {day: "monday", time: "14:30"} — see
+ *  0029_scheduled_times_and_end_date.sql. `time` is 24-hour "HH:MM",
+ *  matching an <input type="time"> value directly (no am/pm parsing
+ *  needed client-side). The DB's is_valid_scheduled_days() check
+ *  constraint enforces this same shape, so a row read back from
+ *  Supabase is always already valid — this type is never a "maybe
+ *  malformed" concern the way it would be without that constraint. */
+export type ScheduledDayTime = { day: DayOfWeek; time: string };
+
 export type Student = {
   id: string;
   name: string;
@@ -20,8 +30,12 @@ export type Student = {
   /** A single emoji, picked from src/lib/avatar.ts's curated set — null
    *  means not chosen yet, shown as a neutral placeholder icon instead. */
   avatar: string | null;
-  /** Which weekdays sessions are scheduled for — empty array means not set. */
-  scheduled_days: DayOfWeek[];
+  /** Which weekdays (+ times) sessions are scheduled for — empty array
+   *  means not set. */
+  scheduled_days: ScheduledDayTime[];
+  /** "Scheduled through" — end of term/year, e.g. 2026-06-15. Null
+   *  means no end date set. */
+  schedule_end_date: string | null;
   created_at: string;
 };
 
@@ -335,8 +349,12 @@ export type TeacherStudent = {
   /** A single emoji, picked from src/lib/avatar.ts's curated set — null
    *  means not chosen yet, shown as a neutral placeholder icon instead. */
   avatar: string | null;
-  /** Which weekdays sessions are scheduled for — empty array means not set. */
-  scheduled_days: DayOfWeek[];
+  /** Which weekdays (+ times) sessions are scheduled for — empty array
+   *  means not set. */
+  scheduled_days: ScheduledDayTime[];
+  /** "Scheduled through" — end of term/year, e.g. 2026-06-15. Null
+   *  means no end date set. */
+  schedule_end_date: string | null;
   created_at: string;
 };
 
