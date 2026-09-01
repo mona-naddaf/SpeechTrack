@@ -33,7 +33,15 @@ export default async function CommunityPage() {
     redirect("/login");
   }
 
-  const [goalsResult, formatsResult, materialsResult, areasResult] = await Promise.all([
+  const [
+    goalsResult,
+    formatsResult,
+    materialsResult,
+    areasResult,
+    copiedGoalsResult,
+    copiedFormatsResult,
+    copiedMaterialsResult,
+  ] = await Promise.all([
     supabase
       .from("goals")
       .select(SHARED_GOAL_SELECT_COLUMNS)
@@ -51,6 +59,24 @@ export default async function CommunityPage() {
       .eq("visibility", "shared")
       .order("created_at", { ascending: false }),
     supabase.from("areas").select("id, name").order("name", { ascending: true }),
+    // Which shared items she already has a copy of (see copied_from_id
+    // in 0026_community_copy_tracking.sql) — drives the "Already in your
+    // bank" disabled state so "Add to my bank" can't duplicate a copy.
+    supabase
+      .from("goals")
+      .select("copied_from_id")
+      .eq("slp_id", user.id)
+      .not("copied_from_id", "is", null),
+    supabase
+      .from("response_formats")
+      .select("copied_from_id")
+      .eq("slp_id", user.id)
+      .not("copied_from_id", "is", null),
+    supabase
+      .from("materials")
+      .select("copied_from_id")
+      .eq("slp_id", user.id)
+      .not("copied_from_id", "is", null),
   ]);
 
   const rawGoals = (goalsResult.data ?? []) as unknown as (SharedGoalRow & {
@@ -128,6 +154,16 @@ export default async function CommunityPage() {
     materialsResult.error?.message ??
     null;
 
+  const alreadyCopiedGoalIds = (
+    (copiedGoalsResult.data ?? []) as { copied_from_id: string }[]
+  ).map((r) => r.copied_from_id);
+  const alreadyCopiedFormatIds = (
+    (copiedFormatsResult.data ?? []) as { copied_from_id: string }[]
+  ).map((r) => r.copied_from_id);
+  const alreadyCopiedMaterialIds = (
+    (copiedMaterialsResult.data ?? []) as { copied_from_id: string }[]
+  ).map((r) => r.copied_from_id);
+
   return (
     <main className="flex-1 bg-cream-50 px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-3xl">
@@ -201,6 +237,9 @@ export default async function CommunityPage() {
             formats={formats}
             materials={materials}
             authorsById={authorsById}
+            alreadyCopiedGoalIds={alreadyCopiedGoalIds}
+            alreadyCopiedFormatIds={alreadyCopiedFormatIds}
+            alreadyCopiedMaterialIds={alreadyCopiedMaterialIds}
             myCategories={(areasResult.data ?? []) as Area[]}
             goalsTable="goals"
             formatsTable="response_formats"

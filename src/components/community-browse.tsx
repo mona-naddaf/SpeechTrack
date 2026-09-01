@@ -59,6 +59,13 @@ type Props = {
   /** display_name for every distinct owner id across all three lists,
    *  from get_shared_item_authors() — see the two page.tsx callers. */
   authorsById: Record<string, string>;
+  /** copied_from_id values already present on her own rows (one array
+   *  per tab) — every shared item id she already has a copy of, so
+   *  "Add to my bank" can't create a duplicate. See
+   *  0026_community_copy_tracking.sql and the two page.tsx callers. */
+  alreadyCopiedGoalIds: string[];
+  alreadyCopiedFormatIds: string[];
+  alreadyCopiedMaterialIds: string[];
   /** Her own areas/subjects, for find-or-create-by-name when copying a
    *  goal or material into her bank (same matching logic
    *  GoalExcelImport already uses for bulk import). */
@@ -96,6 +103,9 @@ export default function CommunityBrowse({
   formats,
   materials,
   authorsById,
+  alreadyCopiedGoalIds,
+  alreadyCopiedFormatIds,
+  alreadyCopiedMaterialIds,
   myCategories,
   goalsTable,
   formatsTable,
@@ -110,7 +120,22 @@ export default function CommunityBrowse({
   // copying items, so a second copy in the same visit reuses them
   // instead of re-creating (or re-querying) every time.
   const [categories, setCategories] = useState<Category[]>(myCategories);
-  const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
+  // Every shared item id she already has a copy of — seeded from the
+  // server-fetched copied_from_id values (a copy from an earlier visit,
+  // or from another tab/device) and grown as copies succeed in this
+  // session. Drives the "Already in your bank" disabled button state.
+  const [copiedIds, setCopiedIds] = useState<Set<string>>(
+    () =>
+      new Set([
+        ...alreadyCopiedGoalIds,
+        ...alreadyCopiedFormatIds,
+        ...alreadyCopiedMaterialIds,
+      ])
+  );
+  // Subset of copiedIds added *in this session* — just distinguishes the
+  // "Added" label (brief positive feedback right after a click) from
+  // "Already in your bank" (was already true when the page loaded).
+  const [justAddedIds, setJustAddedIds] = useState<Set<string>>(new Set());
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -175,10 +200,84 @@ export default function CommunityBrowse({
     return created.id;
   }
 
+  /** True if she already has a copy of this exact shared item — checked
+   *  fresh against her own table (not just the copiedIds state, which
+   *  could be stale if a copy was made from another tab/device since
+   *  this page loaded) right before every insert, so "Add to my bank"
+   *  can never create a duplicate. */
+  async function alreadyHasCopy(
+    supabase: ReturnType<typeof createClient>,
+    table: "goals" | "teacher_goals" | "response_formats" | "teacher_response_formats" | "materials" | "teacher_materials",
+    sourceId: string
+  ): Promise<boolean> {
+    const { data, error: checkError } = await supabase
+      .from(table)
+      .select("id")
+      .eq(ownerColumn, currentUserId)
+      .eq("copied_from_id", sourceId)
+      .limit(1)
+      .maybeSingle();
+    if (checkError) {
+      setError(checkError.message);
+      return true; // fail closed — don't risk inserting a duplicate
+    }
+    return data !== null;
+  }
+
+  /** Finds her own copy of a shared response format by copied_from_id
+   *  (reusing it rather than making a second copy — this is what keeps
+   *  0026_community_copy_tracking.sql's lack of a DB-level uniqueness
+   *  constraint safe: a shared format copied both directly from the
+   *  Formats tab and indirectly via a goal that references it still
+   *  only ever produces one row), or creates one if she doesn't have it
+   *  yet. Always private — sharing never carries over. */
+  async function findOrCreateFormatCopyId(
+    supabase: ReturnType<typeof createClient>,
+    sourceFormat: NonNullable<CommonSharedGoal["responseFormat"]>
+  ): Promise<string | null> {
+    const { data: existing, error: existingError } = await supabase
+      .from(formatsTable)
+      .select("id")
+      .eq(ownerColumn, currentUserId)
+      .eq("copied_from_id", sourceFormat.id)
+      .limit(1)
+      .maybeSingle();
+    if (existingError) {
+      setError(existingError.message);
+      return null;
+    }
+    if (existing) return (existing as { id: string }).id;
+
+    const { data, error: formatError } = await supabase
+      .from(formatsTable)
+      .insert({
+        [ownerColumn]: currentUserId,
+        name: sourceFormat.name,
+        type: sourceFormat.type,
+        config: sourceFormat.config,
+        visibility: "private",
+        copied_from_id: sourceFormat.id,
+      })
+      .select("id")
+      .single();
+    if (formatError || !data) {
+      setError(formatError?.message ?? "Couldn't copy the response format.");
+      return null;
+    }
+    return (data as { id: string }).id;
+  }
+
   async function handleAddGoal(goal: CommonSharedGoal) {
+    if (copiedIds.has(goal.id)) return;
     setPendingId(goal.id);
     setError(null);
     const supabase = createClient();
+
+    if (await alreadyHasCopy(supabase, goalsTable, goal.id)) {
+      setPendingId(null);
+      setCopiedIds((prev) => new Set(prev).add(goal.id));
+      return;
+    }
 
     const categoryId = await findOrCreateCategoryId(supabase, goal.categoryName);
     if (!categoryId) {
@@ -192,23 +291,11 @@ export default function CommunityBrowse({
     // different-shaped format. Always private: sharing never carries over.
     let responseFormatId: string | null = null;
     if (goal.responseFormat) {
-      const { data, error: formatError } = await supabase
-        .from(formatsTable)
-        .insert({
-          [ownerColumn]: currentUserId,
-          name: goal.responseFormat.name,
-          type: goal.responseFormat.type,
-          config: goal.responseFormat.config,
-          visibility: "private",
-        })
-        .select("id")
-        .single();
-      if (formatError || !data) {
-        setError(formatError?.message ?? "Couldn't copy the response format.");
+      responseFormatId = await findOrCreateFormatCopyId(supabase, goal.responseFormat);
+      if (responseFormatId === null) {
         setPendingId(null);
         return;
       }
-      responseFormatId = (data as { id: string }).id;
     }
 
     const { error: insertError } = await supabase.from(goalsTable).insert({
@@ -219,6 +306,7 @@ export default function CommunityBrowse({
       response_format_id: responseFormatId,
       target_percent: goal.targetPercent,
       visibility: "private",
+      copied_from_id: goal.id,
     });
 
     setPendingId(null);
@@ -226,13 +314,21 @@ export default function CommunityBrowse({
       setError(insertError.message);
       return;
     }
-    setAddedIds((prev) => new Set(prev).add(goal.id));
+    setCopiedIds((prev) => new Set(prev).add(goal.id));
+    setJustAddedIds((prev) => new Set(prev).add(goal.id));
   }
 
   async function handleAddFormat(format: CommonSharedFormat) {
+    if (copiedIds.has(format.id)) return;
     setPendingId(format.id);
     setError(null);
     const supabase = createClient();
+
+    if (await alreadyHasCopy(supabase, formatsTable, format.id)) {
+      setPendingId(null);
+      setCopiedIds((prev) => new Set(prev).add(format.id));
+      return;
+    }
 
     const { error: insertError } = await supabase.from(formatsTable).insert({
       [ownerColumn]: currentUserId,
@@ -240,6 +336,7 @@ export default function CommunityBrowse({
       type: format.type,
       config: format.config,
       visibility: "private",
+      copied_from_id: format.id,
     });
 
     setPendingId(null);
@@ -247,13 +344,21 @@ export default function CommunityBrowse({
       setError(insertError.message);
       return;
     }
-    setAddedIds((prev) => new Set(prev).add(format.id));
+    setCopiedIds((prev) => new Set(prev).add(format.id));
+    setJustAddedIds((prev) => new Set(prev).add(format.id));
   }
 
   async function handleAddMaterial(material: CommonSharedMaterial) {
+    if (copiedIds.has(material.id)) return;
     setPendingId(material.id);
     setError(null);
     const supabase = createClient();
+
+    if (await alreadyHasCopy(supabase, materialsTable, material.id)) {
+      setPendingId(null);
+      setCopiedIds((prev) => new Set(prev).add(material.id));
+      return;
+    }
 
     const categoryId = await findOrCreateCategoryId(supabase, material.categoryName);
     if (!categoryId) {
@@ -268,6 +373,7 @@ export default function CommunityBrowse({
       description: material.description,
       [categoryIdColumn]: categoryId,
       visibility: "private",
+      copied_from_id: material.id,
     });
 
     setPendingId(null);
@@ -275,7 +381,8 @@ export default function CommunityBrowse({
       setError(insertError.message);
       return;
     }
-    setAddedIds((prev) => new Set(prev).add(material.id));
+    setCopiedIds((prev) => new Set(prev).add(material.id));
+    setJustAddedIds((prev) => new Set(prev).add(material.id));
   }
 
   function AddButton({
@@ -285,11 +392,16 @@ export default function CommunityBrowse({
     id: string;
     onClick: () => void;
   }) {
-    if (addedIds.has(id)) {
+    if (copiedIds.has(id)) {
+      const justAdded = justAddedIds.has(id);
       return (
-        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-accent-100 px-3 py-1.5 text-sm font-medium text-accent-700">
+        <span
+          className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium ${
+            justAdded ? "bg-accent-100 text-accent-700" : "bg-stone-100 text-stone-500"
+          }`}
+        >
           <Check className="h-4 w-4" />
-          Added
+          {justAdded ? "Added" : "Already in your bank"}
         </span>
       );
     }
