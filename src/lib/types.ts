@@ -648,3 +648,20 @@ export type CommunityRatingRow = {
   raterId: string;
   rating: number;
 };
+
+/** One row from get_shared_item_categories() (0028_community_shared_categories.sql)
+ *  — the real Area/Subject name for a shared goal or material, looked
+ *  up server-side because the area/teacher_subjects tables themselves
+ *  are still owner-only (see the two page.tsx callers). Covers
+ *  "goal"/"material"/"teacher_goal"/"teacher_material" item types only
+ *  — response formats are categorized by `type`, not a lookup table. */
+export type CommunityCategoryRow = { itemId: string; categoryName: string };
+
+/** One row from get_shared_material_linked_goals()
+ *  (0028_community_shared_categories.sql) — a shared material's linked
+ *  goal, included only when that goal is *also* shared (see the
+ *  migration for why: an unshared linked goal can be a real student's
+ *  private, assigned goal, which must never leak). A material can link
+ *  to more than one goal, so this is a flat list rather than
+ *  one-per-material. */
+export type CommunityLinkedGoalRow = { materialId: string; goalId: string; goalText: string };

@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import type {
   Area,
   CommunityAuthor,
+  CommunityCategoryRow,
+  CommunityLinkedGoalRow,
   CommunityRatingRow,
   SharedGoalRow,
   SharedMaterialRow,
@@ -112,6 +114,57 @@ export default async function CommunityPage() {
     area: SharedMaterialRow["area"] | Area[];
   })[];
 
+  // The embedded `area:areas(...)` join above only resolves for an item
+  // *she* owns — areas is still owner-only RLS, so someone else's shared
+  // goal/material embeds `area: null` here. get_shared_item_categories
+  // (0028_community_shared_categories.sql) is the narrow, safely-scoped
+  // lookup that fills in the real name for everyone else's items too,
+  // the same pattern get_shared_item_authors already uses for display
+  // names. Falls back to the embedded join (then "Uncategorized") so
+  // this degrades gracefully if the RPC call itself fails.
+  const goalIds = rawGoals.map((row) => row.id);
+  const materialIds = rawMaterials.map((row) => row.id);
+
+  const [goalCategoriesResult, materialCategoriesResult, linkedGoalsResult] =
+    await Promise.all([
+      goalIds.length > 0
+        ? supabase.rpc("get_shared_item_categories", { p_item_type: "goal", p_item_ids: goalIds })
+        : Promise.resolve({ data: [] as CommunityCategoryRow[] }),
+      materialIds.length > 0
+        ? supabase.rpc("get_shared_item_categories", {
+            p_item_type: "material",
+            p_item_ids: materialIds,
+          })
+        : Promise.resolve({ data: [] as CommunityCategoryRow[] }),
+      materialIds.length > 0
+        ? supabase.rpc("get_shared_material_linked_goals", {
+            p_material_type: "material",
+            p_material_ids: materialIds,
+          })
+        : Promise.resolve({ data: [] as CommunityLinkedGoalRow[] }),
+    ]);
+
+  const goalCategoryNameById = new Map(
+    ((goalCategoriesResult.data ?? []) as { item_id: string; category_name: string }[]).map(
+      (r) => [r.item_id, r.category_name]
+    )
+  );
+  const materialCategoryNameById = new Map(
+    (
+      (materialCategoriesResult.data ?? []) as { item_id: string; category_name: string }[]
+    ).map((r) => [r.item_id, r.category_name])
+  );
+  const linkedGoalsByMaterialId = new Map<string, { id: string; text: string }[]>();
+  for (const row of (linkedGoalsResult.data ?? []) as {
+    material_id: string;
+    goal_id: string;
+    goal_text: string;
+  }[]) {
+    const list = linkedGoalsByMaterialId.get(row.material_id) ?? [];
+    list.push({ id: row.goal_id, text: row.goal_text });
+    linkedGoalsByMaterialId.set(row.material_id, list);
+  }
+
   const goals: CommonSharedGoal[] = rawGoals.map((row) => {
     const area = unwrapOne(row.area);
     const responseFormat = unwrapOne(row.response_format);
@@ -119,7 +172,7 @@ export default async function CommunityPage() {
       id: row.id,
       ownerId: row.slp_id,
       text: row.text,
-      categoryName: area?.name ?? "Uncategorized",
+      categoryName: goalCategoryNameById.get(row.id) ?? area?.name ?? "Uncategorized",
       targetPercent: row.target_percent,
       responseFormat: responseFormat
         ? {
@@ -148,7 +201,8 @@ export default async function CommunityPage() {
       title: row.title,
       url: row.url,
       description: row.description,
-      categoryName: area?.name ?? "Uncategorized",
+      categoryName: materialCategoryNameById.get(row.id) ?? area?.name ?? "Uncategorized",
+      linkedGoals: linkedGoalsByMaterialId.get(row.id) ?? [],
     };
   });
 
@@ -197,46 +251,46 @@ export default async function CommunityPage() {
   return (
     <main className="flex-1 bg-cream-50 px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-3xl">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-1 text-sm text-stone-500 transition-colors hover:text-brand-800"
+            className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-sm text-stone-500 transition-colors hover:text-brand-800"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to dashboard
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <Link
               href="/toolkit/assessments"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
+              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
             >
               <ClipboardList className="h-4 w-4" />
               Assessments
             </Link>
             <Link
               href="/toolkit/goals"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
+              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
             >
               <Target className="h-4 w-4" />
               Goal bank
             </Link>
             <Link
               href="/toolkit/formats"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
+              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
             >
               <Sliders className="h-4 w-4" />
               Response formats
             </Link>
             <Link
               href="/toolkit/behavior-types"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
+              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
             >
               <Smile className="h-4 w-4" />
               Behavior types
             </Link>
             <Link
               href="/toolkit/materials"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
+              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
             >
               <Library className="h-4 w-4" />
               Materials

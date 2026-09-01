@@ -44,6 +44,11 @@ export type CommonSharedMaterial = {
   url: string;
   description: string | null;
   categoryName: string;
+  /** From get_shared_material_linked_goals() (0028_community_shared_categories.sql)
+   *  — only ever populated with goals that are *also* shared, never a
+   *  private/student-assigned one (see that migration for why). Usually
+   *  0 or 1 entries, but a material can link to more than one goal. */
+  linkedGoals: { id: string; text: string }[];
 };
 
 type Tab = "goals" | "formats" | "materials";
@@ -952,6 +957,18 @@ function MaterialsTab({
                 {material.description && (
                   <p className="mt-1 text-sm text-stone-500">{material.description}</p>
                 )}
+                {material.linkedGoals.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {material.linkedGoals.map((goal) => (
+                      <span
+                        key={goal.id}
+                        className="rounded-full bg-cream-50 px-2 py-0.5 text-xs text-stone-500"
+                      >
+                        {goal.text}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <RatingControl
                   itemId={material.id}
                   summary={ratingSummaries.get(material.id)}
@@ -992,6 +1009,18 @@ function MaterialsTab({
                 </p>
                 {material.description && (
                   <p className="mt-1 text-sm text-stone-500">{material.description}</p>
+                )}
+                {material.linkedGoals.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {material.linkedGoals.map((goal) => (
+                      <span
+                        key={goal.id}
+                        className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-500"
+                      >
+                        {goal.text}
+                      </span>
+                    ))}
+                  </div>
                 )}
                 <RatingControl
                   itemId={material.id}
