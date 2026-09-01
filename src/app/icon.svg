@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- BloomTrack favicon: a simple 4-petal flower, using the exact
+       soft-badge color pair the login page's role icons already use
+       (see the "bg-brand-100" + "text-brand-600" MessageCircleHeart
+       badge in src/app/login/page.tsx). #FFE6DF is brand-100,
+       #F04E28 is brand-600, both from tailwind.config.ts. Chosen over
+       the higher-contrast brand-700-on-white options for visual
+       consistency with that existing in-app badge treatment; it reads
+       softer at true 16x16 than the higher-contrast alternatives, a
+       known tradeoff of matching that pairing.
+
+       Note for future edits: an XML comment cannot contain two
+       consecutive hyphens anywhere in its text, not just at the
+       boundaries. Use an em dash or reword the sentence instead;
+       that sequence anywhere in here breaks this whole file's
+       parsing. -->
+  <rect width="32" height="32" rx="6" fill="#FFE6DF" />
+  <g transform="translate(16 16)">
+    <g fill="#F04E28">
+      <ellipse cx="0" cy="-6.4" rx="3.3" ry="5.1" />
+      <ellipse cx="0" cy="-6.4" rx="3.3" ry="5.1" transform="rotate(90)" />
+      <ellipse cx="0" cy="-6.4" rx="3.3" ry="5.1" transform="rotate(180)" />
+      <ellipse cx="0" cy="-6.4" rx="3.3" ry="5.1" transform="rotate(270)" />
+    </g>
+    <circle r="3.1" fill="#FFE6DF" />
+  </g>
+</svg>
