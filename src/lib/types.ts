@@ -536,3 +536,91 @@ export type SupervisorLink = {
   member_name: string;
   created_at: string;
 };
+
+// ============================================================
+// Community sharing — step 2: browse/discovery of every 'shared' row
+// across accounts on the same side. Each shape below adds an owner id
+// (slp_id/teacher_id) and drops fields a browse card never needs
+// (baseline, status, visible_to_parent, ...) from the equivalent
+// bank-goal/format/material shape elsewhere in this file. `author`
+// is populated separately via get_shared_item_authors() — see
+// src/components/community-browse.tsx.
+// ============================================================
+
+export type CommunityAuthor = { id: string; display_name: string };
+
+/** The response-format side of a browsed goal, joined in *only* if that
+ *  format is itself visibility: 'shared' — response_formats/
+ *  teacher_response_formats carry their own RLS policy, so a goal that
+ *  references a still-private format simply embeds null here for
+ *  everyone but its owner. type/config (not just id/name) are included
+ *  because "Add to my bank" needs the full format to copy, not just
+ *  display it. */
+type SharedGoalResponseFormat = {
+  id: string;
+  name: string;
+  type: ResponseFormatType;
+  config: ResponseFormat["config"];
+};
+
+export type SharedGoalRow = {
+  id: string;
+  slp_id: string;
+  area_id: string;
+  text: string;
+  response_format_id: string | null;
+  target_percent: number | null;
+  created_at: string;
+  area: { id: string; name: string } | null;
+  response_format: SharedGoalResponseFormat | null;
+};
+
+export type TeacherSharedGoalRow = {
+  id: string;
+  teacher_id: string;
+  subject_id: string;
+  text: string;
+  response_format_id: string | null;
+  target_percent: number | null;
+  created_at: string;
+  subject: { id: string; name: string } | null;
+  response_format: SharedGoalResponseFormat | null;
+};
+
+export type SharedResponseFormatRow = {
+  id: string;
+  slp_id: string;
+  name: string;
+  type: ResponseFormatType;
+  config: ResponseFormat["config"];
+  created_at: string;
+};
+
+export type TeacherSharedResponseFormatRow = Omit<
+  SharedResponseFormatRow,
+  "slp_id"
+> & {
+  teacher_id: string;
+};
+
+export type SharedMaterialRow = {
+  id: string;
+  slp_id: string;
+  title: string;
+  url: string;
+  description: string | null;
+  area_id: string;
+  created_at: string;
+  area: { id: string; name: string } | null;
+};
+
+export type TeacherSharedMaterialRow = {
+  id: string;
+  teacher_id: string;
+  title: string;
+  url: string;
+  description: string | null;
+  subject_id: string;
+  created_at: string;
+  subject: { id: string; name: string } | null;
+};

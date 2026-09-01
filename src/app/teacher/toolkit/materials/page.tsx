@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, ListChecks, Sliders, Smile } from "lucide-react";
+import { ArrowLeft, ListChecks, Sliders, Smile, Users } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/role";
@@ -81,6 +81,13 @@ export default async function TeacherMaterialsPage() {
             >
               <Smile className="h-4 w-4" />
               Behavior types
+            </Link>
+            <Link
+              href="/teacher/toolkit/community"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
+            >
+              <Users className="h-4 w-4" />
+              Community
             </Link>
           </div>
         </div>

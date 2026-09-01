@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, ClipboardList, Library, Sliders, Target } from "lucide-react";
+import { ArrowLeft, ClipboardList, Library, Sliders, Target, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { BehaviorType } from "@/lib/types";
 import BehaviorTypesSection from "./behavior-types-section";
@@ -59,6 +59,13 @@ export default async function BehaviorTypesPage() {
             >
               <Library className="h-4 w-4" />
               Materials
+            </Link>
+            <Link
+              href="/toolkit/community"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
+            >
+              <Users className="h-4 w-4" />
+              Community
             </Link>
           </div>
         </div>

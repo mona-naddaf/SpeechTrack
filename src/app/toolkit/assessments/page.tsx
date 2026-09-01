@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Library, Sliders, Smile, Target } from "lucide-react";
+import { ArrowLeft, Library, Sliders, Smile, Target, Users } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Area } from "@/lib/types";
@@ -69,6 +69,13 @@ export default async function AssessmentsPage() {
             >
               <Library className="h-4 w-4" />
               Materials
+            </Link>
+            <Link
+              href="/toolkit/community"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
+            >
+              <Users className="h-4 w-4" />
+              Community
             </Link>
           </div>
         </div>

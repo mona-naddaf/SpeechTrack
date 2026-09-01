@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, Library, ListChecks, Sliders } from "lucide-react";
+import { ArrowLeft, Library, ListChecks, Sliders, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/role";
 import type { TeacherBehaviorType } from "@/lib/types";
@@ -57,6 +57,13 @@ export default async function TeacherBehaviorTypesPage() {
             >
               <Library className="h-4 w-4" />
               Materials
+            </Link>
+            <Link
+              href="/teacher/toolkit/community"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
+            >
+              <Users className="h-4 w-4" />
+              Community
             </Link>
           </div>
         </div>
