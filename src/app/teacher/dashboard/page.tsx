@@ -50,11 +50,16 @@ export default async function TeacherDashboardPage() {
   const displayName = fullName || user.email;
 
   // Caseload wins + at-risk nudges — all derived from the same three
-  // lightweight queries (RLS already scopes each to her own students, so
-  // none needs an explicit teacher_id filter). attendance_records feeds
-  // the same streak math as sessions — an excused absence protects a
-  // streak without counting as a session (see computeCadenceStreak in
-  // src/lib/streaks.ts).
+  // lightweight queries. teacher_sessions/attendance_records still don't
+  // need an explicit teacher_id filter (RLS on those two tables is still
+  // owner-only, untouched by 0025_community_sharing_browse.sql), but the
+  // goals count does need one now: that migration added a second
+  // permissive SELECT policy allowing *any* account's visibility='shared'
+  // rows, so without this filter another Teacher's shared bank goal
+  // could in principle count toward her "recent wins" here.
+  // attendance_records feeds the same streak math as sessions — an
+  // excused absence protects a streak without counting as a session (see
+  // computeCadenceStreak in src/lib/streaks.ts).
   const today = getTodayLocalDateString();
   const [sessionsResult, attendanceResult, masteredCountResult] =
     await Promise.all([
@@ -63,6 +68,7 @@ export default async function TeacherDashboardPage() {
       supabase
         .from("teacher_goals")
         .select("id", { count: "exact", head: true })
+        .eq("teacher_id", user.id)
         .eq("status", "mastered")
         .gte("mastered_at", daysAgoLocalDateString(30)),
     ]);

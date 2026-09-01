@@ -90,13 +90,20 @@ export default async function TeacherStudentDetailPage({
       .from("teacher_subjects")
       .select("id, name")
       .order("name", { ascending: true }),
+    // Both queries below add an explicit teacher_id filter, not just RLS:
+    // since 0025_community_sharing_browse.sql added a second permissive
+    // SELECT policy allowing *any* account's visibility='shared' rows,
+    // RLS alone would also let another Teacher's shared formats/bank
+    // goals leak into these two pickers.
     supabase
       .from("teacher_response_formats")
       .select("id, name")
+      .eq("teacher_id", user.id)
       .order("created_at", { ascending: true }),
     supabase
       .from("teacher_goals")
       .select("id, subject_id, text, response_format_id, target_percent")
+      .eq("teacher_id", user.id)
       .is("student_id", null)
       .order("text", { ascending: true }),
     supabase

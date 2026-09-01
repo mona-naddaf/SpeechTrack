@@ -96,13 +96,20 @@ export default async function StudentDetailPage({
       .from("areas")
       .select("id, name")
       .order("name", { ascending: true }),
+    // Both queries below add an explicit slp_id filter, not just RLS:
+    // since 0025_community_sharing_browse.sql added a second permissive
+    // SELECT policy allowing *any* account's visibility='shared' rows,
+    // RLS alone would also let another SLP's shared formats/bank goals
+    // leak into these two pickers.
     supabase
       .from("response_formats")
       .select("id, name")
+      .eq("slp_id", user.id)
       .order("created_at", { ascending: true }),
     supabase
       .from("goals")
       .select("id, area_id, text, response_format_id, target_percent")
+      .eq("slp_id", user.id)
       .is("student_id", null)
       .order("text", { ascending: true }),
     supabase

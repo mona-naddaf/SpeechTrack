@@ -16,12 +16,17 @@ export default async function MaterialsPage() {
     redirect("/login");
   }
 
+  // Both queries below add an explicit slp_id filter, not just RLS: since
+  // 0025_community_sharing_browse.sql added a second permissive SELECT
+  // policy allowing *any* account's visibility='shared' rows, RLS alone
+  // would also let another SLP's shared materials/bank goals leak in here.
   const [materialsResult, areasResult, goalsResult] = await Promise.all([
     supabase
       .from("materials")
       .select(
         "id, title, url, description, area_id, visibility, created_at, area:areas(id, name), material_goals(goal_id)"
       )
+      .eq("slp_id", user.id)
       .order("created_at", { ascending: false }),
     supabase.from("areas").select("id, name").order("name", { ascending: true }),
     // Only bank templates and freehand (never-from-bank) goals — a goal
@@ -32,6 +37,7 @@ export default async function MaterialsPage() {
     supabase
       .from("goals")
       .select("id, text, area_id, area:areas(id, name), student:students(id, name)")
+      .eq("slp_id", user.id)
       .is("source_bank_goal_id", null)
       .order("text", { ascending: true }),
   ]);

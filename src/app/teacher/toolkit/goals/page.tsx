@@ -22,12 +22,17 @@ export default async function TeacherGoalBankPage() {
     redirect("/dashboard");
   }
 
+  // Explicit teacher_id filter, not just RLS: since
+  // 0025_community_sharing_browse.sql added a second permissive SELECT
+  // policy allowing *any* account's visibility='shared' rows, RLS alone
+  // would also let another Teacher's shared bank goals/formats leak in.
   const [bankGoalsResult, subjectsResult, formatsResult] = await Promise.all([
     supabase
       .from("teacher_goals")
       .select(
         "id, student_id, subject_id, text, response_format_id, target_percent, visibility, created_at, subject:teacher_subjects(id, name), response_format:teacher_response_formats(id, name)"
       )
+      .eq("teacher_id", user.id)
       .is("student_id", null)
       .order("created_at", { ascending: false }),
     supabase
@@ -37,6 +42,7 @@ export default async function TeacherGoalBankPage() {
     supabase
       .from("teacher_response_formats")
       .select("id, name")
+      .eq("teacher_id", user.id)
       .order("created_at", { ascending: true }),
   ]);
 

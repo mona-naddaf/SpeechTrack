@@ -14,9 +14,14 @@ export default async function ResponseFormatsPage() {
     redirect("/login");
   }
 
+  // Explicit slp_id filter, not just RLS: since
+  // 0025_community_sharing_browse.sql added a second permissive SELECT
+  // policy allowing *any* account's visibility='shared' rows, RLS alone
+  // would also let another SLP's shared formats leak into this list.
   const { data: formats, error } = await supabase
     .from("response_formats")
     .select("id, name, type, config, visibility, created_at")
+    .eq("slp_id", user.id)
     .order("created_at", { ascending: true });
 
   return (

@@ -21,6 +21,10 @@ export default async function TeacherSubjectsPage() {
     redirect("/dashboard");
   }
 
+  // Explicit teacher_id filter on the formats query, not just RLS: since
+  // 0025_community_sharing_browse.sql added a second permissive SELECT
+  // policy allowing *any* account's visibility='shared' rows, RLS alone
+  // would also let another Teacher's shared formats leak into this list.
   const [subjectsResult, formatsResult] = await Promise.all([
     supabase
       .from("teacher_subjects")
@@ -29,6 +33,7 @@ export default async function TeacherSubjectsPage() {
     supabase
       .from("teacher_response_formats")
       .select("id, name, type, config, visibility, created_at")
+      .eq("teacher_id", user.id)
       .order("created_at", { ascending: true }),
   ]);
 

@@ -16,17 +16,25 @@ export default async function GoalBankPage() {
   }
 
   const [bankGoalsResult, areasResult, formatsResult] = await Promise.all([
+    // Explicit slp_id filter, not just RLS: since 0025_community_sharing_browse.sql
+    // added a second permissive SELECT policy allowing *any* account's
+    // visibility='shared' rows, RLS alone would also let another SLP's
+    // shared bank goals leak into her own goal bank here.
     supabase
       .from("goals")
       .select(
         "id, student_id, area_id, text, response_format_id, target_percent, visibility, created_at, area:areas(id, name), response_format:response_formats(id, name)"
       )
+      .eq("slp_id", user.id)
       .is("student_id", null)
       .order("created_at", { ascending: false }),
     supabase.from("areas").select("id, name").order("name", { ascending: true }),
+    // Same reasoning — this feeds the response-format dropdown on the
+    // bank-goal form, which must only ever offer her own formats.
     supabase
       .from("response_formats")
       .select("id, name")
+      .eq("slp_id", user.id)
       .order("created_at", { ascending: true }),
   ]);
 
