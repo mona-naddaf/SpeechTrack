@@ -113,9 +113,20 @@ export default async function SupervisorStudentDetailPage({
         .eq("student_id", studentId)
         .order("date", { ascending: false })
         .order("created_at", { ascending: false }),
+      // Explicit teacher_id filter, not just RLS: 0023's
+      // is_supervisor_of() policy makes every one of a supervisor's
+      // *linked members'* teacher_behavior_types visible, not just this
+      // one -- the same "a permissive multi-row-visible SELECT policy
+      // needs every existing unfiltered query on that table to add an
+      // explicit owner filter" issue 0025_community_sharing_browse.sql's
+      // fix pattern addresses elsewhere, just from a different policy.
+      // Without this, a supervisor linked to more than one Teacher would
+      // see every linked member's color palette combined here, not just
+      // this student's own teacher's.
       supabase
         .from("teacher_behavior_types")
         .select("id, name, color")
+        .eq("teacher_id", id)
         .order("name", { ascending: true }),
       supabase
         .from("teacher_sessions")
@@ -384,9 +395,20 @@ export default async function SupervisorStudentDetailPage({
       .eq("student_id", studentId)
       .order("date", { ascending: false })
       .order("created_at", { ascending: false }),
+    // Explicit slp_id filter, not just RLS: 0023's is_supervisor_of()
+    // policy makes every one of a supervisor's *linked members'*
+    // behavior_types visible, not just this one -- the same "a
+    // permissive multi-row-visible SELECT policy needs every existing
+    // unfiltered query on that table to add an explicit owner filter"
+    // issue 0025_community_sharing_browse.sql's fix pattern addresses
+    // elsewhere, just from a different policy. Without this, a
+    // supervisor linked to more than one SLP would see every linked
+    // member's color palette combined here, not just this student's own
+    // SLP's.
     supabase
       .from("behavior_types")
       .select("id, name, color")
+      .eq("slp_id", id)
       .order("name", { ascending: true }),
     supabase
       .from("attendance_records")

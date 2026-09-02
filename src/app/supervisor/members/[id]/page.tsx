@@ -8,10 +8,11 @@ import AvatarBadge from "@/components/avatar-badge";
 import SupervisorViewingBanner from "@/components/supervisor-viewing-banner";
 
 /** A linked member's caseload, read-only — the supervisor-side mirror of
- *  /dashboard and /teacher/dashboard's student list. Every query here is
- *  scoped by the "Supervisors can view linked members' ..." RLS policies
- *  added in 0023_supervisor_readonly_access.sql, not by anything this
- *  page filters client-side. */
+ *  /dashboard and /teacher/dashboard's student list. RLS (the
+ *  "Supervisors can view linked members' ..." policies added in
+ *  0023_supervisor_readonly_access.sql) is what makes any of this
+ *  readable at all, but it alone isn't enough to scope the students
+ *  query to *this one* member — see the explicit .eq() filter below. */
 export default async function SupervisorMemberPage({
   params,
 }: {
@@ -39,15 +40,25 @@ export default async function SupervisorMemberPage({
     notFound();
   }
 
+  // Explicit owner filter, not just RLS: 0023's is_supervisor_of()
+  // policy makes every one of the supervisor's *linked members'* rows on
+  // this table visible, not just this one member's -- without this
+  // filter, a supervisor linked to more than one Teacher/SLP would see
+  // every linked member's students combined on what's supposed to be
+  // this one member's own caseload page. Same category of bug as the
+  // behavior_types leak on the student detail page, found while
+  // verifying that fix.
   const { data: students, error } =
     link.member_role === "teacher"
       ? await supabase
           .from("teacher_students")
           .select("id, name, class, avatar, created_at")
+          .eq("teacher_id", id)
           .order("created_at", { ascending: false })
       : await supabase
           .from("students")
           .select("id, name, class, avatar, created_at")
+          .eq("slp_id", id)
           .order("created_at", { ascending: false });
 
   return (
