@@ -20,7 +20,13 @@ export type DayOfWeek =
  *  constraint enforces this same shape, so a row read back from
  *  Supabase is always already valid — this type is never a "maybe
  *  malformed" concern the way it would be without that constraint. */
-export type ScheduledDayTime = { day: DayOfWeek; time: string };
+export type ScheduledDayTime = {
+  day: DayOfWeek;
+  time: string;
+  /** Session length in minutes — defaults to 30, but any positive
+   *  number is allowed (the DB CHECK constraint caps it at 480). */
+  duration_minutes: number;
+};
 
 export type Student = {
   id: string;

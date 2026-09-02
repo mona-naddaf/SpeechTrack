@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
+  CalendarDays,
   ClipboardList,
   Library,
   Settings,
@@ -111,6 +112,13 @@ export default async function DashboardPage() {
             Welcome, {displayName} <span aria-hidden>👋</span>
           </h1>
           <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/schedule"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
+            >
+              <CalendarDays className="h-4 w-4" />
+              Schedule
+            </Link>
             <Link
               href="/toolkit/assessments"
               className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
