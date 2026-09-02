@@ -34,6 +34,13 @@ export default async function SchedulePage() {
     scheduleEndDate: row.schedule_end_date,
   }));
 
+  // schedule_events is one shared table for both the SLP and Teacher
+  // sides (0031_schedule_events.sql) -- RLS already scopes this to only
+  // this SLP's own rows, same as the unfiltered `students` select above.
+  const { data: eventsData, error: eventsError } = await supabase
+    .from("schedule_events")
+    .select("id, title, date, start_time, duration_minutes, note, color, created_at");
+
   return (
     <main className="flex-1 bg-cream-50 px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-4xl">
@@ -53,9 +60,9 @@ export default async function SchedulePage() {
           </p>
         </div>
 
-        {error && (
+        {(error || eventsError) && (
           <p className="mt-4 text-sm text-red-600">
-            Couldn&apos;t load the schedule: {error.message}
+            Couldn&apos;t load the schedule: {(error ?? eventsError)!.message}
           </p>
         )}
 
@@ -64,6 +71,9 @@ export default async function SchedulePage() {
             students={students}
             studentBasePath="/students"
             initialToday={getTodayLocalDateString()}
+            initialEvents={eventsData ?? []}
+            ownerId={user.id}
+            ownerField="slp_id"
           />
         </div>
       </div>

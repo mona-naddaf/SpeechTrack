@@ -5,6 +5,10 @@ export type ColorOption = {
   swatchClass: string;
   /** light background + dark text — pill/badge */
   badgeClass: string;
+  /** mid-tone border — pairs with badgeClass for an outlined card/block
+   *  (e.g. a Schedule page event block) that needs more than a flat
+   *  badge fill. */
+  borderClass: string;
 };
 
 export const COLOR_OPTIONS: ColorOption[] = [
@@ -13,48 +17,56 @@ export const COLOR_OPTIONS: ColorOption[] = [
     label: "Green",
     swatchClass: "bg-green-500",
     badgeClass: "bg-green-100 text-green-800",
+    borderClass: "border-green-300",
   },
   {
     value: "teal",
     label: "Teal",
     swatchClass: "bg-teal-500",
     badgeClass: "bg-teal-100 text-teal-800",
+    borderClass: "border-teal-300",
   },
   {
     value: "amber",
     label: "Amber",
     swatchClass: "bg-amber-500",
     badgeClass: "bg-amber-100 text-amber-800",
+    borderClass: "border-amber-300",
   },
   {
     value: "clay",
     label: "Clay",
     swatchClass: "bg-orange-500",
     badgeClass: "bg-orange-100 text-orange-800",
+    borderClass: "border-orange-300",
   },
   {
     value: "grey",
     label: "Grey",
     swatchClass: "bg-slate-400",
     badgeClass: "bg-slate-100 text-slate-700",
+    borderClass: "border-slate-300",
   },
   {
     value: "blue",
     label: "Blue",
     swatchClass: "bg-blue-500",
     badgeClass: "bg-blue-100 text-blue-800",
+    borderClass: "border-blue-300",
   },
   {
     value: "purple",
     label: "Purple",
     swatchClass: "bg-purple-500",
     badgeClass: "bg-purple-100 text-purple-800",
+    borderClass: "border-purple-300",
   },
   {
     value: "red",
     label: "Red",
     swatchClass: "bg-red-500",
     badgeClass: "bg-red-100 text-red-800",
+    borderClass: "border-red-300",
   },
 ];
 
@@ -63,6 +75,7 @@ const FALLBACK_COLOR: ColorOption = {
   label: "Grey",
   swatchClass: "bg-slate-400",
   badgeClass: "bg-slate-100 text-slate-700",
+  borderClass: "border-slate-300",
 };
 
 export function getColorOption(value: string): ColorOption {

@@ -9,12 +9,21 @@ import {
   type RefObject,
 } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarX2, ChevronLeft, ChevronRight, Play } from "lucide-react";
+import {
+  CalendarClock,
+  CalendarX2,
+  ChevronLeft,
+  ChevronRight,
+  Play,
+  Plus,
+} from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import { weekStartOf } from "@/lib/streaks";
-import type { ScheduledDayTime } from "@/lib/types";
+import type { ScheduledDayTime, ScheduleEvent } from "@/lib/types";
 import {
   DAY_LABELS,
   DEFAULT_DURATION_MINUTES,
+  DEFAULT_EVENT_COLOR,
   addDaysToDateString,
   datesForWeekOf,
   dayOfWeekOf,
@@ -25,7 +34,12 @@ import {
   isWithinScheduleEndDate,
   timeToMinutes,
 } from "@/lib/schedule";
+import { getColorOption } from "@/lib/colors";
 import AvatarBadge from "@/components/avatar-badge";
+import ScheduleEventFormModal, {
+  type ScheduleEventFormValues,
+} from "@/components/schedule-event-form-modal";
+import DeleteScheduleEventConfirmModal from "@/components/delete-schedule-event-confirm-modal";
 
 /** Side-agnostic shape ScheduleView renders from — the SLP and Teacher
  *  schedule pages each map their raw Student/TeacherStudent query
@@ -50,6 +64,16 @@ type Props = {
    *  rest of the app already uses for an initial "today" — seeds the
    *  default view before the live clock below takes over client-side. */
   initialToday: string;
+  /** Standalone events (step 3) — schedule_events is one shared table
+   *  for both sides (see 0031_schedule_events.sql), so ScheduleView owns
+   *  their add/edit/delete here directly (same "client component owns
+   *  its own CRUD" pattern as e.g. StudentsSection) rather than each
+   *  page reimplementing it. */
+  initialEvents: ScheduleEvent[];
+  /** The signed-in SLP's or Teacher's own id — written into whichever of
+   *  schedule_events.slp_id / teacher_id `ownerField` names. */
+  ownerId: string;
+  ownerField: "slp_id" | "teacher_id";
 };
 
 const PX_PER_MINUTE = 1; // 60px per hour — keeps top/height == minutes, no extra scaling math
@@ -86,7 +110,8 @@ function toLocalDateStr(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-type Block = {
+type SessionBlock = {
+  kind: "session";
   studentId: string;
   studentName: string;
   avatar: string | null;
@@ -95,14 +120,32 @@ type Block = {
   time: string;
 };
 
+type EventBlock = {
+  kind: "event";
+  /** The original row, kept whole (rather than flattened into its own
+   *  title/note/color/time fields) so the click handler can hand it
+   *  straight to ScheduleEventFormModal for editing with no separate
+   *  by-id lookup. */
+  event: ScheduleEvent;
+  startMinutes: number;
+  endMinutes: number;
+};
+
+type Block = SessionBlock | EventBlock;
+
 /** Every block that falls on `dateStr` — one per (student, scheduled
  *  day) whose day-of-week matches and whose schedule_end_date (if any)
- *  hasn't passed as of that specific date. This is evaluated fresh per
- *  date shown, not just "hide the whole student once their end date is
- *  in the past" — a week that's partly before and partly after an end
- *  date shows exactly the days that are still in range. */
+ *  hasn't passed as of that specific date, plus one per standalone
+ *  event whose own `date` is exactly `dateStr` (events are a single
+ *  occurrence, not a recurring weekly pattern like scheduled_days, so
+ *  no day-of-week matching applies to them). Student blocks are
+ *  evaluated fresh per date shown, not just "hide the whole student
+ *  once their end date is in the past" — a week that's partly before
+ *  and partly after an end date shows exactly the days that are still
+ *  in range. */
 function blocksForDate(
   students: CommonScheduleStudent[],
+  events: ScheduleEvent[],
   dateStr: string
 ): Block[] {
   const dow = dayOfWeekOf(dateStr);
@@ -118,6 +161,7 @@ function blocksForDate(
       // its own real value.
       const duration = entry.duration_minutes ?? DEFAULT_DURATION_MINUTES;
       blocks.push({
+        kind: "session",
         studentId: student.id,
         studentName: student.name,
         avatar: student.avatar,
@@ -127,10 +171,21 @@ function blocksForDate(
       });
     }
   }
+  for (const event of events) {
+    if (event.date !== dateStr) continue;
+    const start = timeToMinutes(event.start_time);
+    blocks.push({
+      kind: "event",
+      event,
+      startMinutes: start,
+      endMinutes: start + event.duration_minutes,
+    });
+  }
   return blocks.sort((a, b) => a.startMinutes - b.startMinutes);
 }
 
 type LanedBlock = Block & { lane: number; laneCount: number };
+type LanedEventBlock = EventBlock & { lane: number; laneCount: number };
 
 /** Simple greedy interval-graph coloring: blocks that don't overlap in
  *  time share lane 0; anything that would collide gets pushed to the
@@ -163,25 +218,32 @@ function assignLanes(blocks: Block[]): LanedBlock[] {
   });
 }
 
-/** One scheduled-session block, positioned absolutely within its
- *  column's relatively-positioned timeline. Shared by Week (compact)
- *  and Day (detailed) views via `variant`. The block itself is a div
- *  with a click/keyboard handler rather than a Link — it contains its
- *  own "Start session" button, and a button or link can't legally nest
- *  inside an <a>, so navigation goes through next/navigation's router
- *  instead for both. */
+/** One scheduled-session OR standalone-event block, positioned
+ *  absolutely within its column's relatively-positioned timeline.
+ *  Shared by Week (compact) and Day (detailed) views via `variant`. The
+ *  block itself is a div with a click/keyboard handler rather than a
+ *  Link — a session block contains its own "Start session" button, and
+ *  a button or link can't legally nest inside an <a>, so navigation
+ *  goes through next/navigation's router instead for both; an event
+ *  block has no student page to link to at all, so its click just opens
+ *  its own edit form (never onOpenStudent/onStartSession — see
+ *  EventBlockView below). Geometry (top/height/lane width) is identical
+ *  for both kinds, computed once here and handed off to whichever
+ *  renderer applies. */
 function ScheduleBlock({
   block,
   rangeStart,
   variant,
   onOpenStudent,
   onStartSession,
+  onOpenEvent,
 }: {
   block: LanedBlock;
   rangeStart: number;
   variant: "week" | "day";
   onOpenStudent: (id: string) => void;
   onStartSession: (id: string) => void;
+  onOpenEvent: (event: ScheduleEvent) => void;
 }) {
   const top = (block.startMinutes - rangeStart) * PX_PER_MINUTE + TOP_PADDING_PX;
   const height = Math.max(
@@ -190,18 +252,37 @@ function ScheduleBlock({
   );
   const widthPct = 100 / block.laneCount;
   const leftPct = block.lane * widthPct;
+
+  if (block.kind === "event") {
+    return (
+      <EventBlockView
+        block={block}
+        variant={variant}
+        geometry={{ top, height, widthPct, leftPct }}
+        onOpenEvent={onOpenEvent}
+      />
+    );
+  }
+
   // A laned (overlapping) block is narrower — give its name more room
   // to breathe by letting it wrap onto a second line there, instead of
   // truncating to a sliver of the name on one line. A solo block at
   // full width usually fits comfortably on one line already.
   const nameCanWrap = block.laneCount > 1 || height >= 44;
 
-  function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+  // An arrow function, not `function handleKeyDown() {}` — a hoisted
+  // function declaration would make TS treat `block` as possibly still
+  // the wider LanedBlock union inside it (hoisting means it could in
+  // principle be called before the `block.kind === "event"` narrowing
+  // above), so it loses the narrowing to SessionBlock this whole rest
+  // of the function relies on. A const arrow function has no such
+  // hoisting concern and keeps the narrowed type.
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       onOpenStudent(block.studentId);
     }
-  }
+  };
 
   if (variant === "day") {
     // A short duration (as little as 15 minutes) laned alongside other
@@ -339,6 +420,86 @@ function ScheduleBlock({
   );
 }
 
+/** A standalone event's block — same geometry as ScheduleBlock's session
+ *  rendering (computed once by the caller and handed down), but its own
+ *  simpler content: a small calendar icon instead of a student avatar,
+ *  no "Start session" shortcut, and colored from the event's own
+ *  src/lib/colors.ts palette pick rather than the fixed teal
+ *  accent-* classes every session block uses — that color difference is
+ *  what makes an event visually read as "not a student session" at a
+ *  glance, on top of the icon and the missing Start button. Clicking
+ *  anywhere on the block (or Enter/Space) opens it for editing via
+ *  onOpenEvent — deliberately never onOpenStudent/onStartSession, since
+ *  an event has no student to navigate to. */
+function EventBlockView({
+  block,
+  variant,
+  geometry,
+  onOpenEvent,
+}: {
+  block: LanedEventBlock;
+  variant: "week" | "day";
+  geometry: { top: number; height: number; widthPct: number; leftPct: number };
+  onOpenEvent: (event: ScheduleEvent) => void;
+}) {
+  const { top, height, widthPct, leftPct } = geometry;
+  const color = getColorOption(block.event.color ?? DEFAULT_EVENT_COLOR);
+  const isDay = variant === "day";
+  // Same isCompact threshold ScheduleBlock's own Day-variant session
+  // rendering uses — below this height there's no room for icon + title
+  // + time without any of it overflowing.
+  const isDayCompact = isDay && height < 40;
+  const showTime = isDay ? !isDayCompact : height >= 34;
+  const nameCanWrap = isDay ? !isDayCompact : block.laneCount > 1;
+  const showIcon = isDay ? !isDayCompact : block.laneCount < 3;
+
+  function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onOpenEvent(block.event);
+    }
+  }
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      title={block.event.title}
+      onClick={() => onOpenEvent(block.event)}
+      onKeyDown={handleKeyDown}
+      className={`absolute cursor-pointer overflow-hidden border text-left shadow-sm transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-brand-500 ${color.badgeClass} ${color.borderClass} ${
+        isDay
+          ? `rounded-xl ${isDayCompact ? "px-1.5 py-1" : "p-2"}`
+          : "rounded-lg px-1.5 py-1"
+      }`}
+      style={{
+        top,
+        height,
+        left: `calc(${leftPct}% + ${isDay ? 4 : 2}px)`,
+        width: `calc(${widthPct}% - ${isDay ? 8 : 4}px)`,
+      }}
+    >
+      <div className="flex min-w-0 items-start gap-1">
+        {showIcon && (
+          <CalendarClock className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
+        )}
+        <span
+          className={`min-w-0 flex-1 font-semibold leading-tight ${
+            isDay ? "text-sm" : "text-xs"
+          } ${nameCanWrap ? "line-clamp-2 break-words" : "truncate"}`}
+        >
+          {block.event.title}
+        </span>
+      </div>
+      {showTime && (
+        <p className="truncate text-[10px] opacity-80">
+          {formatTime12h(block.event.start_time)}
+        </p>
+      )}
+    </div>
+  );
+}
+
 /** The horizontal "current time" marker — only ever rendered by a
  *  caller that has already confirmed the column being drawn is today
  *  and that the live clock has ticked at least once (see ScheduleView's
@@ -444,6 +605,7 @@ function useAutoScrollToSensibleStart(ref: RefObject<HTMLDivElement | null>) {
 function WeekGrid({
   dates,
   students,
+  events,
   rangeStart,
   rangeEnd,
   hours,
@@ -452,10 +614,12 @@ function WeekGrid({
   nowMinutes,
   onOpenStudent,
   onStartSession,
+  onOpenEvent,
   onOpenDay,
 }: {
   dates: string[];
   students: CommonScheduleStudent[];
+  events: ScheduleEvent[];
   rangeStart: number;
   rangeEnd: number;
   hours: number[];
@@ -464,6 +628,7 @@ function WeekGrid({
   nowMinutes: number | null;
   onOpenStudent: (id: string) => void;
   onStartSession: (id: string) => void;
+  onOpenEvent: (event: ScheduleEvent) => void;
   onOpenDay: (date: string) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -513,7 +678,7 @@ function WeekGrid({
             <TimeAxis hours={hours} rangeStart={rangeStart} totalHeight={totalHeight} />
 
             {dates.map((date) => {
-              const laned = assignLanes(blocksForDate(students, date));
+              const laned = assignLanes(blocksForDate(students, events, date));
               const isToday = date === todayDateStr;
               const showNow =
                 isToday &&
@@ -534,12 +699,17 @@ function WeekGrid({
                   )}
                   {laned.map((block) => (
                     <ScheduleBlock
-                      key={`${block.studentId}-${block.time}`}
+                      key={
+                        block.kind === "session"
+                          ? `session-${block.studentId}-${block.time}`
+                          : `event-${block.event.id}`
+                      }
                       block={block}
                       rangeStart={rangeStart}
                       variant="week"
                       onOpenStudent={onOpenStudent}
                       onStartSession={onStartSession}
+                      onOpenEvent={onOpenEvent}
                     />
                   ))}
                 </div>
@@ -555,6 +725,7 @@ function WeekGrid({
 function DayTimeline({
   date,
   students,
+  events,
   rangeStart,
   rangeEnd,
   hours,
@@ -563,9 +734,11 @@ function DayTimeline({
   nowMinutes,
   onOpenStudent,
   onStartSession,
+  onOpenEvent,
 }: {
   date: string;
   students: CommonScheduleStudent[];
+  events: ScheduleEvent[];
   rangeStart: number;
   rangeEnd: number;
   hours: number[];
@@ -574,8 +747,9 @@ function DayTimeline({
   nowMinutes: number | null;
   onOpenStudent: (id: string) => void;
   onStartSession: (id: string) => void;
+  onOpenEvent: (event: ScheduleEvent) => void;
 }) {
-  const laned = assignLanes(blocksForDate(students, date));
+  const laned = assignLanes(blocksForDate(students, events, date));
   const showNow =
     isToday && nowMinutes !== null && nowMinutes >= rangeStart && nowMinutes <= rangeEnd;
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -597,17 +771,22 @@ function DayTimeline({
             )}
             {laned.length === 0 ? (
               <p className="absolute inset-x-0 top-6 text-center text-sm text-stone-400">
-                No sessions scheduled this day.
+                Nothing scheduled this day.
               </p>
             ) : (
               laned.map((block) => (
                 <ScheduleBlock
-                  key={`${block.studentId}-${block.time}`}
+                  key={
+                    block.kind === "session"
+                      ? `session-${block.studentId}-${block.time}`
+                      : `event-${block.event.id}`
+                  }
                   block={block}
                   rangeStart={rangeStart}
                   variant="day"
                   onOpenStudent={onOpenStudent}
                   onStartSession={onStartSession}
+                  onOpenEvent={onOpenEvent}
                 />
               ))
             )}
@@ -622,6 +801,9 @@ export default function ScheduleView({
   students,
   studentBasePath,
   initialToday,
+  initialEvents,
+  ownerId,
+  ownerField,
 }: Props) {
   const router = useRouter();
   const [view, setView] = useState<"week" | "day">("week");
@@ -629,6 +811,87 @@ export default function ScheduleView({
   const [todayDateStr, setTodayDateStr] = useState(initialToday);
   // null until the first client-side tick — see the hydration note below.
   const [nowMinutes, setNowMinutes] = useState<number | null>(null);
+
+  // Standalone events (step 3) — same "client component owns its own
+  // CRUD against a shared table" pattern as StudentsSection/
+  // AttendanceSection, just living here instead of a dedicated section
+  // component since the Schedule page has only the one section.
+  const [events, setEvents] = useState<ScheduleEvent[]>(initialEvents);
+  const [showAddEventModal, setShowAddEventModal] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
+  const [deletingEvent, setDeletingEvent] = useState<ScheduleEvent | null>(
+    null
+  );
+
+  async function handleAddEvent(values: ScheduleEventFormValues) {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("schedule_events")
+      .insert({
+        [ownerField]: ownerId,
+        title: values.title,
+        date: values.date,
+        start_time: values.startTime,
+        duration_minutes: values.durationMinutes,
+        note: values.note,
+        color: values.color,
+      })
+      .select("id, title, date, start_time, duration_minutes, note, color, created_at")
+      .single();
+
+    if (error || !data) {
+      return error?.message ?? "Something went wrong. Please try again.";
+    }
+
+    setEvents((prev) => [...prev, data]);
+    setShowAddEventModal(false);
+    return null;
+  }
+
+  async function handleEditEvent(values: ScheduleEventFormValues) {
+    if (!editingEvent) return null;
+
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("schedule_events")
+      .update({
+        title: values.title,
+        date: values.date,
+        start_time: values.startTime,
+        duration_minutes: values.durationMinutes,
+        note: values.note,
+        color: values.color,
+      })
+      .eq("id", editingEvent.id)
+      .select("id, title, date, start_time, duration_minutes, note, color, created_at")
+      .single();
+
+    if (error || !data) {
+      return error?.message ?? "Something went wrong. Please try again.";
+    }
+
+    setEvents((prev) => prev.map((e) => (e.id === data.id ? data : e)));
+    setEditingEvent(null);
+    return null;
+  }
+
+  async function handleDeleteEvent() {
+    if (!deletingEvent) return null;
+
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("schedule_events")
+      .delete()
+      .eq("id", deletingEvent.id);
+
+    if (error) {
+      return error.message;
+    }
+
+    setEvents((prev) => prev.filter((e) => e.id !== deletingEvent.id));
+    setDeletingEvent(null);
+    return null;
+  }
 
   // The live "now" line: ticks every 30s via the browser's own clock,
   // not the server's. A full real-time (per-second) line would be
@@ -656,9 +919,9 @@ export default function ScheduleView({
     return () => clearInterval(id);
   }, []);
 
-  const hasAnySchedule = useMemo(
-    () => students.some((s) => s.scheduledDays.length > 0),
-    [students]
+  const hasAnythingToShow = useMemo(
+    () => students.some((s) => s.scheduledDays.length > 0) || events.length > 0,
+    [students, events]
   );
 
   // Fixed full-day range (see the constants' own comments) rather than
@@ -731,29 +994,39 @@ export default function ScheduleView({
               : formatFullDateLabel(anchorDate)}
           </h2>
         </div>
-        <div className="inline-flex rounded-lg border border-stone-300 bg-white p-0.5">
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setView("week")}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-              view === "week"
-                ? "bg-brand-700 text-white"
-                : "text-stone-600 hover:bg-cream-100"
-            }`}
+            onClick={() => setShowAddEventModal(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md"
           >
-            Week
+            <Plus className="h-4 w-4" />
+            Add event
           </button>
-          <button
-            type="button"
-            onClick={() => setView("day")}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-              view === "day"
-                ? "bg-brand-700 text-white"
-                : "text-stone-600 hover:bg-cream-100"
-            }`}
-          >
-            Day
-          </button>
+          <div className="inline-flex rounded-lg border border-stone-300 bg-white p-0.5">
+            <button
+              type="button"
+              onClick={() => setView("week")}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                view === "week"
+                  ? "bg-brand-700 text-white"
+                  : "text-stone-600 hover:bg-cream-100"
+              }`}
+            >
+              Week
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("day")}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                view === "day"
+                  ? "bg-brand-700 text-white"
+                  : "text-stone-600 hover:bg-cream-100"
+              }`}
+            >
+              Day
+            </button>
+          </div>
         </div>
       </div>
 
@@ -762,20 +1035,21 @@ export default function ScheduleView({
         or later hours.
       </p>
 
-      {!hasAnySchedule ? (
+      {!hasAnythingToShow ? (
         <div className="mt-4 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-stone-300 bg-white p-10 text-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent-100">
             <CalendarX2 className="h-6 w-6 text-accent-600" />
           </div>
           <p className="text-stone-500">
-            No students have scheduled days yet — add scheduled days from a
-            student&apos;s edit form to see them here.
+            Nothing scheduled yet — add scheduled days from a student&apos;s
+            edit form, or add a standalone event above, to see them here.
           </p>
         </div>
       ) : view === "week" ? (
         <WeekGrid
           dates={weekDates}
           students={students}
+          events={events}
           rangeStart={rangeStart}
           rangeEnd={rangeEnd}
           hours={hours}
@@ -784,6 +1058,7 @@ export default function ScheduleView({
           nowMinutes={nowMinutes}
           onOpenStudent={(id) => router.push(studentHref(id))}
           onStartSession={(id) => router.push(sessionHref(id))}
+          onOpenEvent={(event) => setEditingEvent(event)}
           onOpenDay={(d) => {
             setAnchorDate(d);
             setView("day");
@@ -793,6 +1068,7 @@ export default function ScheduleView({
         <DayTimeline
           date={anchorDate}
           students={students}
+          events={events}
           rangeStart={rangeStart}
           rangeEnd={rangeEnd}
           hours={hours}
@@ -801,6 +1077,38 @@ export default function ScheduleView({
           nowMinutes={nowMinutes}
           onOpenStudent={(id) => router.push(studentHref(id))}
           onStartSession={(id) => router.push(sessionHref(id))}
+          onOpenEvent={(event) => setEditingEvent(event)}
+        />
+      )}
+
+      {showAddEventModal && (
+        <ScheduleEventFormModal
+          mode="add"
+          initialDate={anchorDate}
+          onCancel={() => setShowAddEventModal(false)}
+          onSubmit={handleAddEvent}
+        />
+      )}
+
+      {editingEvent && (
+        <ScheduleEventFormModal
+          mode="edit"
+          initialEvent={editingEvent}
+          initialDate={anchorDate}
+          onCancel={() => setEditingEvent(null)}
+          onSubmit={handleEditEvent}
+          onDelete={() => {
+            setDeletingEvent(editingEvent);
+            setEditingEvent(null);
+          }}
+        />
+      )}
+
+      {deletingEvent && (
+        <DeleteScheduleEventConfirmModal
+          event={deletingEvent}
+          onCancel={() => setDeletingEvent(null)}
+          onConfirm={handleDeleteEvent}
         />
       )}
     </div>

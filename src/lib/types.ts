@@ -393,6 +393,32 @@ export type AttendanceRecord = {
   created_at: string;
 };
 
+// ============================================================
+// Schedule events -- standalone calendar entries (a meeting, or
+// anything else not tied to a student) shown on the Schedule page
+// alongside scheduled student sessions. Same shared-table shape as
+// AttendanceRecord above (schedule_events, from
+// 0031_schedule_events.sql): exactly one of slp_id/teacher_id is set at
+// the DB level, and every read is already scoped to "my own events" by
+// RLS, so neither column needs to appear in this app-facing shape.
+// ============================================================
+
+export type ScheduleEvent = {
+  id: string;
+  title: string;
+  /** YYYY-MM-DD -- a single occurrence, not a recurring pattern like
+   *  scheduled_days. */
+  date: string;
+  /** "HH:MM", 24h -- same convention as ScheduledDayTime.time. */
+  start_time: string;
+  duration_minutes: number;
+  note: string | null;
+  /** One of src/lib/colors.ts's COLOR_OPTIONS values, or null for the
+   *  default. */
+  color: string | null;
+  created_at: string;
+};
+
 export type TeacherSubject = {
   id: string;
   name: string;

@@ -18,6 +18,14 @@ export const DAYS_OF_WEEK: DayOfWeek[] = [
  *  (for any entry that somehow lacks the field) never disagree. */
 export const DEFAULT_DURATION_MINUTES = 30;
 
+/** A new event's default src/lib/colors.ts palette value — deliberately
+ *  not "teal", which already reads as "student session" everywhere else
+ *  on the Schedule page (ScheduleBlock's accent-* classes), so a fresh
+ *  event is visually distinct from a session block right away rather
+ *  than by coincidence of whatever color the picker happens to land on
+ *  first. */
+export const DEFAULT_EVENT_COLOR = "blue";
+
 export const DAY_LABELS: Record<DayOfWeek, string> = {
   monday: "Mon",
   tuesday: "Tue",
