@@ -419,6 +419,31 @@ export type ScheduleEvent = {
   created_at: string;
 };
 
+// ============================================================
+// Holidays and countdowns -- Schedule/Calendar step 4. Same shared-
+// table shape as ScheduleEvent above (holidays / countdowns, from
+// 0032_holidays_and_countdowns.sql): exactly one of slp_id/teacher_id
+// is set at the DB level, RLS already scopes every read to "my own"
+// (plus, for holidays only, a linked supervisor's read-only view), so
+// neither column needs to appear in either app-facing shape.
+// ============================================================
+
+export type Holiday = {
+  id: string;
+  title: string;
+  /** YYYY-MM-DD -- a whole-day marker, no time. */
+  date: string;
+  created_at: string;
+};
+
+export type Countdown = {
+  id: string;
+  title: string;
+  /** YYYY-MM-DD -- the date being counted down to. */
+  target_date: string;
+  created_at: string;
+};
+
 export type TeacherSubject = {
   id: string;
   name: string;

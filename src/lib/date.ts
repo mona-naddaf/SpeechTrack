@@ -28,6 +28,18 @@ export function formatDate(dateStr: string): string {
   });
 }
 
+/** Whole days from `today` to `dateStr` — positive if `dateStr` is in
+ *  the future, negative if it's in the past, 0 if they're the same day.
+ *  Both plain YYYY-MM-DD strings parsed at local midnight, so this is a
+ *  clean calendar-day difference regardless of DST — the countdowns
+ *  widget's "X days until ..." is exactly this. */
+export function daysUntil(dateStr: string, today: string): number {
+  const target = new Date(`${dateStr}T00:00:00`);
+  const from = new Date(`${today}T00:00:00`);
+  const msPerDay = 24 * 60 * 60 * 1000;
+  return Math.round((target.getTime() - from.getTime()) / msPerDay);
+}
+
 /** Compact form for chart axis labels, e.g. "Jan 5" (no year). */
 export function formatShortDate(dateStr: string): string {
   const d = new Date(`${dateStr}T00:00:00`);

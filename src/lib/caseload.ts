@@ -75,6 +75,30 @@ export function findAtRiskStreaks(
     .slice(0, limit);
 }
 
+/** Adds the same shared set of dates (the practice's holidays) onto
+ *  every student's own per-student date list, producing the combined
+ *  shape computeCaseloadStreaks()/findAtRiskStreaks() expect for
+ *  absentDatesByStudentId. A holiday isn't specific to one student the
+ *  way an excused attendance_records absence is -- it protects every
+ *  student's streak on that same calendar day -- so this is the one
+ *  place that folds "this student's own excused absences" and "the
+ *  practice's holidays" into a single list, rather than each caller
+ *  re-deriving that merge itself. Students with no individual absences
+ *  yet still get the holiday dates (that's the whole point), which is
+ *  why this builds a fresh map from `studentIds` rather than just
+ *  mutating whatever's already in `datesByStudentId`. */
+export function addSharedDatesToEveryStudent(
+  datesByStudentId: Map<string, string[]>,
+  studentIds: string[],
+  sharedDates: string[]
+): Map<string, string[]> {
+  const merged = new Map<string, string[]>();
+  for (const id of studentIds) {
+    merged.set(id, [...(datesByStudentId.get(id) ?? []), ...sharedDates]);
+  }
+  return merged;
+}
+
 /** Groups a flat list of {student_id, date} rows into a
  *  Map<student_id, date[]> — the shape computeCaseloadStreaks() and
  *  findAtRiskStreaks() both expect, for either sessions or attendance

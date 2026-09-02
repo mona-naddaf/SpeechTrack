@@ -14,6 +14,7 @@ import { getUserRole } from "@/lib/role";
 import { daysAgoLocalDateString, getTodayLocalDateString } from "@/lib/date";
 import { weekStartOf } from "@/lib/streaks";
 import {
+  addSharedDatesToEveryStudent,
   computeCaseloadStreaks,
   findAtRiskStreaks,
   groupDatesByStudent,
@@ -21,6 +22,7 @@ import {
 import { buildSlpDashboardSteps } from "@/lib/onboarding-tour";
 import CaseloadWinsCard from "@/components/caseload-wins-card";
 import StreakRiskNudges from "@/components/streak-risk-nudges";
+import CountdownsWidget from "@/components/countdowns-widget";
 import DashboardTour from "@/components/dashboard-tour";
 import LinkSupervisorButton from "@/components/link-supervisor-button";
 import SignOutButton from "./sign-out-button";
@@ -58,22 +60,30 @@ export default async function DashboardPage() {
       : "";
   const displayName = fullName || user.email;
 
-  // Caseload wins + at-risk nudges — all derived from the same three
-  // lightweight queries. sessions/attendance_records still don't need an
-  // explicit slp_id filter (RLS on those two tables is still owner-only,
-  // untouched by 0025_community_sharing_browse.sql), but the goals count
-  // does need one now: that migration added a second permissive SELECT
-  // policy allowing *any* account's visibility='shared' rows, so without
-  // this filter another SLP's shared bank goal could in principle count
-  // toward her "recent wins" here. attendance_records feeds the same
-  // streak math as sessions — an excused absence protects a streak
-  // without counting as a session (see computeCadenceStreak in
-  // src/lib/streaks.ts).
+  // Caseload wins + at-risk nudges — all derived from the same four
+  // lightweight queries. sessions/attendance_records/holidays still
+  // don't need an explicit slp_id filter (RLS on all three is
+  // owner-only, untouched by 0025_community_sharing_browse.sql), but
+  // the goals count does need one now: that migration added a second
+  // permissive SELECT policy allowing *any* account's visibility='shared'
+  // rows, so without this filter another SLP's shared bank goal could in
+  // principle count toward her "recent wins" here. attendance_records
+  // and holidays both feed the same streak math as sessions — an
+  // excused absence or a marked holiday protects a streak without
+  // counting as a session (see computeCadenceStreak in
+  // src/lib/streaks.ts, and addSharedDatesToEveryStudent below for how
+  // holidays — one shared date list, not per-student like attendance —
+  // get folded in for every student alike).
   const today = getTodayLocalDateString();
-  const [sessionsResult, attendanceResult, masteredCountResult] =
+  const [sessionsResult, attendanceResult, holidaysResult, countdownsResult, masteredCountResult] =
     await Promise.all([
       supabase.from("sessions").select("student_id, date"),
       supabase.from("attendance_records").select("student_id, date"),
+      supabase.from("holidays").select("id, title, date, created_at"),
+      supabase
+        .from("countdowns")
+        .select("id, title, target_date, created_at")
+        .order("target_date", { ascending: true }),
       supabase
         .from("goals")
         .select("id", { count: "exact", head: true })
@@ -85,8 +95,10 @@ export default async function DashboardPage() {
   const sessionDatesByStudentId = groupDatesByStudent(
     sessionsResult.data ?? []
   );
-  const absentDatesByStudentId = groupDatesByStudent(
-    attendanceResult.data ?? []
+  const absentDatesByStudentId = addSharedDatesToEveryStudent(
+    groupDatesByStudent(attendanceResult.data ?? []),
+    (students ?? []).map((s) => s.id),
+    (holidaysResult.data ?? []).map((h) => h.date)
   );
   const caseloadStreaks = computeCaseloadStreaks(
     students ?? [],
@@ -182,6 +194,11 @@ export default async function DashboardPage() {
           <StreakRiskNudges
             atRiskStudents={atRiskStudents}
             basePath="/students"
+          />
+          <CountdownsWidget
+            countdowns={countdownsResult.data ?? []}
+            today={today}
+            manageHref="/schedule"
           />
         </div>
 

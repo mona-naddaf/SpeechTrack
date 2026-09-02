@@ -34,13 +34,25 @@ export default async function TeacherSchedulePage() {
     scheduleEndDate: row.schedule_end_date,
   }));
 
-  // schedule_events is one shared table for both the SLP and Teacher
-  // sides (0031_schedule_events.sql) -- RLS already scopes this to only
+  // schedule_events/holidays/countdowns are each one shared table for
+  // both the SLP and Teacher sides (0031_schedule_events.sql,
+  // 0032_holidays_and_countdowns.sql) -- RLS already scopes each to only
   // this Teacher's own rows, same as the unfiltered `teacher_students`
   // select above.
-  const { data: eventsData, error: eventsError } = await supabase
-    .from("schedule_events")
-    .select("id, title, date, start_time, duration_minutes, note, color, created_at");
+  const [
+    { data: eventsData, error: eventsError },
+    { data: holidaysData, error: holidaysError },
+    { data: countdownsData, error: countdownsError },
+  ] = await Promise.all([
+    supabase
+      .from("schedule_events")
+      .select("id, title, date, start_time, duration_minutes, note, color, created_at"),
+    supabase.from("holidays").select("id, title, date, created_at"),
+    supabase
+      .from("countdowns")
+      .select("id, title, target_date, created_at")
+      .order("target_date", { ascending: true }),
+  ]);
 
   return (
     <main className="flex-1 bg-cream-50 px-4 py-8 sm:px-6 sm:py-10">
@@ -61,9 +73,10 @@ export default async function TeacherSchedulePage() {
           </p>
         </div>
 
-        {(error || eventsError) && (
+        {(error || eventsError || holidaysError || countdownsError) && (
           <p className="mt-4 text-sm text-red-600">
-            Couldn&apos;t load the schedule: {(error ?? eventsError)!.message}
+            Couldn&apos;t load the schedule:{" "}
+            {(error ?? eventsError ?? holidaysError ?? countdownsError)!.message}
           </p>
         )}
 
@@ -73,6 +86,8 @@ export default async function TeacherSchedulePage() {
             studentBasePath="/teacher/students"
             initialToday={getTodayLocalDateString()}
             initialEvents={eventsData ?? []}
+            initialHolidays={holidaysData ?? []}
+            initialCountdowns={countdownsData ?? []}
             ownerId={user.id}
             ownerField="teacher_id"
           />

@@ -11,6 +11,7 @@ import {
 import { useRouter } from "next/navigation";
 import {
   CalendarClock,
+  CalendarOff,
   CalendarX2,
   ChevronLeft,
   ChevronRight,
@@ -19,7 +20,12 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { weekStartOf } from "@/lib/streaks";
-import type { ScheduledDayTime, ScheduleEvent } from "@/lib/types";
+import type {
+  Countdown,
+  Holiday,
+  ScheduledDayTime,
+  ScheduleEvent,
+} from "@/lib/types";
 import {
   DAY_LABELS,
   DEFAULT_DURATION_MINUTES,
@@ -40,6 +46,16 @@ import ScheduleEventFormModal, {
   type ScheduleEventFormValues,
 } from "@/components/schedule-event-form-modal";
 import DeleteScheduleEventConfirmModal from "@/components/delete-schedule-event-confirm-modal";
+import HolidayFormModal, {
+  type HolidayFormValues,
+} from "@/components/holiday-form-modal";
+import DeleteHolidayConfirmModal from "@/components/delete-holiday-confirm-modal";
+import HolidaysSection from "@/components/holidays-section";
+import CountdownFormModal, {
+  type CountdownFormValues,
+} from "@/components/countdown-form-modal";
+import DeleteCountdownConfirmModal from "@/components/delete-countdown-confirm-modal";
+import CountdownsWidget from "@/components/countdowns-widget";
 
 /** Side-agnostic shape ScheduleView renders from — the SLP and Teacher
  *  schedule pages each map their raw Student/TeacherStudent query
@@ -70,8 +86,21 @@ type Props = {
    *  its own CRUD" pattern as e.g. StudentsSection) rather than each
    *  page reimplementing it. */
   initialEvents: ScheduleEvent[];
+  /** Holidays (step 4) — same "one shared table, ScheduleView owns the
+   *  CRUD" shape as events above (0032_holidays_and_countdowns.sql). A
+   *  marked holiday shows on the Week/Day calendar (see
+   *  isHoliday/holidayTitleFor below) and, via
+   *  addSharedDatesToEveryStudent in src/lib/caseload.ts, protects every
+   *  student's session streak that day — that half happens server-side,
+   *  wherever a streak is computed, not here. */
+  initialHolidays: Holiday[];
+  /** Countdowns (step 4) — same shared-table CRUD shape again. Shown
+   *  both here (the interactive management list) and, read-only, as a
+   *  preview widget on the dashboard. */
+  initialCountdowns: Countdown[];
   /** The signed-in SLP's or Teacher's own id — written into whichever of
-   *  schedule_events.slp_id / teacher_id `ownerField` names. */
+   *  schedule_events.slp_id / teacher_id (and holidays' / countdowns')
+   *  `ownerField` names. */
   ownerId: string;
   ownerField: "slp_id" | "teacher_id";
 };
@@ -606,6 +635,7 @@ function WeekGrid({
   dates,
   students,
   events,
+  holidaysByDate,
   rangeStart,
   rangeEnd,
   hours,
@@ -620,6 +650,9 @@ function WeekGrid({
   dates: string[];
   students: CommonScheduleStudent[];
   events: ScheduleEvent[];
+  /** date -> holiday title, for the badge tooltip and to know which day
+   *  columns get the holiday tint. */
+  holidaysByDate: Map<string, string>;
   rangeStart: number;
   rangeEnd: number;
   hours: number[];
@@ -641,13 +674,17 @@ function WeekGrid({
           <div />
           {dates.map((date) => {
             const isToday = date === todayDateStr;
+            const holidayTitle = holidaysByDate.get(date);
             const d = new Date(`${date}T00:00:00`);
             return (
               <button
                 key={date}
                 type="button"
                 onClick={() => onOpenDay(date)}
-                className="flex flex-col items-center gap-0.5 border-l border-stone-200 py-2.5 transition-colors hover:bg-cream-50"
+                title={holidayTitle}
+                className={`flex flex-col items-center gap-0.5 border-l border-stone-200 py-2.5 transition-colors hover:bg-cream-50 ${
+                  holidayTitle ? "bg-amber-50" : ""
+                }`}
               >
                 <span className="text-[11px] font-medium uppercase tracking-wide text-stone-400">
                   {DAY_LABELS[dayOfWeekOf(date)]}
@@ -659,6 +696,12 @@ function WeekGrid({
                 >
                   {d.getDate()}
                 </span>
+                {holidayTitle && (
+                  <span className="flex items-center gap-0.5 truncate px-1 text-[10px] font-medium text-amber-700">
+                    <CalendarOff className="h-2.5 w-2.5 shrink-0" aria-hidden />
+                    <span className="truncate">{holidayTitle}</span>
+                  </span>
+                )}
               </button>
             );
           })}
@@ -680,6 +723,7 @@ function WeekGrid({
             {dates.map((date) => {
               const laned = assignLanes(blocksForDate(students, events, date));
               const isToday = date === todayDateStr;
+              const isHoliday = holidaysByDate.has(date);
               const showNow =
                 isToday &&
                 nowMinutes !== null &&
@@ -688,7 +732,9 @@ function WeekGrid({
               return (
                 <div
                   key={date}
-                  className="relative border-l border-stone-200"
+                  className={`relative border-l border-stone-200 ${
+                    isHoliday ? "bg-amber-50/60" : ""
+                  }`}
                   style={{ height: totalHeight }}
                 >
                   <HourGridlines hours={hours} rangeStart={rangeStart} />
@@ -726,6 +772,7 @@ function DayTimeline({
   date,
   students,
   events,
+  holidaysByDate,
   rangeStart,
   rangeEnd,
   hours,
@@ -739,6 +786,7 @@ function DayTimeline({
   date: string;
   students: CommonScheduleStudent[];
   events: ScheduleEvent[];
+  holidaysByDate: Map<string, string>;
   rangeStart: number;
   rangeEnd: number;
   hours: number[];
@@ -754,12 +802,19 @@ function DayTimeline({
     isToday && nowMinutes !== null && nowMinutes >= rangeStart && nowMinutes <= rangeEnd;
   const scrollRef = useRef<HTMLDivElement>(null);
   useAutoScrollToSensibleStart(scrollRef);
+  const holidayTitle = holidaysByDate.get(date);
 
   return (
     <div className="mt-4 overflow-x-auto rounded-2xl border border-stone-200 bg-white shadow-sm">
+      {holidayTitle && (
+        <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-800">
+          <CalendarOff className="h-4 w-4 shrink-0" aria-hidden />
+          {holidayTitle} — no sessions expected today
+        </div>
+      )}
       <div
         ref={scrollRef}
-        className="min-w-[420px] overflow-y-auto"
+        className={`min-w-[420px] overflow-y-auto ${holidayTitle ? "bg-amber-50/40" : ""}`}
         style={{ maxHeight: TIMELINE_VIEWPORT_HEIGHT }}
       >
         <div className="grid grid-cols-[64px_1fr]">
@@ -802,6 +857,8 @@ export default function ScheduleView({
   studentBasePath,
   initialToday,
   initialEvents,
+  initialHolidays,
+  initialCountdowns,
   ownerId,
   ownerField,
 }: Props) {
@@ -893,6 +950,143 @@ export default function ScheduleView({
     return null;
   }
 
+  // Holidays (step 4) — same CRUD-owning shape as events above.
+  const [holidays, setHolidays] = useState<Holiday[]>(initialHolidays);
+  const [showAddHolidayModal, setShowAddHolidayModal] = useState(false);
+  const [editingHoliday, setEditingHoliday] = useState<Holiday | null>(null);
+  const [deletingHoliday, setDeletingHoliday] = useState<Holiday | null>(null);
+
+  async function handleAddHoliday(values: HolidayFormValues) {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("holidays")
+      .insert({ [ownerField]: ownerId, title: values.title, date: values.date })
+      .select("id, title, date, created_at")
+      .single();
+
+    if (error || !data) {
+      return error?.message ?? "Something went wrong. Please try again.";
+    }
+
+    setHolidays((prev) => [...prev, data]);
+    setShowAddHolidayModal(false);
+    return null;
+  }
+
+  async function handleEditHoliday(values: HolidayFormValues) {
+    if (!editingHoliday) return null;
+
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("holidays")
+      .update({ title: values.title, date: values.date })
+      .eq("id", editingHoliday.id)
+      .select("id, title, date, created_at")
+      .single();
+
+    if (error || !data) {
+      return error?.message ?? "Something went wrong. Please try again.";
+    }
+
+    setHolidays((prev) => prev.map((h) => (h.id === data.id ? data : h)));
+    setEditingHoliday(null);
+    return null;
+  }
+
+  async function handleDeleteHoliday() {
+    if (!deletingHoliday) return null;
+
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("holidays")
+      .delete()
+      .eq("id", deletingHoliday.id);
+
+    if (error) {
+      return error.message;
+    }
+
+    setHolidays((prev) => prev.filter((h) => h.id !== deletingHoliday.id));
+    setDeletingHoliday(null);
+    return null;
+  }
+
+  // date -> title, for the calendar's holiday tint/badge (WeekGrid/
+  // DayTimeline) — computed once here rather than by every callee.
+  const holidaysByDate = useMemo(
+    () => new Map(holidays.map((h) => [h.date, h.title])),
+    [holidays]
+  );
+
+  // Countdowns (step 4) — same CRUD-owning shape again.
+  const [countdowns, setCountdowns] = useState<Countdown[]>(initialCountdowns);
+  const [showAddCountdownModal, setShowAddCountdownModal] = useState(false);
+  const [editingCountdown, setEditingCountdown] = useState<Countdown | null>(
+    null
+  );
+  const [deletingCountdown, setDeletingCountdown] = useState<Countdown | null>(
+    null
+  );
+
+  async function handleAddCountdown(values: CountdownFormValues) {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("countdowns")
+      .insert({
+        [ownerField]: ownerId,
+        title: values.title,
+        target_date: values.targetDate,
+      })
+      .select("id, title, target_date, created_at")
+      .single();
+
+    if (error || !data) {
+      return error?.message ?? "Something went wrong. Please try again.";
+    }
+
+    setCountdowns((prev) => [...prev, data]);
+    setShowAddCountdownModal(false);
+    return null;
+  }
+
+  async function handleEditCountdown(values: CountdownFormValues) {
+    if (!editingCountdown) return null;
+
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("countdowns")
+      .update({ title: values.title, target_date: values.targetDate })
+      .eq("id", editingCountdown.id)
+      .select("id, title, target_date, created_at")
+      .single();
+
+    if (error || !data) {
+      return error?.message ?? "Something went wrong. Please try again.";
+    }
+
+    setCountdowns((prev) => prev.map((c) => (c.id === data.id ? data : c)));
+    setEditingCountdown(null);
+    return null;
+  }
+
+  async function handleDeleteCountdown() {
+    if (!deletingCountdown) return null;
+
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("countdowns")
+      .delete()
+      .eq("id", deletingCountdown.id);
+
+    if (error) {
+      return error.message;
+    }
+
+    setCountdowns((prev) => prev.filter((c) => c.id !== deletingCountdown.id));
+    setDeletingCountdown(null);
+    return null;
+  }
+
   // The live "now" line: ticks every 30s via the browser's own clock,
   // not the server's. A full real-time (per-second) line would be
   // overkill for a scheduling overview and just churns re-renders for
@@ -920,8 +1114,11 @@ export default function ScheduleView({
   }, []);
 
   const hasAnythingToShow = useMemo(
-    () => students.some((s) => s.scheduledDays.length > 0) || events.length > 0,
-    [students, events]
+    () =>
+      students.some((s) => s.scheduledDays.length > 0) ||
+      events.length > 0 ||
+      holidays.length > 0,
+    [students, events, holidays]
   );
 
   // Fixed full-day range (see the constants' own comments) rather than
@@ -1050,6 +1247,7 @@ export default function ScheduleView({
           dates={weekDates}
           students={students}
           events={events}
+          holidaysByDate={holidaysByDate}
           rangeStart={rangeStart}
           rangeEnd={rangeEnd}
           hours={hours}
@@ -1069,6 +1267,7 @@ export default function ScheduleView({
           date={anchorDate}
           students={students}
           events={events}
+          holidaysByDate={holidaysByDate}
           rangeStart={rangeStart}
           rangeEnd={rangeEnd}
           hours={hours}
@@ -1080,6 +1279,21 @@ export default function ScheduleView({
           onOpenEvent={(event) => setEditingEvent(event)}
         />
       )}
+
+      <HolidaysSection
+        holidays={holidays}
+        onAdd={() => setShowAddHolidayModal(true)}
+        onEdit={(holiday) => setEditingHoliday(holiday)}
+      />
+
+      <div className="mt-4">
+        <CountdownsWidget
+          countdowns={countdowns}
+          today={todayDateStr}
+          onAdd={() => setShowAddCountdownModal(true)}
+          onEdit={(countdown) => setEditingCountdown(countdown)}
+        />
+      </div>
 
       {showAddEventModal && (
         <ScheduleEventFormModal
@@ -1109,6 +1323,64 @@ export default function ScheduleView({
           event={deletingEvent}
           onCancel={() => setDeletingEvent(null)}
           onConfirm={handleDeleteEvent}
+        />
+      )}
+
+      {showAddHolidayModal && (
+        <HolidayFormModal
+          mode="add"
+          onCancel={() => setShowAddHolidayModal(false)}
+          onSubmit={handleAddHoliday}
+        />
+      )}
+
+      {editingHoliday && (
+        <HolidayFormModal
+          mode="edit"
+          initialHoliday={editingHoliday}
+          onCancel={() => setEditingHoliday(null)}
+          onSubmit={handleEditHoliday}
+          onDelete={() => {
+            setDeletingHoliday(editingHoliday);
+            setEditingHoliday(null);
+          }}
+        />
+      )}
+
+      {deletingHoliday && (
+        <DeleteHolidayConfirmModal
+          holiday={deletingHoliday}
+          onCancel={() => setDeletingHoliday(null)}
+          onConfirm={handleDeleteHoliday}
+        />
+      )}
+
+      {showAddCountdownModal && (
+        <CountdownFormModal
+          mode="add"
+          onCancel={() => setShowAddCountdownModal(false)}
+          onSubmit={handleAddCountdown}
+        />
+      )}
+
+      {editingCountdown && (
+        <CountdownFormModal
+          mode="edit"
+          initialCountdown={editingCountdown}
+          onCancel={() => setEditingCountdown(null)}
+          onSubmit={handleEditCountdown}
+          onDelete={() => {
+            setDeletingCountdown(editingCountdown);
+            setEditingCountdown(null);
+          }}
+        />
+      )}
+
+      {deletingCountdown && (
+        <DeleteCountdownConfirmModal
+          countdown={deletingCountdown}
+          onCancel={() => setDeletingCountdown(null)}
+          onConfirm={handleDeleteCountdown}
         />
       )}
     </div>

@@ -56,10 +56,16 @@ const MAX_STREAK_PERIODS = 5000;
  * The single shared streak calculation, used by:
  * - the SLP/Teacher student page, with that student's logged session dates,
  *   their chosen `expected_frequency`, and their attendance_records dates
+ *   *plus* the practice's holidays folded in (see
+ *   addSharedDatesToEveryStudent in src/lib/caseload.ts) — this function
+ *   itself doesn't know or care whether a given `absentDates` entry is an
+ *   excused absence or a holiday, they protect a streak identically
  * - the parent dashboard, with practice-log dates, a fixed "daily" cadence
  *   (see src/app/parent/page.tsx), and no absence dates — "daily" here
  *   means exactly the same thing either caller means: a qualifying entry
- *   every calendar day.
+ *   every calendar day. Home practice isn't affected by a school holiday
+ *   (there's still a family at home either way), so this caller
+ *   deliberately never folds holidays in.
  *
  * "daily": counts consecutive calendar days with at least one entry,
  * walking backward from `today`. `today` itself is allowed to have no

@@ -96,6 +96,7 @@ export default async function SupervisorStudentDetailPage({
       homePracticeResult,
       practiceLogsResult,
       attendanceResult,
+      holidaysResult,
     ] = await Promise.all([
       supabase
         .from("teacher_goals")
@@ -141,6 +142,12 @@ export default async function SupervisorStudentDetailPage({
         .eq("student_id", studentId)
         .order("date", { ascending: false })
         .order("created_at", { ascending: false }),
+      // Not student-specific, and unlike attendance_records above there's
+      // no student_id to scope by -- an explicit teacher_id filter (not
+      // just RLS's is_supervisor_of() check) keeps this to *this* linked
+      // member's holidays specifically, in case the supervisor is linked
+      // to more than one member.
+      supabase.from("holidays").select("date").eq("teacher_id", id),
     ]);
 
     const rawGoals = (goalsResult.data ?? []) as unknown as TeacherGoalWithRelations[];
@@ -184,7 +191,7 @@ export default async function SupervisorStudentDetailPage({
       sessions.map((s) => s.date),
       student.expected_frequency,
       getTodayLocalDateString(),
-      attendance.map((a) => a.date)
+      [...attendance.map((a) => a.date), ...(holidaysResult.data ?? []).map((h) => h.date)]
     );
 
     return (
@@ -334,6 +341,7 @@ export default async function SupervisorStudentDetailPage({
     behaviorLogsResult,
     behaviorTypesResult,
     attendanceResult,
+    holidaysResult,
   ] = await Promise.all([
     supabase
       .from("goals")
@@ -386,6 +394,12 @@ export default async function SupervisorStudentDetailPage({
       .eq("student_id", studentId)
       .order("date", { ascending: false })
       .order("created_at", { ascending: false }),
+    // Not student-specific, and unlike attendance_records above there's
+    // no student_id to scope by -- an explicit slp_id filter (not just
+    // RLS's is_supervisor_of() check) keeps this to *this* linked
+    // member's holidays specifically, in case the supervisor is linked
+    // to more than one member.
+    supabase.from("holidays").select("date").eq("slp_id", id),
   ]);
 
   const rawGoals = (goalsResult.data ?? []) as unknown as GoalWithRelations[];
@@ -498,7 +512,7 @@ export default async function SupervisorStudentDetailPage({
     sessions.map((s) => s.date),
     student.expected_frequency,
     getTodayLocalDateString(),
-    attendance.map((a) => a.date)
+    [...attendance.map((a) => a.date), ...(holidaysResult.data ?? []).map((h) => h.date)]
   );
 
   return (

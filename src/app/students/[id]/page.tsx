@@ -84,6 +84,7 @@ export default async function StudentDetailPage({
     behaviorLogsResult,
     behaviorTypesResult,
     attendanceResult,
+    holidaysResult,
   ] = await Promise.all([
     supabase
       .from("goals")
@@ -164,6 +165,11 @@ export default async function StudentDetailPage({
       .eq("student_id", id)
       .order("date", { ascending: false })
       .order("created_at", { ascending: false }),
+    // Not student-specific (holidays have no student_id) — every one of
+    // this SLP's holidays applies to every student's streak alike, same
+    // as attendance_records' excused absences do, just shared rather
+    // than per-student. See computeCadenceStreak below.
+    supabase.from("holidays").select("date"),
   ]);
 
   // Materials linked to any of this student's goals, for the chips shown
@@ -275,7 +281,10 @@ export default async function StudentDetailPage({
     (sessionsResult.data ?? []).map((s) => s.date),
     student.expected_frequency,
     getTodayLocalDateString(),
-    (attendanceResult.data ?? []).map((a) => a.date)
+    [
+      ...(attendanceResult.data ?? []).map((a) => a.date),
+      ...(holidaysResult.data ?? []).map((h) => h.date),
+    ]
   );
 
   return (
