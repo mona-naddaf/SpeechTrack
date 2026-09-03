@@ -56,6 +56,31 @@ export function formatDateRange(first: string, last: string): string {
     : `${formatDate(first)} – ${formatDate(last)}`;
 }
 
+/** Every YYYY-MM-DD date from `start` to `end` inclusive -- expands a
+ *  holiday's date range (see 0033_holiday_date_ranges.sql) into the
+ *  individual days it should mark/protect, since every caller
+ *  downstream (the calendar's amber tint, streak protection) still just
+ *  wants a flat list of dates, not a range to reason about itself. Both
+ *  ends parsed at local midnight, same as the rest of this file, so
+ *  this is immune to the UTC-parsing off-by-one a plain `new
+ *  Date(dateStr)` would risk. Returns an empty array if `end` is before
+ *  `start` (never happens for a real row -- the DB CHECK constraint
+ *  guarantees end_date >= start_date -- but harmless either way, not an
+ *  infinite loop, since the cursor only ever walks forward). */
+export function eachDateInRange(start: string, end: string): string[] {
+  const dates: string[] = [];
+  const cursor = new Date(`${start}T00:00:00`);
+  const last = new Date(`${end}T00:00:00`);
+  while (cursor.getTime() <= last.getTime()) {
+    const y = cursor.getFullYear();
+    const m = String(cursor.getMonth() + 1).padStart(2, "0");
+    const d = String(cursor.getDate()).padStart(2, "0");
+    dates.push(`${y}-${m}-${d}`);
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return dates;
+}
+
 /** Age in whole years, computed live from a YYYY-MM-DD date of birth
  *  against today's local date — deliberately never stored, so it's
  *  always correct without a birthday-crossing background job. */

@@ -21,7 +21,7 @@ import {
   resolveMaterialChipsByGoal,
   type RawGoalMaterialLink,
 } from "@/lib/materials";
-import { getTodayLocalDateString } from "@/lib/date";
+import { eachDateInRange, getTodayLocalDateString } from "@/lib/date";
 import { computeAssessmentScore } from "@/lib/assessment";
 import { computeCadenceStreak, formatCadenceStreakLabel } from "@/lib/streaks";
 import { formatSchedule } from "@/lib/schedule";
@@ -158,7 +158,7 @@ export default async function SupervisorStudentDetailPage({
       // just RLS's is_supervisor_of() check) keeps this to *this* linked
       // member's holidays specifically, in case the supervisor is linked
       // to more than one member.
-      supabase.from("holidays").select("date").eq("teacher_id", id),
+      supabase.from("holidays").select("start_date, end_date").eq("teacher_id", id),
     ]);
 
     const rawGoals = (goalsResult.data ?? []) as unknown as TeacherGoalWithRelations[];
@@ -202,7 +202,12 @@ export default async function SupervisorStudentDetailPage({
       sessions.map((s) => s.date),
       student.expected_frequency,
       getTodayLocalDateString(),
-      [...attendance.map((a) => a.date), ...(holidaysResult.data ?? []).map((h) => h.date)]
+      [
+        ...attendance.map((a) => a.date),
+        ...(holidaysResult.data ?? []).flatMap((h) =>
+          eachDateInRange(h.start_date, h.end_date)
+        ),
+      ]
     );
 
     return (
@@ -421,7 +426,7 @@ export default async function SupervisorStudentDetailPage({
     // RLS's is_supervisor_of() check) keeps this to *this* linked
     // member's holidays specifically, in case the supervisor is linked
     // to more than one member.
-    supabase.from("holidays").select("date").eq("slp_id", id),
+    supabase.from("holidays").select("start_date, end_date").eq("slp_id", id),
   ]);
 
   const rawGoals = (goalsResult.data ?? []) as unknown as GoalWithRelations[];
@@ -534,7 +539,12 @@ export default async function SupervisorStudentDetailPage({
     sessions.map((s) => s.date),
     student.expected_frequency,
     getTodayLocalDateString(),
-    [...attendance.map((a) => a.date), ...(holidaysResult.data ?? []).map((h) => h.date)]
+    [
+      ...attendance.map((a) => a.date),
+      ...(holidaysResult.data ?? []).flatMap((h) =>
+        eachDateInRange(h.start_date, h.end_date)
+      ),
+    ]
   );
 
   return (

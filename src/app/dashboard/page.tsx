@@ -11,7 +11,11 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/role";
-import { daysAgoLocalDateString, getTodayLocalDateString } from "@/lib/date";
+import {
+  daysAgoLocalDateString,
+  eachDateInRange,
+  getTodayLocalDateString,
+} from "@/lib/date";
 import { weekStartOf } from "@/lib/streaks";
 import {
   addSharedDatesToEveryStudent,
@@ -79,7 +83,9 @@ export default async function DashboardPage() {
     await Promise.all([
       supabase.from("sessions").select("student_id, date"),
       supabase.from("attendance_records").select("student_id, date"),
-      supabase.from("holidays").select("id, title, date, created_at"),
+      supabase
+        .from("holidays")
+        .select("id, title, start_date, end_date, created_at"),
       supabase
         .from("countdowns")
         .select("id, title, target_date, created_at")
@@ -98,7 +104,9 @@ export default async function DashboardPage() {
   const absentDatesByStudentId = addSharedDatesToEveryStudent(
     groupDatesByStudent(attendanceResult.data ?? []),
     (students ?? []).map((s) => s.id),
-    (holidaysResult.data ?? []).map((h) => h.date)
+    (holidaysResult.data ?? []).flatMap((h) =>
+      eachDateInRange(h.start_date, h.end_date)
+    )
   );
   const caseloadStreaks = computeCaseloadStreaks(
     students ?? [],

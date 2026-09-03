@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, TrendingUp } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/role";
-import { getTodayLocalDateString } from "@/lib/date";
+import { eachDateInRange, getTodayLocalDateString } from "@/lib/date";
 import type {
   AttendanceRecord,
   BehaviorLogWithType,
@@ -150,7 +150,7 @@ export default async function TeacherStudentDetailPage({
     // this Teacher's holidays applies to every student's streak alike,
     // same as attendance_records' excused absences do, just shared
     // rather than per-student. See computeCadenceStreak below.
-    supabase.from("holidays").select("date"),
+    supabase.from("holidays").select("start_date, end_date"),
   ]);
 
   // Materials linked to any of this student's goals, for the chips shown
@@ -191,7 +191,9 @@ export default async function TeacherStudentDetailPage({
     getTodayLocalDateString(),
     [
       ...(attendanceResult.data ?? []).map((a) => a.date),
-      ...(holidaysResult.data ?? []).map((h) => h.date),
+      ...(holidaysResult.data ?? []).flatMap((h) =>
+        eachDateInRange(h.start_date, h.end_date)
+      ),
     ]
   );
 

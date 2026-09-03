@@ -19,6 +19,7 @@ import {
   Plus,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { eachDateInRange } from "@/lib/date";
 import { weekStartOf } from "@/lib/streaks";
 import type {
   Countdown,
@@ -960,8 +961,13 @@ export default function ScheduleView({
     const supabase = createClient();
     const { data, error } = await supabase
       .from("holidays")
-      .insert({ [ownerField]: ownerId, title: values.title, date: values.date })
-      .select("id, title, date, created_at")
+      .insert({
+        [ownerField]: ownerId,
+        title: values.title,
+        start_date: values.startDate,
+        end_date: values.endDate,
+      })
+      .select("id, title, start_date, end_date, created_at")
       .single();
 
     if (error || !data) {
@@ -979,9 +985,13 @@ export default function ScheduleView({
     const supabase = createClient();
     const { data, error } = await supabase
       .from("holidays")
-      .update({ title: values.title, date: values.date })
+      .update({
+        title: values.title,
+        start_date: values.startDate,
+        end_date: values.endDate,
+      })
       .eq("id", editingHoliday.id)
-      .select("id, title, date, created_at")
+      .select("id, title, start_date, end_date, created_at")
       .single();
 
     if (error || !data) {
@@ -1012,11 +1022,22 @@ export default function ScheduleView({
   }
 
   // date -> title, for the calendar's holiday tint/badge (WeekGrid/
-  // DayTimeline) — computed once here rather than by every callee.
-  const holidaysByDate = useMemo(
-    () => new Map(holidays.map((h) => [h.date, h.title])),
-    [holidays]
-  );
+  // DayTimeline) — computed once here rather than by every callee. Each
+  // holiday is expanded from its start_date/end_date range into every
+  // individual day it covers (see 0033_holiday_date_ranges.sql), so a
+  // multi-day holiday tints/badges every one of its days, not just the
+  // first. If two holidays' ranges overlap on the same day, whichever
+  // is later in `holidays` wins that day's title — an edge case, not
+  // worth a more elaborate multi-holiday-per-day display.
+  const holidaysByDate = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const holiday of holidays) {
+      for (const date of eachDateInRange(holiday.start_date, holiday.end_date)) {
+        map.set(date, holiday.title);
+      }
+    }
+    return map;
+  }, [holidays]);
 
   // Countdowns (step 4) — same CRUD-owning shape again.
   const [countdowns, setCountdowns] = useState<Countdown[]>(initialCountdowns);

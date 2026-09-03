@@ -47,7 +47,7 @@ export default async function TeacherSchedulePage() {
     supabase
       .from("schedule_events")
       .select("id, title, date, start_time, duration_minutes, note, color, created_at"),
-    supabase.from("holidays").select("id, title, date, created_at"),
+    supabase.from("holidays").select("id, title, start_date, end_date, created_at"),
     supabase
       .from("countdowns")
       .select("id, title, target_date, created_at")

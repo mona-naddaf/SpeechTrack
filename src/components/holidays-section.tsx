@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { CalendarOff, ChevronDown, ChevronRight, Plus } from "lucide-react";
 import type { Holiday } from "@/lib/types";
-import { formatDate } from "@/lib/date";
+import { formatDateRange } from "@/lib/date";
 
 type Props = {
   holidays: Holiday[];
@@ -18,7 +18,9 @@ type Props = {
  *  the page's main content. */
 export default function HolidaysSection({ holidays, onAdd, onEdit }: Props) {
   const [collapsed, setCollapsed] = useState(false);
-  const sorted = [...holidays].sort((a, b) => a.date.localeCompare(b.date));
+  const sorted = [...holidays].sort((a, b) =>
+    a.start_date.localeCompare(b.start_date)
+  );
 
   return (
     <div className="mt-6 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
@@ -67,7 +69,7 @@ export default function HolidaysSection({ holidays, onAdd, onEdit }: Props) {
                     {holiday.title}
                   </span>
                   <span className="shrink-0 text-xs text-stone-500">
-                    {formatDate(holiday.date)}
+                    {formatDateRange(holiday.start_date, holiday.end_date)}
                   </span>
                 </button>
               </li>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import type { Holiday } from "@/lib/types";
-import { formatDate } from "@/lib/date";
+import { formatDateRange } from "@/lib/date";
 
 type Props = {
   holiday: Holiday;
@@ -41,12 +41,15 @@ export default function DeleteHolidayConfirmModal({
         </h2>
         <p className="mt-2 text-sm text-stone-600">
           Are you sure you want to delete this holiday? Any protection it
-          gave a student&apos;s streak on that day goes with it. This
-          action cannot be undone.
+          gave a student&apos;s streak on{" "}
+          {holiday.start_date === holiday.end_date ? "that day" : "those days"}{" "}
+          goes with it. This action cannot be undone.
         </p>
         <div className="mt-2 rounded-md bg-cream-50 p-3 text-sm text-stone-700">
           <p className="font-medium">{holiday.title}</p>
-          <p className="text-stone-500">{formatDate(holiday.date)}</p>
+          <p className="text-stone-500">
+            {formatDateRange(holiday.start_date, holiday.end_date)}
+          </p>
         </div>
 
         {error && <p className="mt-2 text-sm text-red-600">{error}</p>}

@@ -6,7 +6,8 @@ import type { Holiday } from "@/lib/types";
 
 export type HolidayFormValues = {
   title: string;
-  date: string;
+  startDate: string;
+  endDate: string;
 };
 
 type Props = {
@@ -20,10 +21,10 @@ type Props = {
   onDelete?: () => void;
 };
 
-/** Add/edit form for a holiday — title + a single date, nothing else.
- *  Shared by the SLP and Teacher Schedule pages via ScheduleView, since
- *  holidays is one table for both sides (see
- *  0032_holidays_and_countdowns.sql). */
+/** Add/edit form for a holiday — title + a date range (see
+ *  0033_holiday_date_ranges.sql). Shared by the SLP and Teacher Schedule
+ *  pages via ScheduleView, since holidays is one table for both sides
+ *  (see 0032_holidays_and_countdowns.sql). */
 export default function HolidayFormModal({
   mode,
   initialHoliday,
@@ -32,9 +33,31 @@ export default function HolidayFormModal({
   onDelete,
 }: Props) {
   const [title, setTitle] = useState(initialHoliday?.title ?? "");
-  const [date, setDate] = useState(initialHoliday?.date ?? "");
+  const [startDate, setStartDate] = useState(initialHoliday?.start_date ?? "");
+  const [endDate, setEndDate] = useState(initialHoliday?.end_date ?? "");
+  // Whether the end date has ever been set independently of the start
+  // date. While false, changing the start date carries the end date
+  // along with it — so a single-day holiday only means picking one
+  // date, same as this form's old single-`date` shape effectively felt
+  // like. An edit starts "touched": its two dates already carry real,
+  // possibly-different values chosen on purpose, so nudging the start
+  // date of an existing multi-day holiday must never silently collapse
+  // its end date back to match.
+  const [endDateTouched, setEndDateTouched] = useState(mode === "edit");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function handleStartDateChange(value: string) {
+    setStartDate(value);
+    if (!endDateTouched) {
+      setEndDate(value);
+    }
+  }
+
+  function handleEndDateChange(value: string) {
+    setEndDate(value);
+    setEndDateTouched(true);
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -43,14 +66,18 @@ export default function HolidayFormModal({
       setError("Title is required.");
       return;
     }
-    if (!date) {
-      setError("Date is required.");
+    if (!startDate || !endDate) {
+      setError("Start and end dates are required.");
+      return;
+    }
+    if (endDate < startDate) {
+      setError("End date can't be before the start date.");
       return;
     }
 
     setLoading(true);
     setError(null);
-    const result = await onSubmit({ title: trimmedTitle, date });
+    const result = await onSubmit({ title: trimmedTitle, startDate, endDate });
     setLoading(false);
     if (result) {
       setError(result);
@@ -84,22 +111,46 @@ export default function HolidayFormModal({
             />
           </div>
 
-          <div>
-            <label
-              htmlFor="holiday-date"
-              className="block text-sm font-medium text-stone-700"
-            >
-              Date
-            </label>
-            <input
-              id="holiday-date"
-              type="date"
-              required
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-            />
+          <div className="flex flex-wrap gap-3">
+            <div>
+              <label
+                htmlFor="holiday-start-date"
+                className="block text-sm font-medium text-stone-700"
+              >
+                Start date
+              </label>
+              <input
+                id="holiday-start-date"
+                type="date"
+                required
+                value={startDate}
+                onChange={(e) => handleStartDateChange(e.target.value)}
+                className="mt-1 rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="holiday-end-date"
+                className="block text-sm font-medium text-stone-700"
+              >
+                End date
+              </label>
+              <input
+                id="holiday-end-date"
+                type="date"
+                required
+                value={endDate}
+                onChange={(e) => handleEndDateChange(e.target.value)}
+                className="mt-1 rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              />
+            </div>
           </div>
+          <p className="text-xs text-stone-400">
+            A single-day holiday just picks the same date twice — the end
+            date follows the start date automatically until you change it
+            yourself.
+          </p>
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 

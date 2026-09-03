@@ -431,8 +431,15 @@ export type ScheduleEvent = {
 export type Holiday = {
   id: string;
   title: string;
-  /** YYYY-MM-DD -- a whole-day marker, no time. */
-  date: string;
+  /** YYYY-MM-DD, inclusive on both ends -- a holiday spans every day
+   *  from start_date through end_date (see
+   *  0033_holiday_date_ranges.sql). end_date equals start_date for a
+   *  single-day holiday, same as every holiday was before that
+   *  migration. Expand into the individual days with eachDateInRange()
+   *  (src/lib/date.ts) wherever the calendar tint or streak protection
+   *  needs a flat date list rather than a range. */
+  start_date: string;
+  end_date: string;
   created_at: string;
 };
 
