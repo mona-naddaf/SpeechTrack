@@ -9,6 +9,7 @@ import type {
   BehaviorLogWithType,
   HomePracticeItem,
   PracticeLogWithPraise,
+  TeacherGoalTrack,
   TeacherGoalWithRelations,
   TeacherStudentCustomField,
 } from "@/lib/types";
@@ -72,6 +73,7 @@ export default async function TeacherStudentDetailPage({
     subjectsResult,
     formatsResult,
     bankGoalsResult,
+    goalTracksResult,
     behaviorLogsResult,
     behaviorTypesResult,
     sessionsResult,
@@ -83,7 +85,7 @@ export default async function TeacherStudentDetailPage({
     supabase
       .from("teacher_goals")
       .select(
-        "id, student_id, subject_id, text, response_format_id, baseline, target_percent, status, source_bank_goal_id, created_at, subject:teacher_subjects(id, name), response_format:teacher_response_formats(id, name)"
+        "id, student_id, subject_id, text, response_format_id, baseline, target_percent, status, source_bank_goal_id, track_id, step_order, created_at, subject:teacher_subjects(id, name), response_format:teacher_response_formats(id, name), track:teacher_goal_tracks(id, name)"
       )
       .eq("student_id", id)
       .order("created_at", { ascending: false }),
@@ -107,6 +109,11 @@ export default async function TeacherStudentDetailPage({
       .eq("teacher_id", user.id)
       .is("student_id", null)
       .order("text", { ascending: true }),
+    supabase
+      .from("teacher_goal_tracks")
+      .select("id, student_id, name, created_at")
+      .eq("student_id", id)
+      .order("created_at", { ascending: false }),
     supabase
       .from("behavior_logs")
       .select(
@@ -288,6 +295,9 @@ export default async function TeacherStudentDetailPage({
                   subjects={subjectsResult.data ?? []}
                   responseFormats={formatsResult.data ?? []}
                   bankGoals={bankGoalsResult.data ?? []}
+                  initialGoalTracks={
+                    (goalTracksResult.data ?? []) as unknown as TeacherGoalTrack[]
+                  }
                   materialsByGoalId={materialsByGoalId}
                 />
               ),

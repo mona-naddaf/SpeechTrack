@@ -114,7 +114,20 @@ export type Area = {
   name: string;
 };
 
-export type GoalStatus = "active" | "on_hold" | "mastered";
+/** "queued" = part of a goal_tracks sequence, not yet its turn — waiting
+ *  for the step ahead of it to be mastered. Invisible to session logging
+ *  (which only ever fetches status = 'active') until it advances. */
+export type GoalStatus = "active" | "on_hold" | "mastered" | "queued";
+
+/** A treatment-plan track: an ordered sequence of a student's goals
+ *  (goals.track_id + step_order). Mastering one step auto-activates the
+ *  next queued one — see 0034_treatment_plan_tracks.sql. */
+export type GoalTrack = {
+  id: string;
+  student_id: string;
+  name: string;
+  created_at: string;
+};
 
 export type Goal = {
   id: string;
@@ -125,15 +138,21 @@ export type Goal = {
   baseline: string | null;
   target_percent: number | null;
   status: GoalStatus;
+  /** Both null for a goal outside any track (behaves exactly as before).
+   *  Both set together for a track step — see goals_track_step_pairing_check. */
+  track_id: string | null;
+  step_order: number | null;
   /** SLP-controlled: shows this goal's progress on the parent dashboard. */
   visible_to_parent: boolean;
   created_at: string;
 };
 
-/** A goal row joined with its area and response format for display. */
+/** A goal row joined with its area, response format, and track (if any)
+ *  for display. */
 export type GoalWithRelations = Goal & {
   area: { id: string; name: string } | null;
   response_format: { id: string; name: string } | null;
+  track: { id: string; name: string } | null;
 };
 
 /** A goal-bank template (student_id is null) — just enough to list/pick from,
@@ -456,6 +475,14 @@ export type TeacherSubject = {
   name: string;
 };
 
+/** The Teacher equivalent of GoalTrack — teacher_goal_tracks. */
+export type TeacherGoalTrack = {
+  id: string;
+  student_id: string;
+  name: string;
+  created_at: string;
+};
+
 export type TeacherGoal = {
   id: string;
   student_id: string | null;
@@ -465,15 +492,19 @@ export type TeacherGoal = {
   baseline: string | null;
   target_percent: number | null;
   status: GoalStatus;
+  track_id: string | null;
+  step_order: number | null;
   /** Teacher-controlled: shows this goal's progress on the parent dashboard. */
   visible_to_parent: boolean;
   created_at: string;
 };
 
-/** A teacher goal row joined with its subject and response format for display. */
+/** A teacher goal row joined with its subject, response format, and track
+ *  (if any) for display. */
 export type TeacherGoalWithRelations = TeacherGoal & {
   subject: { id: string; name: string } | null;
   response_format: { id: string; name: string } | null;
+  track: { id: string; name: string } | null;
 };
 
 /** A teacher goal-bank template (student_id is null) — just enough to

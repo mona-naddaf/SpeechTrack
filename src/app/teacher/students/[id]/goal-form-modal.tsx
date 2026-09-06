@@ -287,6 +287,10 @@ export default function GoalFormModal({
               <option value="active">Active</option>
               <option value="on_hold">On hold</option>
               <option value="mastered">Mastered</option>
+              {/* Only meaningful for a goal that's part of a track — picking
+                  it here is the manual override that skips the automatic
+                  wait for its turn (requirement 6). */}
+              <option value="queued">Queued</option>
             </select>
           </div>
 

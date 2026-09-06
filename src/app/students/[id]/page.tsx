@@ -6,6 +6,7 @@ import type {
   AssessmentAnswerValue,
   AssessmentQuestionResponseType,
   AttendanceRecord,
+  GoalTrack,
   GoalWithRelations,
   HomePracticeItem,
   PracticeLogWithPraise,
@@ -76,6 +77,7 @@ export default async function StudentDetailPage({
     areasResult,
     formatsResult,
     bankGoalsResult,
+    goalTracksResult,
     sessionsResult,
     homePracticeResult,
     practiceLogsResult,
@@ -89,7 +91,7 @@ export default async function StudentDetailPage({
     supabase
       .from("goals")
       .select(
-        "id, student_id, area_id, text, response_format_id, baseline, target_percent, status, source_bank_goal_id, created_at, area:areas(id, name), response_format:response_formats(id, name)"
+        "id, student_id, area_id, text, response_format_id, baseline, target_percent, status, source_bank_goal_id, track_id, step_order, created_at, area:areas(id, name), response_format:response_formats(id, name), track:goal_tracks(id, name)"
       )
       .eq("student_id", id)
       .order("created_at", { ascending: false }),
@@ -113,6 +115,11 @@ export default async function StudentDetailPage({
       .eq("slp_id", user.id)
       .is("student_id", null)
       .order("text", { ascending: true }),
+    supabase
+      .from("goal_tracks")
+      .select("id, student_id, name, created_at")
+      .eq("student_id", id)
+      .order("created_at", { ascending: false }),
     supabase
       .from("sessions")
       .select("id, student_id, date, note, created_at")
@@ -379,6 +386,9 @@ export default async function StudentDetailPage({
                   areas={areasResult.data ?? []}
                   responseFormats={formatsResult.data ?? []}
                   bankGoals={bankGoalsResult.data ?? []}
+                  initialGoalTracks={
+                    (goalTracksResult.data ?? []) as unknown as GoalTrack[]
+                  }
                   materialsByGoalId={materialsByGoalId}
                 />
               ),

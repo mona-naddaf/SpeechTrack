@@ -7,6 +7,7 @@ import type {
   MaterialChip,
   ResponseFormatOption,
   TeacherBankGoal,
+  TeacherGoalTrack,
   TeacherGoalWithRelations,
   TeacherSubject,
 } from "@/lib/types";
@@ -16,11 +17,14 @@ import CelebrationToast from "@/components/celebration-toast";
 import MaterialChips from "@/components/material-chips";
 import SectionHeader from "@/components/section-header";
 import { useSectionPreferences } from "@/components/section-preferences";
+import BulkAssignTrackModal, {
+  type BulkAssignBankGoal,
+} from "@/components/bulk-assign-track-modal";
 import GoalFormModal, { type GoalFormValues } from "./goal-form-modal";
 import DeleteGoalConfirmModal from "./delete-goal-confirm-modal";
 
 const GOAL_SELECT_COLUMNS =
-  "id, student_id, subject_id, text, response_format_id, baseline, target_percent, status, visible_to_parent, created_at, subject:teacher_subjects(id, name), response_format:teacher_response_formats(id, name)";
+  "id, student_id, subject_id, text, response_format_id, baseline, target_percent, status, visible_to_parent, track_id, step_order, created_at, subject:teacher_subjects(id, name), response_format:teacher_response_formats(id, name), track:teacher_goal_tracks(id, name)";
 
 type Props = {
   studentId: string;
@@ -29,6 +33,7 @@ type Props = {
   subjects: TeacherSubject[];
   responseFormats: ResponseFormatOption[];
   bankGoals: TeacherBankGoal[];
+  initialGoalTracks: TeacherGoalTrack[];
   /** Materials linked to each goal (via teacher_material_goals), keyed by
    *  goal id — shown as clickable chips right on the card. Missing
    *  entries render no chips. */
@@ -42,11 +47,14 @@ export default function GoalsSection({
   subjects,
   responseFormats,
   bankGoals,
+  initialGoalTracks,
   materialsByGoalId,
 }: Props) {
   const [goals, setGoals] = useState<TeacherGoalWithRelations[]>(initialGoals);
+  const [goalTracks, setGoalTracks] = useState<TeacherGoalTrack[]>(initialGoalTracks);
   const [listError] = useState<string | null>(initialGoalsError);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showBulkAssignModal, setShowBulkAssignModal] = useState(false);
   const [editingGoal, setEditingGoal] = useState<TeacherGoalWithRelations | null>(
     null
   );
@@ -56,6 +64,7 @@ export default function GoalsSection({
   const [visibilityErrorByGoalId, setVisibilityErrorByGoalId] = useState<
     Record<string, string>
   >({});
+  const [reorderError, setReorderError] = useState<string | null>(null);
   const [showMasteryCelebration, setShowMasteryCelebration] = useState(false);
   const {
     collapsed,
@@ -85,6 +94,19 @@ export default function GoalsSection({
     // at runtime they come back as single objects (or null), matching
     // TeacherGoalWithRelations.
     return data as unknown as TeacherGoalWithRelations | null;
+  }
+
+  // Mastering a track step can auto-advance a sibling step server-side
+  // (0034_treatment_plan_tracks.sql's trigger) — refetching just the one
+  // edited goal would miss that, so this pulls the whole list instead.
+  async function refetchAllGoals(): Promise<TeacherGoalWithRelations[]> {
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("teacher_goals")
+      .select(GOAL_SELECT_COLUMNS)
+      .eq("student_id", studentId)
+      .order("created_at", { ascending: false });
+    return (data ?? []) as unknown as TeacherGoalWithRelations[];
   }
 
   async function handleAdd(values: GoalFormValues) {
@@ -155,11 +177,18 @@ export default function GoalsSection({
       return error.message;
     }
 
-    const fullGoal = await refetchGoal(editingGoal.id);
-    if (fullGoal) {
-      setGoals((prev) =>
-        prev.map((g) => (g.id === fullGoal.id ? fullGoal : g))
-      );
+    // A track step's mastery can auto-activate its next step in the same
+    // update (see the DB trigger) — refetch the whole list so that sibling
+    // shows up too, not just the goal that was actually edited here.
+    if (justMastered && editingGoal.track_id) {
+      setGoals(await refetchAllGoals());
+    } else {
+      const fullGoal = await refetchGoal(editingGoal.id);
+      if (fullGoal) {
+        setGoals((prev) =>
+          prev.map((g) => (g.id === fullGoal.id ? fullGoal : g))
+        );
+      }
     }
     setEditingGoal(null);
 
@@ -169,6 +198,75 @@ export default function GoalsSection({
     }
 
     return null;
+  }
+
+  // Swaps step_order between two adjacent steps in the same track. Doesn't
+  // touch status at all, so it can never retroactively re-trigger the
+  // mastery-advance trigger (that only fires on a transition into
+  // 'mastered') — reordering only affects which step gets auto-activated
+  // *next*, per requirement 6.
+  async function handleReorderStep(
+    goal: TeacherGoalWithRelations,
+    direction: "up" | "down"
+  ) {
+    if (!goal.track_id || goal.step_order === null) return;
+
+    const siblings = goals
+      .filter((g) => g.track_id === goal.track_id)
+      .sort((a, b) => (a.step_order ?? 0) - (b.step_order ?? 0));
+    const idx = siblings.findIndex((g) => g.id === goal.id);
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= siblings.length) return;
+
+    const other = siblings[swapIdx];
+    const goalStep = goal.step_order;
+    const otherStep = other.step_order;
+    if (otherStep === null) return;
+
+    setReorderError(null);
+    setGoals((prev) =>
+      prev.map((g) => {
+        if (g.id === goal.id) return { ...g, step_order: otherStep };
+        if (g.id === other.id) return { ...g, step_order: goalStep };
+        return g;
+      })
+    );
+
+    const supabase = createClient();
+    const [{ error: e1 }, { error: e2 }] = await Promise.all([
+      supabase.from("teacher_goals").update({ step_order: otherStep }).eq("id", goal.id),
+      supabase.from("teacher_goals").update({ step_order: goalStep }).eq("id", other.id),
+    ]);
+
+    if (e1 || e2) {
+      setGoals((prev) =>
+        prev.map((g) => {
+          if (g.id === goal.id) return { ...g, step_order: goalStep };
+          if (g.id === other.id) return { ...g, step_order: otherStep };
+          return g;
+        })
+      );
+      setReorderError((e1 ?? e2)?.message ?? "Couldn't reorder that step.");
+    }
+  }
+
+  function handleBulkAssignDone({
+    insertedGoals,
+    newTrack,
+  }: {
+    insertedGoals: Record<string, unknown>[];
+    newTrack: { id: string; name: string } | null;
+  }) {
+    setGoals((prev) =>
+      sortByNewest([...prev, ...(insertedGoals as unknown as TeacherGoalWithRelations[])])
+    );
+    if (newTrack) {
+      setGoalTracks((prev) => [
+        { id: newTrack.id, name: newTrack.name, student_id: studentId, created_at: new Date().toISOString() },
+        ...prev,
+      ]);
+    }
+    setShowBulkAssignModal(false);
   }
 
   async function handleDelete() {
@@ -231,13 +329,21 @@ export default function GoalsSection({
         canMoveUp={canMoveUp}
         canMoveDown={canMoveDown}
         actions={
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md"
-          >
-            <Plus className="h-4 w-4" />
-            Set a goal
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowBulkAssignModal(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md"
+            >
+              Assign from bank
+            </button>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md"
+            >
+              <Plus className="h-4 w-4" />
+              Set a goal
+            </button>
+          </div>
         }
       />
 
@@ -247,6 +353,10 @@ export default function GoalsSection({
             <p className="mt-4 text-sm text-red-600">
               Couldn&apos;t load goals: {listError}
             </p>
+          )}
+
+          {reorderError && (
+            <p className="mt-4 text-sm text-red-600">{reorderError}</p>
           )}
 
           {!listError && goals.length === 0 && (
@@ -281,6 +391,30 @@ export default function GoalsSection({
               <p className="mt-3 flex-1 text-sm text-stone-900">
                 {goal.text}
               </p>
+
+              {goal.track && (
+                <div className="mt-2 flex items-center gap-1.5 text-xs text-stone-500">
+                  <span>
+                    {goal.track.name} · Step {goal.step_order}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleReorderStep(goal, "up")}
+                    className="rounded px-1 text-stone-400 hover:bg-stone-100 hover:text-stone-700"
+                    title="Move earlier in the track"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleReorderStep(goal, "down")}
+                    className="rounded px-1 text-stone-400 hover:bg-stone-100 hover:text-stone-700"
+                    title="Move later in the track"
+                  >
+                    ↓
+                  </button>
+                </div>
+              )}
 
               <p className="mt-2 text-sm text-stone-500">
                 {goal.target_percent !== null
@@ -354,6 +488,32 @@ export default function GoalsSection({
           goal={deletingGoal}
           onCancel={() => setDeletingGoal(null)}
           onConfirm={handleDelete}
+        />
+      )}
+
+      {showBulkAssignModal && (
+        <BulkAssignTrackModal
+          studentId={studentId}
+          categoryLabel="Subject"
+          categories={subjects}
+          bankGoals={bankGoals.map(
+            (g): BulkAssignBankGoal => ({
+              id: g.id,
+              categoryId: g.subject_id,
+              text: g.text,
+              response_format_id: g.response_format_id,
+              target_percent: g.target_percent,
+            })
+          )}
+          existingTracks={goalTracks}
+          goalsTable="teacher_goals"
+          tracksTable="teacher_goal_tracks"
+          categoryTable="teacher_subjects"
+          responseFormatTable="teacher_response_formats"
+          categoryIdColumn="subject_id"
+          ownerColumn="teacher_id"
+          onCancel={() => setShowBulkAssignModal(false)}
+          onDone={handleBulkAssignDone}
         />
       )}
 
