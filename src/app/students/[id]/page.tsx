@@ -477,6 +477,7 @@ export default async function StudentDetailPage({
                   sessions={sessionsResult.data ?? []}
                   error={sessionsResult.error?.message ?? null}
                   newSessionHref={`/students/${student.id}/session/new`}
+                  sessionsTable="sessions"
                 />
               ),
             },

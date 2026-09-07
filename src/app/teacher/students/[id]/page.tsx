@@ -370,6 +370,7 @@ export default async function TeacherStudentDetailPage({
                   sessions={sessionsResult.data ?? []}
                   error={sessionsResult.error?.message ?? null}
                   newSessionHref={`/teacher/students/${student.id}/session/new`}
+                  sessionsTable="teacher_sessions"
                 />
               ),
             },
