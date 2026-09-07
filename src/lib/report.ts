@@ -42,6 +42,11 @@ export type ReportBehaviorEntry = {
   count: number;
 };
 
+export type ReportSessionNote = {
+  date: string;
+  note: string;
+};
+
 /** Fully-normalized, role-agnostic input to buildStudentReportDocx — the
  *  API route is the one place that knows whether the data came from the
  *  SLP or Teacher tables; by the time it gets here, everything reads the
@@ -67,6 +72,11 @@ export type StudentReportData = {
   /** Behaviour type counts within the date range — empty when nothing was
    *  logged, in which case the whole section is left out of the document. */
   behaviorEntries: ReportBehaviorEntry[];
+  /** Every session note within the date range, chronological — this is
+   *  the SLP/Teacher's own record, so it's *not* filtered to
+   *  visible_to_parent like the /parent-facing view is. Empty means the
+   *  whole "Session Notes" section is left out, same as Behaviour Summary. */
+  sessionNotes: ReportSessionNote[];
 };
 
 const TREND_LABELS: Record<TrendDirection, string> = {
@@ -299,6 +309,14 @@ export async function buildStudentReportDocx(
       `Sessions logged in this period: ${data.actualSessionCount}`
     )
   );
+
+  // ---- Session Notes (omitted entirely when there are none in range) ----
+  if (data.sessionNotes.length > 0) {
+    children.push(sectionHeading("Session Notes"));
+    for (const entry of data.sessionNotes) {
+      children.push(bulletLine(`${formatDate(entry.date)}: ${entry.note}`));
+    }
+  }
 
   // ---- Attendance ----
   children.push(sectionHeading("Attendance"));

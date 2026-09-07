@@ -7,6 +7,7 @@ import { buildGoalReport, type ProgressGoal, type ProgressTrial } from "@/lib/pr
 import { computeCadenceStreak } from "@/lib/streaks";
 import type { HomePracticeItem, PracticeLogWithPraise } from "@/lib/types";
 import type { BehaviorBreakdownEntry } from "./behavior-section";
+import type { ParentSessionNote } from "./session-notes-section";
 import ParentLoginForm from "./parent-login-form";
 import ParentDashboard from "./parent-dashboard";
 
@@ -148,7 +149,7 @@ export default async function ParentPage() {
     (student as { share_behavior_with_parent?: boolean }).share_behavior_with_parent
   );
 
-  const [itemsResult, logsResult, goalsResult, behaviorLogsResult] =
+  const [itemsResult, logsResult, goalsResult, behaviorLogsResult, sessionNotesResult] =
     await Promise.all([
       supabase
         .from(itemsTable)
@@ -176,6 +177,16 @@ export default async function ParentPage() {
             .eq("student_id", student.id)
             .gte("date", daysAgoLocalDateString(30))
         : Promise.resolve({ data: [] as RawBehaviorLog[], error: null }),
+      // Sharing here is per-session (visible_to_parent), not a student-
+      // level toggle like behavior — so unlike behaviorLogsTable above,
+      // this is always queried; an empty result just hides the section
+      // (see ParentDashboard), same as Progress.
+      supabase
+        .from(sessionsRelation)
+        .select("id, date, note")
+        .eq("student_id", student.id)
+        .eq("visible_to_parent", true)
+        .order("date", { ascending: false }),
     ]);
 
   // Only shared goals ever reach this point (filtered by visible_to_parent
@@ -211,6 +222,16 @@ export default async function ParentPage() {
     (behaviorLogsResult.data ?? []) as unknown as RawBehaviorLog[]
   );
 
+  const sessionNotes: ParentSessionNote[] = (
+    (sessionNotesResult.data ?? []) as unknown as {
+      id: string;
+      date: string;
+      note: string | null;
+    }[]
+  )
+    .filter((s) => s.note && s.note.trim())
+    .map((s) => ({ id: s.id, date: s.date, note: s.note as string }));
+
   // Simple consecutive-calendar-days streak — the "daily" cadence in
   // computeCadenceStreak() is exactly this, so no separate calculation is
   // needed (see src/lib/streaks.ts).
@@ -235,6 +256,7 @@ export default async function ParentPage() {
           progressReports={progressReports}
           showBehaviorSection={shareBehaviorWithParent}
           behaviorBreakdown={behaviorBreakdown}
+          sessionNotes={sessionNotes}
         />
       </div>
     </main>

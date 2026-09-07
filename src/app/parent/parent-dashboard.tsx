@@ -13,6 +13,7 @@ import LogPracticeForm from "./log-practice-form";
 import LogoutButton from "./logout-button";
 import ProgressSection from "./progress-section";
 import BehaviorSection, { type BehaviorBreakdownEntry } from "./behavior-section";
+import SessionNotesSection, { type ParentSessionNote } from "./session-notes-section";
 
 type Props = {
   studentId: string;
@@ -38,6 +39,12 @@ type Props = {
    *  here hides it. */
   showBehaviorSection: boolean;
   behaviorBreakdown: BehaviorBreakdownEntry[];
+  /** Only sessions the SLP/Teacher has toggled visible_to_parent on, with
+   *  a non-empty note. Empty means the section is hidden entirely rather
+   *  than rendered empty — same as Progress (sharing here is per-session,
+   *  not a single student-level toggle, so there's no separate "enabled"
+   *  flag the way showBehaviorSection has). */
+  sessionNotes: ParentSessionNote[];
 };
 
 // Warm, distinct mood badge colors — matches the mood-picker in LogPracticeForm.
@@ -58,6 +65,7 @@ export default function ParentDashboard({
   progressReports,
   showBehaviorSection,
   behaviorBreakdown,
+  sessionNotes,
 }: Props) {
   return (
     <div className="space-y-6">
@@ -220,6 +228,10 @@ export default function ParentDashboard({
 
       {showBehaviorSection && (
         <BehaviorSection breakdown={behaviorBreakdown} />
+      )}
+
+      {sessionNotes.length > 0 && (
+        <SessionNotesSection notes={sessionNotes} />
       )}
     </div>
   );

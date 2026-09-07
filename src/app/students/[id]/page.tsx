@@ -122,7 +122,7 @@ export default async function StudentDetailPage({
       .order("created_at", { ascending: false }),
     supabase
       .from("sessions")
-      .select("id, student_id, date, note, created_at")
+      .select("id, student_id, date, note, visible_to_parent, created_at")
       .eq("student_id", id)
       .order("date", { ascending: false })
       .order("created_at", { ascending: false }),

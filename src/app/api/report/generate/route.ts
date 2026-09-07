@@ -3,7 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/role";
 import { computeAge } from "@/lib/date";
 import { buildGoalReport, type ProgressGoal, type ProgressTrial } from "@/lib/progress";
-import { buildStudentReportDocx, type ReportGoalEntry } from "@/lib/report";
+import {
+  buildStudentReportDocx,
+  type ReportGoalEntry,
+  type ReportSessionNote,
+} from "@/lib/report";
 import type { AttendanceReason, ExpectedFrequency, GoalStatus } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -143,10 +147,11 @@ export async function POST(request: Request) {
       .order("created_at", { ascending: true }),
     supabase
       .from(tables.sessions)
-      .select("id")
+      .select("id, date, note")
       .eq("student_id", studentId)
       .gte("date", startDate)
-      .lte("date", endDate),
+      .lte("date", endDate)
+      .order("date", { ascending: true }),
     supabase
       .from("attendance_records")
       .select("id, date, reason, reason_note")
@@ -214,6 +219,17 @@ export async function POST(request: Request) {
       targetPercent: g.target_percent,
     }));
 
+  // Every session note in the range, regardless of visible_to_parent —
+  // this report is the SLP/Teacher's own record, not the parent-facing
+  // view (which is the one place that filters to shared notes only).
+  const sessionsInRange = (sessionsInRangeResult.data ?? []) as unknown as {
+    date: string;
+    note: string | null;
+  }[];
+  const sessionNotes: ReportSessionNote[] = sessionsInRange
+    .filter((s) => s.note && s.note.trim())
+    .map((s) => ({ date: s.date, note: s.note as string }));
+
   const absences = (attendanceResult.data ?? []).map((a) => ({
     date: a.date as string,
     reason: a.reason as AttendanceReason | null,
@@ -238,11 +254,12 @@ export async function POST(request: Request) {
     startDate,
     endDate,
     expectedFrequency: student.expected_frequency as ExpectedFrequency,
-    actualSessionCount: sessionsInRangeResult.data?.length ?? 0,
+    actualSessionCount: sessionsInRange.length,
     goalEntries,
     absenceCount: absences.length,
     absences,
     behaviorEntries,
+    sessionNotes,
   });
 
   return new NextResponse(new Uint8Array(buffer), {

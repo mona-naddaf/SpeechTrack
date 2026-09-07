@@ -25,6 +25,7 @@ export default function NewSessionForm({
   const router = useRouter();
   const [date, setDate] = useState(getTodayLocalDateString());
   const [note, setNote] = useState("");
+  const [shareNoteWithParent, setShareNoteWithParent] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [trialsByGoal, setTrialsByGoal] = useState<Record<string, Trial[]>>(
     {}
@@ -66,6 +67,7 @@ export default function NewSessionForm({
         student_id: studentId,
         date,
         note: note.trim() || null,
+        visible_to_parent: shareNoteWithParent,
       })
       .select("id")
       .single();
@@ -77,6 +79,21 @@ export default function NewSessionForm({
 
     setSessionId(data.id);
     return data.id;
+  }
+
+  // Same immediate-save pattern as the other parent-sharing toggles
+  // (e.g. a goal's "Show progress to parent" checkbox) — if the session
+  // row doesn't exist yet (nothing logged this visit), the choice is just
+  // held in state and included the moment ensureSession() first creates it.
+  async function handleToggleShareNote(checked: boolean) {
+    setShareNoteWithParent(checked);
+    if (sessionId) {
+      const supabase = createClient();
+      await supabase
+        .from("sessions")
+        .update({ visible_to_parent: checked })
+        .eq("id", sessionId);
+    }
   }
 
   async function handleDateChange(newDate: string) {
@@ -301,6 +318,15 @@ export default function NewSessionForm({
           className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
           placeholder="What happened in this session?"
         />
+        <label className="mt-2 flex items-center gap-2 text-xs font-medium text-stone-500">
+          <input
+            type="checkbox"
+            checked={shareNoteWithParent}
+            onChange={(e) => handleToggleShareNote(e.target.checked)}
+            className="h-3.5 w-3.5 rounded border-stone-300 text-brand-600 focus:ring-brand-500"
+          />
+          Share this note with parent
+        </label>
       </div>
 
       <div className="fixed inset-x-0 bottom-0 border-t border-stone-200 bg-white/95 px-4 py-3 backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">

@@ -238,6 +238,10 @@ export type SessionRecord = {
   student_id: string;
   date: string;
   note: string | null;
+  /** SLP/Teacher-controlled: shows this session's note to the parent (see
+   *  0035_session_note_parent_sharing.sql) — same pattern as goals'
+   *  visible_to_parent. */
+  visible_to_parent: boolean;
   created_at: string;
 };
 
