@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Target } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type {
@@ -20,6 +20,8 @@ import { useSectionPreferences } from "@/components/section-preferences";
 import BulkAssignTrackModal, {
   type BulkAssignBankGoal,
 } from "@/components/bulk-assign-track-modal";
+import TrackLadder from "@/components/track-ladder";
+import TreatmentPlanProgress from "@/components/treatment-plan-progress";
 import GoalFormModal, { type GoalFormValues } from "./goal-form-modal";
 import DeleteGoalConfirmModal from "./delete-goal-confirm-modal";
 
@@ -65,7 +67,7 @@ export default function GoalsSection({
     Record<string, string>
   >({});
   const [reorderError, setReorderError] = useState<string | null>(null);
-  const [showMasteryCelebration, setShowMasteryCelebration] = useState(false);
+  const [celebration, setCelebration] = useState<string | null>(null);
   const {
     collapsed,
     onToggleCollapse,
@@ -81,6 +83,61 @@ export default function GoalsSection({
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
   }
+
+  // Groups tracked goals into ladders (one per track, steps in order) and
+  // splits out everything else — standalone goals keep rendering exactly
+  // as a plain card, same as before this feature existed.
+  const { tracks, standaloneGoals } = useMemo(() => {
+    const byTrackId = new Map<
+      string,
+      { name: string; steps: TeacherGoalWithRelations[] }
+    >();
+    const standalone: TeacherGoalWithRelations[] = [];
+    for (const goal of goals) {
+      if (goal.track_id && goal.track) {
+        const entry = byTrackId.get(goal.track_id) ?? { name: goal.track.name, steps: [] };
+        entry.steps.push(goal);
+        byTrackId.set(goal.track_id, entry);
+      } else {
+        standalone.push(goal);
+      }
+    }
+    const trackList = Array.from(byTrackId.entries()).map(([trackId, { name, steps }]) => ({
+      trackId,
+      name,
+      steps: [...steps].sort((a, b) => (a.step_order ?? 0) - (b.step_order ?? 0)),
+    }));
+    trackList.sort((a, b) => {
+      const newest = (list: TeacherGoalWithRelations[]) =>
+        Math.max(...list.map((g) => new Date(g.created_at).getTime()));
+      return newest(b.steps) - newest(a.steps);
+    });
+    return { tracks: trackList, standaloneGoals: standalone };
+  }, [goals]);
+
+  const masteredCount = useMemo(
+    () => goals.filter((g) => g.status === "mastered").length,
+    [goals]
+  );
+  const totalCount = goals.length;
+
+  // Celebrates the whole treatment plan crossing into 100% mastered —
+  // separate from (and can layer with) the per-goal "mastered" celebration
+  // below. The ref means this only fires on an actual transition, never
+  // on first load of an already-complete plan.
+  const wasCompleteRef = useRef<boolean | null>(null);
+  useEffect(() => {
+    const complete = totalCount > 0 && masteredCount === totalCount;
+    if (wasCompleteRef.current === null) {
+      wasCompleteRef.current = complete;
+      return;
+    }
+    if (complete && !wasCompleteRef.current) {
+      setCelebration("🎉 Treatment plan complete!");
+      fireCelebrationConfetti();
+    }
+    wasCompleteRef.current = complete;
+  }, [masteredCount, totalCount]);
 
   async function refetchGoal(id: string): Promise<TeacherGoalWithRelations | null> {
     const supabase = createClient();
@@ -193,11 +250,21 @@ export default function GoalsSection({
     setEditingGoal(null);
 
     if (justMastered) {
-      setShowMasteryCelebration(true);
+      setCelebration("🎉 Goal mastered!");
       fireCelebrationConfetti();
     }
 
     return null;
+  }
+
+  function handleStepClick(stepId: string) {
+    const goal = goals.find((g) => g.id === stepId);
+    if (goal) setEditingGoal(goal);
+  }
+
+  function handleLadderReorder(stepId: string, direction: "up" | "down") {
+    const goal = goals.find((g) => g.id === stepId);
+    if (goal) handleReorderStep(goal, direction);
   }
 
   // Swaps step_order between two adjacent steps in the same track. Doesn't
@@ -371,91 +438,92 @@ export default function GoalsSection({
           )}
 
           {goals.length > 0 && (
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {goals.map((goal) => (
-            <div
-              key={goal.id}
-              className="flex flex-col rounded-2xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md p-4"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <span className="rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-600">
-                  {goal.subject?.name ?? "Uncategorized"}
-                </span>
-                <span
-                  className={`rounded-full px-2.5 py-1 text-xs font-medium ${GOAL_STATUS_CLASSES[goal.status]}`}
-                >
-                  {GOAL_STATUS_LABELS[goal.status]}
-                </span>
-              </div>
+            <div className="mt-4">
+              <TreatmentPlanProgress masteredCount={masteredCount} totalCount={totalCount} />
 
-              <p className="mt-3 flex-1 text-sm text-stone-900">
-                {goal.text}
-              </p>
-
-              {goal.track && (
-                <div className="mt-2 flex items-center gap-1.5 text-xs text-stone-500">
-                  <span>
-                    {goal.track.name} · Step {goal.step_order}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleReorderStep(goal, "up")}
-                    className="rounded px-1 text-stone-400 hover:bg-stone-100 hover:text-stone-700"
-                    title="Move earlier in the track"
-                  >
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleReorderStep(goal, "down")}
-                    className="rounded px-1 text-stone-400 hover:bg-stone-100 hover:text-stone-700"
-                    title="Move later in the track"
-                  >
-                    ↓
-                  </button>
+              {tracks.length > 0 && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {tracks.map((track) => (
+                    <TrackLadder
+                      key={track.trackId}
+                      trackName={track.name}
+                      steps={track.steps.map((g) => ({
+                        id: g.id,
+                        text: g.text,
+                        status: g.status,
+                        step_order: g.step_order ?? 0,
+                      }))}
+                      onStepClick={handleStepClick}
+                      onReorder={handleLadderReorder}
+                    />
+                  ))}
                 </div>
               )}
 
-              <p className="mt-2 text-sm text-stone-500">
-                {goal.target_percent !== null
-                  ? `Target: ${goal.target_percent}%`
-                  : "No target set"}
-              </p>
+              {standaloneGoals.length > 0 && (
+                <div className={`grid gap-3 sm:grid-cols-2 ${tracks.length > 0 ? "mt-3" : ""}`}>
+                  {standaloneGoals.map((goal) => (
+                    <div
+                      key={goal.id}
+                      className="flex flex-col rounded-2xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md p-4"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-600">
+                          {goal.subject?.name ?? "Uncategorized"}
+                        </span>
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs font-medium ${GOAL_STATUS_CLASSES[goal.status]}`}
+                        >
+                          {GOAL_STATUS_LABELS[goal.status]}
+                        </span>
+                      </div>
 
-              <MaterialChips materials={materialsByGoalId[goal.id] ?? []} />
+                      <p className="mt-3 flex-1 text-sm text-stone-900">
+                        {goal.text}
+                      </p>
 
-              <label className="mt-3 flex items-center gap-2 text-xs font-medium text-stone-500">
-                <input
-                  type="checkbox"
-                  checked={goal.visible_to_parent}
-                  onChange={() => handleToggleVisibleToParent(goal)}
-                  className="h-3.5 w-3.5 rounded border-stone-300 text-brand-600 focus:ring-brand-500"
-                />
-                Show progress to parent
-              </label>
-              {visibilityErrorByGoalId[goal.id] && (
-                <p className="mt-1 text-xs text-red-600">
-                  {visibilityErrorByGoalId[goal.id]}
-                </p>
+                      <p className="mt-2 text-sm text-stone-500">
+                        {goal.target_percent !== null
+                          ? `Target: ${goal.target_percent}%`
+                          : "No target set"}
+                      </p>
+
+                      <MaterialChips materials={materialsByGoalId[goal.id] ?? []} />
+
+                      <label className="mt-3 flex items-center gap-2 text-xs font-medium text-stone-500">
+                        <input
+                          type="checkbox"
+                          checked={goal.visible_to_parent}
+                          onChange={() => handleToggleVisibleToParent(goal)}
+                          className="h-3.5 w-3.5 rounded border-stone-300 text-brand-600 focus:ring-brand-500"
+                        />
+                        Show progress to parent
+                      </label>
+                      {visibilityErrorByGoalId[goal.id] && (
+                        <p className="mt-1 text-xs text-red-600">
+                          {visibilityErrorByGoalId[goal.id]}
+                        </p>
+                      )}
+
+                      <div className="mt-3 flex justify-end gap-1">
+                        <button
+                          onClick={() => setEditingGoal(goal)}
+                          className="rounded-lg px-3 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-100"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => setDeletingGoal(goal)}
+                          className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
-
-              <div className="mt-3 flex justify-end gap-1">
-                <button
-                  onClick={() => setEditingGoal(goal)}
-                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-100"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => setDeletingGoal(goal)}
-                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
-                >
-                  Delete
-                </button>
-              </div>
             </div>
-          ))}
-        </div>
           )}
         </>
       )}
@@ -517,10 +585,10 @@ export default function GoalsSection({
         />
       )}
 
-      {showMasteryCelebration && (
+      {celebration && (
         <CelebrationToast
-          message="🎉 Goal mastered!"
-          onDone={() => setShowMasteryCelebration(false)}
+          message={celebration}
+          onDone={() => setCelebration(null)}
         />
       )}
     </div>
