@@ -254,7 +254,27 @@ export async function buildStudentReportDocx(
           );
         }
 
-        children.push(chartCaption(`${report.metricLabel} over time`));
+        if (report.isSentenceStructure) {
+          for (const component of report.componentBreakdown) {
+            if (component.levelBreakdown.length === 0) continue;
+            const componentSvg = buildLevelBreakdownSvg(component.levelBreakdown);
+            const componentHeight = Math.round(
+              (component.levelBreakdown.length * 34 + 4) * CHART_SCALE
+            );
+            children.push(
+              chartCaption(`${component.name} (${component.independentPercent}% independent)`)
+            );
+            children.push(
+              await chartImage(componentSvg, { width: TREND_DISPLAY.width, height: componentHeight })
+            );
+          }
+        }
+
+        children.push(
+          chartCaption(
+            `${report.isSentenceStructure ? "Combined " : ""}${report.metricLabel} over time`
+          )
+        );
         children.push(
           await chartImage(buildTrendChartSvg(report.trend), TREND_DISPLAY)
         );

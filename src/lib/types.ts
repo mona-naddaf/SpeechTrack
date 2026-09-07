@@ -64,6 +64,7 @@ export type ResponseFormatType =
   | "cueing_hierarchy"
   | "correct_incorrect"
   | "rating_scale"
+  | "sentence_structure"
   | "pronunciation"
   | "open_text"
   | "behaviour_description"
@@ -87,6 +88,37 @@ export type CorrectIncorrectConfig = {
   incorrectLabel?: string;
 };
 
+/** One part of an utterance being tracked separately, e.g. "Subject",
+ *  "is/are", "Verb", "-ing", "Object" — see SentenceStructureConfig.
+ *  `id` is just a stable editor/React key; trial values and reporting key
+ *  off `name` (which can be renamed — same tradeoff a CueingLevel rename
+ *  already has: older trials logged under the old name stop matching in
+ *  the breakdown, exactly like renaming a cueing level does today). */
+export type SentenceStructureComponent = {
+  id: string;
+  name: string;
+};
+
+/** Config shape for a "sentence_structure" format: an ordered list of the
+ *  utterance's components, each scored per-attempt against the same
+ *  editable level scale a Cueing hierarchy uses (reuses CueingLevel/the
+ *  same editor UI, not a separate one). */
+export type SentenceStructureConfig = {
+  components: SentenceStructureComponent[];
+  levels: CueingLevel[];
+};
+
+/** The full shape response_formats.config can take, across every format
+ *  type — used everywhere a format's config gets read (ResponseFormat,
+ *  SessionGoal, TeacherSessionGoal, ProgressGoal, ...) so a new config
+ *  field only needs adding in one place. */
+export type ResponseFormatConfig = { levels?: CueingLevel[] } & Partial<
+  SentenceStructureConfig
+> &
+  Partial<RatingScaleConfig> &
+  CorrectIncorrectConfig &
+  Record<string, unknown>;
+
 /** "shared" doesn't mean browsable by anyone yet (that's a later step) —
  *  right now it's just a flag that marks an item ready for when that
  *  ships, same as MaterialVisibility's "shared" below. */
@@ -96,9 +128,7 @@ export type ResponseFormat = {
   id: string;
   name: string;
   type: ResponseFormatType;
-  config: { levels?: CueingLevel[] } & Partial<RatingScaleConfig> &
-    CorrectIncorrectConfig &
-    Record<string, unknown>;
+  config: ResponseFormatConfig;
   visibility: ShareVisibility;
   created_at: string;
 };
@@ -234,9 +264,7 @@ export type SessionGoal = {
     id: string;
     name: string;
     type: ResponseFormatType;
-    config: { levels?: CueingLevel[] } & Partial<RatingScaleConfig> &
-      CorrectIncorrectConfig &
-      Record<string, unknown>;
+    config: ResponseFormatConfig;
   } | null;
 };
 
@@ -559,9 +587,7 @@ export type TeacherSessionGoal = {
     id: string;
     name: string;
     type: ResponseFormatType;
-    config: { levels?: CueingLevel[] } & Partial<RatingScaleConfig> &
-      CorrectIncorrectConfig &
-      Record<string, unknown>;
+    config: ResponseFormatConfig;
   } | null;
 };
 

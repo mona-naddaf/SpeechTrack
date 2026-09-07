@@ -10,8 +10,10 @@ type Props = {
 };
 
 /** One goal's full progress report — status pill, trial count/date range,
- *  level breakdown (cueing goals only), trend chart, and the
- *  auto-generated written summary with its "Copy summary" button.
+ *  level breakdown (cueing goals) or a per-component breakdown (sentence
+ *  structure goals — reuses the same LevelBreakdownBars, once per
+ *  component), trend chart, and the auto-generated written summary with
+ *  its "Copy summary" button.
  *
  *  The single source of truth for this card: the SLP progress page, the
  *  Teacher progress page (cross-imports this file, same as it does with
@@ -64,8 +66,31 @@ export default function GoalProgressCard({ report }: Props) {
             </div>
           )}
 
+          {report.isSentenceStructure && report.componentBreakdown.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-stone-400">
+                Per-component breakdown
+              </p>
+              {report.componentBreakdown.map((component) => (
+                <div
+                  key={component.name}
+                  className="rounded-lg border border-stone-100 bg-cream-50/50 p-3"
+                >
+                  <p className="mb-2 text-xs font-medium text-stone-600">
+                    {component.name}{" "}
+                    <span className="text-stone-400">
+                      ({component.independentPercent}% independent)
+                    </span>
+                  </p>
+                  <LevelBreakdownBars entries={component.levelBreakdown} />
+                </div>
+              ))}
+            </div>
+          )}
+
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">
+              {report.isSentenceStructure ? "Combined " : ""}
               {report.metricLabel} over time
             </p>
             <TrendChart points={report.trend} label={report.metricLabel} />

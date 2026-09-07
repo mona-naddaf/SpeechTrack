@@ -5,6 +5,7 @@ import { Check, Undo2, X } from "lucide-react";
 import type { MaterialChip, TeacherSessionGoal, Trial } from "@/lib/types";
 import type { MaterialUsageSummary } from "@/lib/progress";
 import { getColorOption } from "@/lib/colors";
+import SentenceStructureTrialBody from "@/components/sentence-structure-trial-body";
 import GoalMaterialSection, {
   type AddMaterialResult,
 } from "./goal-material-section";
@@ -55,17 +56,23 @@ export default function GoalTrialCard({
   const correctLabel = String(format?.config.correctLabel ?? "Correct");
   const incorrectLabel = String(format?.config.incorrectLabel ?? "Incorrect");
 
+  // "sentence_structure" trials don't fit this single-value shape at all
+  // (each trial holds a whole components[]/extras[] row) — its own tally
+  // is computed inside SentenceStructureTrialBody instead, so it's simply
+  // skipped here.
   const tally: Record<string, number> = {};
-  for (const trial of trials) {
-    let key: string;
-    if (formatType === "cueing_hierarchy") {
-      key = String(trial.value?.level ?? "");
-    } else if (formatType === "rating_scale") {
-      key = String(trial.value?.rating ?? "");
-    } else {
-      key = trial.value?.correct ? "correct" : "incorrect";
+  if (formatType !== "sentence_structure") {
+    for (const trial of trials) {
+      let key: string;
+      if (formatType === "cueing_hierarchy") {
+        key = String(trial.value?.level ?? "");
+      } else if (formatType === "rating_scale") {
+        key = String(trial.value?.rating ?? "");
+      } else {
+        key = trial.value?.correct ? "correct" : "incorrect";
+      }
+      tally[key] = (tally[key] ?? 0) + 1;
     }
-    tally[key] = (tally[key] ?? 0) + 1;
   }
 
   return (
@@ -93,7 +100,15 @@ export default function GoalTrialCard({
         </span>
       </div>
 
-      {formatType === "cueing_hierarchy" ? (
+      {formatType === "sentence_structure" ? (
+        <SentenceStructureTrialBody
+          components={format?.config.components ?? []}
+          levels={format?.config.levels ?? []}
+          trials={trials}
+          logging={logging}
+          onLogAttempt={handleLog}
+        />
+      ) : formatType === "cueing_hierarchy" ? (
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
           {levels.map((level, i) => {
             const color = getColorOption(level.color);

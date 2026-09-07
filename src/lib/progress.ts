@@ -1,9 +1,8 @@
 import { formatDate } from "./date";
 import type {
-  CorrectIncorrectConfig,
   CueingLevel,
   GoalStatus,
-  RatingScaleConfig,
+  ResponseFormatConfig,
   ResponseFormatType,
 } from "./types";
 
@@ -17,9 +16,7 @@ export type ProgressGoal = {
     id: string;
     name: string;
     type: ResponseFormatType;
-    config: { levels?: CueingLevel[] } & Partial<RatingScaleConfig> &
-      CorrectIncorrectConfig &
-      Record<string, unknown>;
+    config: ResponseFormatConfig;
   } | null;
 };
 
@@ -46,6 +43,15 @@ export type LevelBreakdownEntry = {
 
 export type TrendDirection = "up" | "down" | "flat";
 
+/** One "sentence_structure" component's own level breakdown — same shape
+ *  as the goal-level one (reuses LevelBreakdownBars as-is, just called
+ *  once per component instead of once for the whole goal). */
+export type ComponentBreakdown = {
+  name: string;
+  levelBreakdown: LevelBreakdownEntry[];
+  independentPercent: number;
+};
+
 export type GoalProgressReport = {
   goal: ProgressGoal;
   totalTrials: number;
@@ -54,14 +60,87 @@ export type GoalProgressReport = {
   lastSessionDate: string | null;
   isCueing: boolean;
   isRating: boolean;
+  isSentenceStructure: boolean;
   /** What the trend/current-percent numbers represent, for chart/summary labels. */
   metricLabel: string;
+  /** For "sentence_structure", this is the *combined* breakdown across
+   *  every component (and extra) pick — the per-component detail lives
+   *  in componentBreakdown below. Empty when there's nothing to show. */
   levelBreakdown: LevelBreakdownEntry[];
+  /** Only populated for "sentence_structure" — one entry per configured
+   *  component (extras are excluded here: they're a one-off per attempt,
+   *  not a stable dimension to report on across sessions). */
+  componentBreakdown: ComponentBreakdown[];
   trend: TrendPoint[];
   currentPercent: number | null;
   trendDirection: TrendDirection;
   summary: string;
 };
+
+/** A single component/extra pick flattened out of one trial's value —
+ *  `{components: [{name, level}, ...], extras: [{label, level}, ...]}` —
+ *  for tallying regardless of which of the two arrays it came from. */
+type SentenceStructurePick = { name: string; level: string };
+
+function readStringField(entry: unknown, field: string): string | null {
+  if (!entry || typeof entry !== "object") return null;
+  const value = (entry as Record<string, unknown>)[field];
+  return typeof value === "string" ? value : null;
+}
+
+function extractSentenceStructurePicks(
+  value: Record<string, unknown>
+): SentenceStructurePick[] {
+  const picks: SentenceStructurePick[] = [];
+
+  const components = Array.isArray(value.components) ? value.components : [];
+  for (const c of components) {
+    const name = readStringField(c, "name");
+    const level = readStringField(c, "level");
+    if (name && level) picks.push({ name, level });
+  }
+
+  const extras = Array.isArray(value.extras) ? value.extras : [];
+  for (const e of extras) {
+    const label = readStringField(e, "label");
+    const level = readStringField(e, "level");
+    if (label && level) picks.push({ name: label, level });
+  }
+
+  return picks;
+}
+
+/** Builds one component's (or the combined, if no `filterName`) level
+ *  breakdown from a flat list of picks — same computation cueing_hierarchy
+ *  already does, just reused per component. */
+function buildLevelBreakdownFromPicks(
+  picks: SentenceStructurePick[],
+  levels: CueingLevel[],
+  filterName: string | null
+): { breakdown: LevelBreakdownEntry[]; independentPercent: number } {
+  const relevant = filterName === null ? picks : picks.filter((p) => p.name === filterName);
+  const counts = new Map<string, number>();
+  for (const p of relevant) counts.set(p.level, (counts.get(p.level) ?? 0) + 1);
+
+  const total = relevant.length;
+  const breakdown = levels.map((level) => {
+    const count = counts.get(level.name) ?? 0;
+    return {
+      name: level.name,
+      color: level.color,
+      count,
+      percent: total > 0 ? Math.round((count / total) * 100) : 0,
+      isIndependent: level.is_independent,
+    };
+  });
+
+  const independentCount = breakdown
+    .filter((b) => b.isIndependent)
+    .reduce((sum, b) => sum + b.count, 0);
+  const independentPercent = total > 0 ? Math.round((independentCount / total) * 100) : 0;
+
+  return { breakdown, independentPercent };
+}
 
 export function buildGoalReport(
   goal: ProgressGoal,
@@ -70,6 +149,7 @@ export function buildGoalReport(
   const goalTrials = allTrials.filter((t) => t.goal_id === goal.id);
   const isCueing = goal.response_format?.type === "cueing_hierarchy";
   const isRating = goal.response_format?.type === "rating_scale";
+  const isSentenceStructure = goal.response_format?.type === "sentence_structure";
 
   const sessionDates = Array.from(
     new Set(goalTrials.map((t) => t.session_date))
@@ -85,10 +165,42 @@ export function buildGoalReport(
   }
 
   let levelBreakdown: LevelBreakdownEntry[] = [];
+  let componentBreakdown: ComponentBreakdown[] = [];
   let trend: TrendPoint[] = [];
   let metricLabel = "% correct";
 
-  if (isCueing) {
+  if (isSentenceStructure) {
+    metricLabel = "% independent";
+    const levels = goal.response_format?.config.levels ?? [];
+    const components = goal.response_format?.config.components ?? [];
+
+    // Every component/extra pick across every trial, flattened — the
+    // combined breakdown/trend below just don't filter by name; the
+    // per-component ones (loop further down) filter to one name each.
+    const allPicks = goalTrials.flatMap((t) => extractSentenceStructurePicks(t.value));
+    const combined = buildLevelBreakdownFromPicks(allPicks, levels, null);
+    levelBreakdown = combined.breakdown;
+
+    componentBreakdown = components.map((component) => {
+      const { breakdown, independentPercent } = buildLevelBreakdownFromPicks(
+        allPicks,
+        levels,
+        component.name
+      );
+      return { name: component.name, levelBreakdown: breakdown, independentPercent };
+    });
+
+    const independentNames = new Set(levels.filter((l) => l.is_independent).map((l) => l.name));
+    trend = sessionDates.map((date) => {
+      const dayTrials = bySessionDate.get(date) ?? [];
+      const dayPicks = dayTrials.flatMap((t) => extractSentenceStructurePicks(t.value));
+      const independentCount = dayPicks.filter((p) => independentNames.has(p.level)).length;
+      return {
+        date,
+        percent: dayPicks.length > 0 ? Math.round((independentCount / dayPicks.length) * 100) : 0,
+      };
+    });
+  } else if (isCueing) {
     metricLabel = "% independent";
     const levels = goal.response_format?.config.levels ?? [];
     const counts = new Map<string, number>();
@@ -171,6 +283,7 @@ export function buildGoalReport(
     trendDirection,
     isCueing,
     isRating,
+    isSentenceStructure,
   });
 
   return {
@@ -181,6 +294,8 @@ export function buildGoalReport(
     lastSessionDate,
     isCueing,
     isRating,
+    isSentenceStructure,
+    componentBreakdown,
     metricLabel,
     levelBreakdown,
     trend,
@@ -324,6 +439,7 @@ function buildSummary(
     trendDirection: TrendDirection;
     isCueing: boolean;
     isRating: boolean;
+    isSentenceStructure: boolean;
   }
 ): string {
   if (
@@ -341,6 +457,6 @@ function buildSummary(
     return `Working on "${goal.text}" since ${since}. Currently averaging ${stats.currentPercent}% of the max rating across ${stats.sessionCount} ${sessionWord}, trending ${stats.trendDirection}.`;
   }
 
-  const metric = stats.isCueing ? "independent" : "correct";
+  const metric = stats.isCueing || stats.isSentenceStructure ? "independent" : "correct";
   return `Working on "${goal.text}" since ${since}. Currently at ${stats.currentPercent}% ${metric} responses across ${stats.sessionCount} ${sessionWord}, trending ${stats.trendDirection}.`;
 }

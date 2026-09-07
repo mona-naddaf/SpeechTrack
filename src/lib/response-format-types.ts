@@ -1,9 +1,11 @@
 import type { ResponseFormatType } from "./types";
 
 /**
- * Every response format type the app knows about. Only "cueing_hierarchy"
- * has a real editor today — the rest are shown as placeholders on the
- * formats page until they're built out.
+ * Every response format type the app knows about. "cueing_hierarchy",
+ * "correct_incorrect", "rating_scale", and "sentence_structure" are
+ * creatable with a real editor (see CREATABLE_TYPES in formats-list.tsx)
+ * — the rest are shown as placeholders on the formats page until they're
+ * built out.
  */
 export const RESPONSE_FORMAT_TYPE_LABELS: {
   type: ResponseFormatType;
@@ -24,6 +26,12 @@ export const RESPONSE_FORMAT_TYPE_LABELS: {
     type: "rating_scale",
     label: "Rating scale",
     description: "Score responses on a numeric scale.",
+  },
+  {
+    type: "sentence_structure",
+    label: "Sentence structure",
+    description:
+      "Track each part of a multi-part utterance (e.g. Subject + is/are + Verb + -ing + Object) separately in one trial.",
   },
   {
     type: "pronunciation",

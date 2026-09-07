@@ -10,7 +10,11 @@ const VISIBILITY_OPTIONS = [
   { value: "shared" as const, label: "Shared" },
 ];
 
-type CreatableType = "correct_incorrect" | "rating_scale" | "cueing_hierarchy";
+type CreatableType =
+  | "correct_incorrect"
+  | "rating_scale"
+  | "cueing_hierarchy"
+  | "sentence_structure";
 
 const TYPE_OPTIONS: { type: CreatableType; label: string; description: string }[] = [
   {
@@ -27,6 +31,12 @@ const TYPE_OPTIONS: { type: CreatableType; label: string; description: string }[
     type: "cueing_hierarchy",
     label: "Cueing hierarchy",
     description: "Track the level of support a student needed to respond.",
+  },
+  {
+    type: "sentence_structure",
+    label: "Sentence structure",
+    description:
+      "Score each part of a multi-part utterance (Subject, Verb, Object, ...) separately in one trial.",
   },
 ];
 
@@ -83,11 +93,28 @@ export default function NewFormatModal({ onCancel, onCreated }: Props) {
         return;
       }
       config = { min: minValue, max: maxValue };
-    } else {
+    } else if (type === "cueing_hierarchy") {
       // cueing_hierarchy — start with two default levels; she customizes
       // levels right after creating, in the same editor used for the
       // built-in default format.
       config = {
+        levels: [
+          { name: "Independent", color: "green", is_independent: true },
+          { name: "With support", color: "amber", is_independent: false },
+        ],
+      };
+      openEditor = true;
+    } else {
+      // sentence_structure — a sensible Subject/Verb/Object starting point
+      // plus the same two default levels cueing_hierarchy starts with
+      // (same scale, same editor UI); she customizes both right after
+      // creating.
+      config = {
+        components: [
+          { id: crypto.randomUUID(), name: "Subject" },
+          { id: crypto.randomUUID(), name: "Verb" },
+          { id: crypto.randomUUID(), name: "Object" },
+        ],
         levels: [
           { name: "Independent", color: "green", is_independent: true },
           { name: "With support", color: "amber", is_independent: false },
@@ -266,6 +293,14 @@ export default function NewFormatModal({ onCancel, onCreated }: Props) {
             <p className="text-sm text-stone-500">
               You&apos;ll start with two levels and can add, remove, rename,
               or recolor them right after creating it.
+            </p>
+          )}
+
+          {type === "sentence_structure" && (
+            <p className="text-sm text-stone-500">
+              You&apos;ll start with Subject/Verb/Object and two levels —
+              fully editable (add, remove, rename, reorder) right after
+              creating it.
             </p>
           )}
 

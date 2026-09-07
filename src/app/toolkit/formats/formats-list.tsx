@@ -15,6 +15,7 @@ import VisibilityField from "@/components/visibility-field";
 import CueingHierarchyEditorModal from "./cueing-hierarchy-editor-modal";
 import CorrectIncorrectEditorModal from "./correct-incorrect-editor-modal";
 import RatingScaleEditorModal from "./rating-scale-editor-modal";
+import SentenceStructureEditorModal from "./sentence-structure-editor-modal";
 import NewFormatModal from "./new-format-modal";
 import DeleteFormatConfirmModal from "./delete-format-confirm-modal";
 
@@ -29,6 +30,7 @@ const CREATABLE_TYPES: ResponseFormatType[] = [
   "correct_incorrect",
   "rating_scale",
   "cueing_hierarchy",
+  "sentence_structure",
 ];
 
 type Props = {
@@ -212,7 +214,36 @@ export default function FormatsList({ initialFormats }: Props) {
             </p>
           )}
 
-          {!["cueing_hierarchy", "correct_incorrect", "rating_scale"].includes(
+          {format.type === "sentence_structure" && (
+            <div className="mt-4">
+              <p className="text-sm text-stone-600">
+                {(format.config.components ?? []).map((c) => c.name).join(" + ") ||
+                  "No components yet"}
+              </p>
+              <ul className="mt-2 flex flex-wrap gap-2">
+                {(format.config.levels ?? []).map(
+                  (level: CueingLevel, i: number) => {
+                    const color = getColorOption(level.color);
+                    return (
+                      <li
+                        key={i}
+                        className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-sm ${color.badgeClass}`}
+                      >
+                        {level.name}
+                        {level.is_independent && (
+                          <span className="text-xs opacity-70">
+                            (independent)
+                          </span>
+                        )}
+                      </li>
+                    );
+                  }
+                )}
+              </ul>
+            </div>
+          )}
+
+          {!["cueing_hierarchy", "correct_incorrect", "rating_scale", "sentence_structure"].includes(
             format.type
           ) && (
             <p className="mt-1 text-sm text-stone-500">
@@ -264,6 +295,14 @@ export default function FormatsList({ initialFormats }: Props) {
 
       {editingFormat && editingFormat.type === "rating_scale" && (
         <RatingScaleEditorModal
+          format={editingFormat}
+          onCancel={() => setEditingFormat(null)}
+          onSaved={handleSaved}
+        />
+      )}
+
+      {editingFormat && editingFormat.type === "sentence_structure" && (
+        <SentenceStructureEditorModal
           format={editingFormat}
           onCancel={() => setEditingFormat(null)}
           onSaved={handleSaved}
