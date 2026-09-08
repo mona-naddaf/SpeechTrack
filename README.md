@@ -290,6 +290,10 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ...
 # Not a Supabase credential — generate your own random value, e.g.:
 #   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 PARENT_SESSION_SECRET=...
+
+# Signs the classroom-contact session cookie (/classroom) — a separate
+# trust boundary from parent access, so use a DIFFERENT random value:
+CLASSROOM_CONTACT_SESSION_SECRET=...
 ```
 
 ### 3. Run the database migrations
@@ -500,6 +504,14 @@ Parents never get a Supabase Auth account, so RLS (which is keyed entirely on `a
 5. Progress/behavior sharing (`0011_selective_parent_sharing.sql`, `0012_slp_behavior_tracking.sql`) is read-only and opt-in per row: `/parent` only ever shows a goal whose `visible_to_parent` is `true`, and only ever shows a student's behavior summary when that student's `share_behavior_with_parent` is `true` (SLP or Teacher side). There's no route for a parent to write either flag — both are only ever set by the SLP/Teacher from their own student page, through the same RLS-protected update path every other goal/student edit already uses.
 
 **Trade-off:** this moves enforcement from the database (safe regardless of application bugs) into that route-handler code (a bug there could leak across students, since the service key ignores RLS). Known limitations, accepted for simplicity: no rate-limiting/lockout on the login endpoint (a 6-character code from a 32-symbol alphabet is ~1 billion combinations, but nothing throttles repeated guesses), and no CSRF token on the log-practice submission (mitigated by `SameSite=Lax`, but not airtight — worst case is a forged log entry, not a data leak, since reading data still requires the code).
+
+### Classroom contact ("Teacher view") access — `/classroom`
+
+A second, independent code-entry flow for a student's classroom contact (`0036_classroom_contact_access.sql`), architecturally identical to parent access above but a completely separate trust boundary — different access-code column (`classroom_contact_access_code`), different signed cookie (`classroom_contact_session`, signed with its own `CLASSROOM_CONTACT_SESSION_SECRET`, see `src/lib/classroom-contact-session.ts`), different login/logout/log-entry routes (`src/app/api/classroom-contact/**`), and its own tables (`classroom_strategies`/`classroom_strategy_logs`/`classroom_strategy_praise` and the Teacher-side mirror `teacher_classroom_strategies`/`teacher_classroom_strategy_logs`/`teacher_classroom_strategy_praise`) — never the parent's `parent_session` cookie or `home_practice_items`/`practice_logs` tables.
+
+- `/classroom`'s write access is scoped to exactly one thing: `POST /api/classroom-contact/strategy/log` inserting one row into `classroom_strategy_logs`/`teacher_classroom_strategy_logs`, with `student_id` always taken from the verified cookie, never from the request body. There's no server route a classroom contact can reach that edits a strategy's text, a goal, a session, or anything else — and since a classroom contact never gets a Supabase Auth session, RLS blocks any attempt to reach those tables directly through the client SDK too (every policy on `classroom_strategies`/`teacher_classroom_strategies` and everything upstream of them requires `auth.uid()` to match an owning `slp_id`/`teacher_id`, which is null with no session).
+- Progress/Behavior sharing is **the exact same reused sections** a parent sees — same `visible_to_parent` (goals/sessions) and `share_behavior_with_parent` (behavior) columns, same `ProgressSection`/`BehaviorSection`/`SessionNotesSection` components (imported straight from `src/app/parent/`, not copied). There's no separate "share with classroom contact" flag — whatever's shared with the parent is what the classroom contact sees too, labeled with its own "Teacher view" header so it's never confused with the parent's own login.
+- `src/middleware.ts` excludes `/classroom` and `/api/classroom-contact` for the same reason it excludes `/parent`/`/api/parent`.
 
 ### 4. Email confirmation
 

@@ -310,6 +310,43 @@ export type PracticeLogWithPraise = PracticeLog & {
 };
 
 // ============================================================
+// Classroom strategies — the classroom-contact-facing mirror of
+// HomePracticeItem/PracticeLog/PraiseMessage above. Same reuse pattern:
+// one shared shape for both classroom_strategies (SLP) and
+// teacher_classroom_strategies (Teacher), since the columns are
+// identical either side (see 0036_classroom_contact_access.sql).
+// ============================================================
+
+export type ClassroomStrategy = {
+  id: string;
+  what_to_do: string;
+  how_to_do_it: string | null;
+  last_used_date: string | null;
+  created_at: string;
+};
+
+/** A snapshot of a classroom strategy at the moment it was logged —
+ *  stored directly in classroom_strategy_logs.activities, same reasoning
+ *  as PracticeActivity above. */
+export type ClassroomStrategyActivity = {
+  id: string;
+  text: string;
+};
+
+export type ClassroomStrategyLog = {
+  id: string;
+  date: string;
+  activities: ClassroomStrategyActivity[];
+  how_it_went: HowItWent;
+  note: string | null;
+  created_at: string;
+};
+
+export type ClassroomStrategyLogWithPraise = ClassroomStrategyLog & {
+  praise: PraiseMessage[];
+};
+
+// ============================================================
 // Assessment builder + administering
 // ============================================================
 

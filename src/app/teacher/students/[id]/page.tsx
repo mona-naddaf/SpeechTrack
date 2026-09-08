@@ -7,6 +7,8 @@ import { eachDateInRange, getTodayLocalDateString } from "@/lib/date";
 import type {
   AttendanceRecord,
   BehaviorLogWithType,
+  ClassroomStrategy,
+  ClassroomStrategyLogWithPraise,
   HomePracticeItem,
   PracticeLogWithPraise,
   TeacherGoalTrack,
@@ -32,6 +34,8 @@ import GoalsSection from "./goals-section";
 import BehaviorSection from "./behavior-section";
 import HomePracticeSection from "./home-practice-section";
 import PracticeLogSection from "./practice-log-section";
+import ClassroomStrategiesSection from "./classroom-strategies-section";
+import ClassroomStrategyLogSection from "./classroom-strategy-log-section";
 import ExportButtons from "./export-buttons";
 
 export default async function TeacherStudentDetailPage({
@@ -59,7 +63,7 @@ export default async function TeacherStudentDetailPage({
   const { data: student } = await supabase
     .from("teacher_students")
     .select(
-      "id, name, class, parent_access_code, share_behavior_with_parent, expected_frequency, avatar, scheduled_days, schedule_end_date, created_at, date_of_birth, mother_email, father_email, homeroom_teacher, custom_fields:teacher_student_custom_fields(id, student_id, label, value, created_at)"
+      "id, name, class, parent_access_code, classroom_contact_access_code, share_behavior_with_parent, expected_frequency, avatar, scheduled_days, schedule_end_date, created_at, date_of_birth, mother_email, father_email, homeroom_teacher, custom_fields:teacher_student_custom_fields(id, student_id, label, value, created_at)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -79,6 +83,8 @@ export default async function TeacherStudentDetailPage({
     sessionsResult,
     homePracticeResult,
     practiceLogsResult,
+    classroomStrategiesResult,
+    classroomStrategyLogsResult,
     attendanceResult,
     holidaysResult,
   ] = await Promise.all([
@@ -143,6 +149,19 @@ export default async function TeacherStudentDetailPage({
       .from("teacher_practice_logs")
       .select(
         "id, date, activities, how_it_went, note, created_at, praise:teacher_praise(id, message, created_at)"
+      )
+      .eq("student_id", id)
+      .order("date", { ascending: false })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("teacher_classroom_strategies")
+      .select("id, what_to_do, how_to_do_it, last_used_date, created_at")
+      .eq("student_id", id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("teacher_classroom_strategy_logs")
+      .select(
+        "id, date, activities, how_it_went, note, created_at, praise:teacher_classroom_strategy_praise(id, message, created_at)"
       )
       .eq("student_id", id)
       .order("date", { ascending: false })
@@ -327,6 +346,34 @@ export default async function TeacherStudentDetailPage({
                       []) as unknown as PracticeLogWithPraise[]
                   }
                   initialError={practiceLogsResult.error?.message ?? null}
+                />
+              ),
+            },
+            {
+              key: "classroom_strategies",
+              defaultCollapsed: true,
+              node: (
+                <ClassroomStrategiesSection
+                  studentId={student.id}
+                  classroomContactAccessCode={student.classroom_contact_access_code}
+                  initialItems={
+                    (classroomStrategiesResult.data ??
+                      []) as unknown as ClassroomStrategy[]
+                  }
+                  initialError={classroomStrategiesResult.error?.message ?? null}
+                />
+              ),
+            },
+            {
+              key: "classroom_strategy_log",
+              defaultCollapsed: true,
+              node: (
+                <ClassroomStrategyLogSection
+                  initialLogs={
+                    (classroomStrategyLogsResult.data ??
+                      []) as unknown as ClassroomStrategyLogWithPraise[]
+                  }
+                  initialError={classroomStrategyLogsResult.error?.message ?? null}
                 />
               ),
             },

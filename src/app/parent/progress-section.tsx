@@ -9,9 +9,15 @@ import GoalProgressCard from "@/app/students/[id]/progress/goal-progress-card";
 
 type Props = {
   reports: GoalProgressReport[];
+  /** When set, the subtitle names the student directly ("A quick look at
+   *  the goals Alex's been working on") instead of saying "your child" —
+   *  used by the Teacher view (src/app/classroom/classroom-dashboard.tsx),
+   *  where "your child" doesn't make sense. Left unset on the Parent view
+   *  so it keeps its original phrasing. */
+  studentName?: string;
 };
 
-export default function ProgressSection({ reports }: Props) {
+export default function ProgressSection({ reports, studentName }: Props) {
   return (
     <div>
       <h2 className="flex items-center gap-2 text-lg font-semibold text-stone-900">
@@ -19,7 +25,8 @@ export default function ProgressSection({ reports }: Props) {
         Progress
       </h2>
       <p className="mt-1 text-sm text-stone-500">
-        A quick look at the goals your child&apos;s been working on.
+        A quick look at the goals{" "}
+        {studentName ? `${studentName}'s` : "your child's"} been working on.
       </p>
 
       <div className="mt-3 space-y-3">
