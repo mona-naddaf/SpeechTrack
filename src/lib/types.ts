@@ -195,6 +195,49 @@ export type BankGoal = {
   target_percent: number | null;
 };
 
+// ============================================================
+// Track Templates — a reusable, saveable track (0034_treatment_plan_tracks.sql's
+// goal_tracks) with no student attached: a name, one area, and an ordered
+// list of steps (goal text + optional response format/target %). Applying
+// one to a student creates a real goal_tracks row plus one goal per step
+// (see 0037_track_templates.sql). Same shared-table-per-side pattern as
+// goal_tracks/teacher_goal_tracks.
+// ============================================================
+
+export type TrackTemplate = {
+  id: string;
+  slp_id: string;
+  name: string;
+  area_id: string;
+  created_at: string;
+};
+
+/** A track template joined with its area, for display. */
+export type TrackTemplateWithArea = TrackTemplate & {
+  area: { id: string; name: string } | null;
+};
+
+export type TrackTemplateStep = {
+  id: string;
+  template_id: string;
+  order_index: number;
+  goal_text: string;
+  response_format_id: string | null;
+  target_percent: number | null;
+  created_at: string;
+};
+
+/** A track template step joined with its response format, for display. */
+export type TrackTemplateStepWithRelations = TrackTemplateStep & {
+  response_format: { id: string; name: string } | null;
+};
+
+/** A template plus its steps (in order) — what the "Apply a track
+ *  template" picker on a student page needs. */
+export type TrackTemplateWithSteps = TrackTemplateWithArea & {
+  steps: TrackTemplateStepWithRelations[];
+};
+
 export type MaterialVisibility = ShareVisibility | "for_sale";
 
 export type Material = {
@@ -585,6 +628,38 @@ export type TeacherBankGoal = {
   text: string;
   response_format_id: string | null;
   target_percent: number | null;
+};
+
+/** The Teacher equivalent of TrackTemplate/TrackTemplateStep — see the
+ *  block above and 0037_track_templates.sql. */
+export type TeacherTrackTemplate = {
+  id: string;
+  teacher_id: string;
+  name: string;
+  subject_id: string;
+  created_at: string;
+};
+
+export type TeacherTrackTemplateWithSubject = TeacherTrackTemplate & {
+  subject: { id: string; name: string } | null;
+};
+
+export type TeacherTrackTemplateStep = {
+  id: string;
+  template_id: string;
+  order_index: number;
+  goal_text: string;
+  response_format_id: string | null;
+  target_percent: number | null;
+  created_at: string;
+};
+
+export type TeacherTrackTemplateStepWithRelations = TeacherTrackTemplateStep & {
+  response_format: { id: string; name: string } | null;
+};
+
+export type TeacherTrackTemplateWithSteps = TeacherTrackTemplateWithSubject & {
+  steps: TeacherTrackTemplateStepWithRelations[];
 };
 
 /** The Teacher equivalent of Material/MaterialWithRelations/MaterialGoalOption

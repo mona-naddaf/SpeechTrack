@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ChevronUp, Lock, Pause } from "lucide-react";
+import { BookmarkPlus, Check, ChevronDown, ChevronUp, Lock, Pause } from "lucide-react";
 import type { GoalStatus } from "@/lib/types";
 
 export type TrackLadderStep = {
@@ -13,6 +13,8 @@ type Props = {
   steps: TrackLadderStep[];
   onStepClick: (stepId: string) => void;
   onReorder: (stepId: string, direction: "up" | "down") => void;
+  /** Omit to hide the "Save as template" action entirely. */
+  onSaveAsTemplate?: () => void;
 };
 
 const NODE_CLASSES: Record<GoalStatus, string> = {
@@ -58,6 +60,7 @@ export default function TrackLadder({
   steps,
   onStepClick,
   onReorder,
+  onSaveAsTemplate,
 }: Props) {
   const sorted = [...steps].sort((a, b) => a.step_order - b.step_order);
   const masteredCount = sorted.filter((s) => s.status === "mastered").length;
@@ -66,9 +69,21 @@ export default function TrackLadder({
     <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between gap-2">
         <h3 className="font-semibold text-stone-900">{trackName}</h3>
-        <span className="shrink-0 rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-500">
-          {masteredCount}/{sorted.length} mastered
-        </span>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-500">
+            {masteredCount}/{sorted.length} mastered
+          </span>
+          {onSaveAsTemplate && (
+            <button
+              type="button"
+              onClick={onSaveAsTemplate}
+              title="Save this track's step sequence as a reusable template"
+              className="rounded-md p-1 text-stone-400 transition-colors hover:bg-stone-100 hover:text-brand-700"
+            >
+              <BookmarkPlus className="h-4 w-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="mt-3">

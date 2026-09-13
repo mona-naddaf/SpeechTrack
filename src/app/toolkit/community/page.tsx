@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, ClipboardList, Sliders, Smile, Target, Library } from "lucide-react";
+import { ArrowLeft, ClipboardList, Sliders, Smile, Target, Library, ListTree } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type {
@@ -294,6 +294,13 @@ export default async function CommunityPage() {
             >
               <Library className="h-4 w-4" />
               Materials
+            </Link>
+            <Link
+              href="/toolkit/track-templates"
+              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
+            >
+              <ListTree className="h-4 w-4" />
+              Track templates
             </Link>
           </div>
         </div>

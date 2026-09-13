@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, ClipboardList, Sliders, Smile, Target, Users } from "lucide-react";
+import { ArrowLeft, ClipboardList, ListTree, Sliders, Smile, Target, Users } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Area, MaterialGoalOption } from "@/lib/types";
@@ -81,6 +81,13 @@ export default async function MaterialsPage() {
             >
               <Smile className="h-4 w-4" />
               Behavior types
+            </Link>
+            <Link
+              href="/toolkit/track-templates"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
+            >
+              <ListTree className="h-4 w-4" />
+              Track templates
             </Link>
             <Link
               href="/toolkit/community"

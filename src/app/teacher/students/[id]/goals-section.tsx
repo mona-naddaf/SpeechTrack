@@ -10,6 +10,7 @@ import type {
   TeacherGoalTrack,
   TeacherGoalWithRelations,
   TeacherSubject,
+  TeacherTrackTemplateWithSteps,
 } from "@/lib/types";
 import { GOAL_STATUS_CLASSES, GOAL_STATUS_LABELS } from "@/lib/goal-status";
 import { fireCelebrationConfetti } from "@/lib/confetti";
@@ -20,6 +21,10 @@ import { useSectionPreferences } from "@/components/section-preferences";
 import BulkAssignTrackModal, {
   type BulkAssignBankGoal,
 } from "@/components/bulk-assign-track-modal";
+import SaveTrackAsTemplateModal from "@/components/save-track-as-template-modal";
+import ApplyTrackTemplateModal, {
+  type ApplyTemplateOption,
+} from "@/components/apply-track-template-modal";
 import TrackLadder from "@/components/track-ladder";
 import TreatmentPlanProgress from "@/components/treatment-plan-progress";
 import GoalFormModal, { type GoalFormValues } from "./goal-form-modal";
@@ -36,6 +41,10 @@ type Props = {
   responseFormats: ResponseFormatOption[];
   bankGoals: TeacherBankGoal[];
   initialGoalTracks: TeacherGoalTrack[];
+  /** Her saved track templates (either origin — saved from a track, or
+   *  built from scratch in the library), each with its steps in order,
+   *  for the "Apply a track template" picker. */
+  trackTemplates: TeacherTrackTemplateWithSteps[];
   /** Materials linked to each goal (via teacher_material_goals), keyed by
    *  goal id — shown as clickable chips right on the card. Missing
    *  entries render no chips. */
@@ -50,6 +59,7 @@ export default function GoalsSection({
   responseFormats,
   bankGoals,
   initialGoalTracks,
+  trackTemplates,
   materialsByGoalId,
 }: Props) {
   const [goals, setGoals] = useState<TeacherGoalWithRelations[]>(initialGoals);
@@ -57,6 +67,8 @@ export default function GoalsSection({
   const [listError] = useState<string | null>(initialGoalsError);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showBulkAssignModal, setShowBulkAssignModal] = useState(false);
+  const [showApplyTemplateModal, setShowApplyTemplateModal] = useState(false);
+  const [savingTrackId, setSavingTrackId] = useState<string | null>(null);
   const [editingGoal, setEditingGoal] = useState<TeacherGoalWithRelations | null>(
     null
   );
@@ -336,6 +348,17 @@ export default function GoalsSection({
     setShowBulkAssignModal(false);
   }
 
+  // Applying a template creates a new track the same way bulk-assign's
+  // "create a new track" path does, so the result folds into state the
+  // same way.
+  function handleApplyTemplateDone(result: {
+    insertedGoals: Record<string, unknown>[];
+    newTrack: { id: string; name: string } | null;
+  }) {
+    handleBulkAssignDone(result);
+    setShowApplyTemplateModal(false);
+  }
+
   async function handleDelete() {
     if (!deletingGoal) return null;
 
@@ -398,6 +421,12 @@ export default function GoalsSection({
         actions={
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setShowApplyTemplateModal(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md"
+            >
+              Apply a track template
+            </button>
+            <button
               onClick={() => setShowBulkAssignModal(true)}
               className="inline-flex items-center gap-1.5 rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md"
             >
@@ -455,6 +484,7 @@ export default function GoalsSection({
                       }))}
                       onStepClick={handleStepClick}
                       onReorder={handleLadderReorder}
+                      onSaveAsTemplate={() => setSavingTrackId(track.trackId)}
                     />
                   ))}
                 </div>
@@ -584,6 +614,62 @@ export default function GoalsSection({
           onDone={handleBulkAssignDone}
         />
       )}
+
+      {showApplyTemplateModal && (
+        <ApplyTrackTemplateModal
+          studentId={studentId}
+          templates={trackTemplates.map(
+            (t): ApplyTemplateOption => ({
+              id: t.id,
+              name: t.name,
+              categoryId: t.subject_id,
+              steps: t.steps.map((s) => ({
+                id: s.id,
+                order_index: s.order_index,
+                goal_text: s.goal_text,
+                response_format_id: s.response_format_id,
+                target_percent: s.target_percent,
+              })),
+            })
+          )}
+          responseFormats={responseFormats}
+          goalsTable="teacher_goals"
+          tracksTable="teacher_goal_tracks"
+          categoryTable="teacher_subjects"
+          responseFormatTable="teacher_response_formats"
+          categoryIdColumn="subject_id"
+          ownerColumn="teacher_id"
+          onCancel={() => setShowApplyTemplateModal(false)}
+          onDone={handleApplyTemplateDone}
+        />
+      )}
+
+      {savingTrackId && (() => {
+        const track = tracks.find((t) => t.trackId === savingTrackId);
+        if (!track) return null;
+        return (
+          <SaveTrackAsTemplateModal
+            trackName={track.name}
+            steps={track.steps.map((g) => ({
+              text: g.text,
+              response_format_id: g.response_format_id,
+              target_percent: g.target_percent,
+            }))}
+            categoryLabel="Subject"
+            categories={subjects}
+            defaultCategoryId={track.steps[0]?.subject_id ?? ""}
+            templatesTable="teacher_track_templates"
+            templateStepsTable="teacher_track_template_steps"
+            categoryIdColumn="subject_id"
+            ownerColumn="teacher_id"
+            onCancel={() => setSavingTrackId(null)}
+            onDone={() => {
+              setSavingTrackId(null);
+              setCelebration("🎉 Template saved!");
+            }}
+          />
+        );
+      })()}
 
       {celebration && (
         <CelebrationToast

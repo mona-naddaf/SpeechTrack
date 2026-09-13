@@ -4,6 +4,7 @@ import {
   CalendarDays,
   ClipboardList,
   Library,
+  ListTree,
   Settings,
   Sliders,
   Smile,
@@ -174,6 +175,13 @@ export default async function DashboardPage() {
             >
               <Library className="h-4 w-4" />
               Materials
+            </Link>
+            <Link
+              href="/toolkit/track-templates"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
+            >
+              <ListTree className="h-4 w-4" />
+              Track templates
             </Link>
             <DashboardTour
               role="slp"

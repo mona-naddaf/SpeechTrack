@@ -14,6 +14,7 @@ import type {
   TeacherGoalTrack,
   TeacherGoalWithRelations,
   TeacherStudentCustomField,
+  TeacherTrackTemplateWithSteps,
 } from "@/lib/types";
 import {
   resolveMaterialChipsByGoal,
@@ -78,6 +79,7 @@ export default async function TeacherStudentDetailPage({
     formatsResult,
     bankGoalsResult,
     goalTracksResult,
+    trackTemplatesResult,
     behaviorLogsResult,
     behaviorTypesResult,
     sessionsResult,
@@ -119,6 +121,15 @@ export default async function TeacherStudentDetailPage({
       .from("teacher_goal_tracks")
       .select("id, student_id, name, created_at")
       .eq("student_id", id)
+      .order("created_at", { ascending: false }),
+    // Not student-scoped — these are her saved templates (no student_id
+    // column at all), offered on every student page's "Apply a track
+    // template" picker.
+    supabase
+      .from("teacher_track_templates")
+      .select(
+        "id, teacher_id, name, subject_id, created_at, subject:teacher_subjects(id, name), steps:teacher_track_template_steps(id, template_id, order_index, goal_text, response_format_id, target_percent, created_at, response_format:teacher_response_formats(id, name))"
+      )
       .order("created_at", { ascending: false }),
     supabase
       .from("behavior_logs")
@@ -210,6 +221,16 @@ export default async function TeacherStudentDetailPage({
     studentGoals,
     (materialLinksResult.data ?? []) as unknown as RawGoalMaterialLink[]
   );
+
+  // Steps come back unordered (no generated Database types to hang an
+  // embedded-resource .order() off of) — sorted client-side, same as
+  // every other track-step list in this app.
+  const trackTemplates = (
+    (trackTemplatesResult.data ?? []) as unknown as TeacherTrackTemplateWithSteps[]
+  ).map((t) => ({
+    ...t,
+    steps: [...t.steps].sort((a, b) => a.order_index - b.order_index),
+  }));
 
   const sessionStreak = computeCadenceStreak(
     (sessionsResult.data ?? []).map((s) => s.date),
@@ -317,6 +338,7 @@ export default async function TeacherStudentDetailPage({
                   initialGoalTracks={
                     (goalTracksResult.data ?? []) as unknown as TeacherGoalTrack[]
                   }
+                  trackTemplates={trackTemplates}
                   materialsByGoalId={materialsByGoalId}
                 />
               ),
