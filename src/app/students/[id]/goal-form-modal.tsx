@@ -8,6 +8,8 @@ import type {
   GoalWithRelations,
   ResponseFormatOption,
 } from "@/lib/types";
+import { matchesSearch } from "@/lib/search";
+import GoalCombobox, { type GoalComboboxOption } from "@/components/goal-combobox";
 
 export type GoalFormValues = {
   areaId: string;
@@ -45,9 +47,15 @@ export default function GoalFormModal({
   const [areaId, setAreaId] = useState(
     initialGoal?.area_id ?? areas[0]?.id ?? ""
   );
-  const [textSource, setTextSource] = useState<TextSource>("write");
+  // Defaults to the bank-search flow on add (search first, area
+  // auto-syncs to whatever she picks) — edit keeps "write" so an
+  // existing goal's text shows straight in the textarea, ready to edit.
+  const [textSource, setTextSource] = useState<TextSource>(
+    mode === "edit" ? "write" : "bank"
+  );
   const [text, setText] = useState(initialGoal?.text ?? "");
   const [selectedBankGoalId, setSelectedBankGoalId] = useState("");
+  const [bankSearch, setBankSearch] = useState("");
   const [baseline, setBaseline] = useState(initialGoal?.baseline ?? "");
   const [targetPercent, setTargetPercent] = useState(
     initialGoal?.target_percent !== undefined &&
@@ -69,9 +77,24 @@ export default function GoalFormModal({
     [bankGoals, areaId]
   );
 
+  const areaNameById = useMemo(
+    () => new Map(areas.map((a) => [a.id, a.name])),
+    [areas]
+  );
+
+  // Typing a search term searches EVERY area at once, not just the one
+  // currently selected above — she shouldn't need to know/remember a
+  // goal's category to find it. With nothing typed, this falls back to
+  // exactly the area-scoped quick-pick list it's always been.
+  const visibleBankGoals = useMemo(() => {
+    if (!bankSearch.trim()) return bankGoalsForArea;
+    return bankGoals.filter((g) => matchesSearch(g.text, bankSearch));
+  }, [bankGoals, bankGoalsForArea, bankSearch]);
+  const searchingAcrossAreas = bankSearch.trim().length > 0;
+
   function handleBankGoalSelect(id: string) {
     setSelectedBankGoalId(id);
-    const found = bankGoalsForArea.find((g) => g.id === id);
+    const found = bankGoals.find((g) => g.id === id);
     if (found) {
       setText(found.text);
       // Bank goals can carry a default response format / target % — load
@@ -81,7 +104,20 @@ export default function GoalFormModal({
       setTargetPercent(
         found.target_percent !== null ? String(found.target_percent) : ""
       );
+      // A cross-area search can surface a goal from a different area than
+      // the one currently selected above — keep the two in sync so the
+      // goal she's about to create lands in its actual area.
+      setAreaId(found.area_id);
     }
+  }
+
+  // Picking a live combobox result: same effect as handleBankGoalSelect,
+  // plus the input's own value becomes the picked goal's text so the
+  // combobox visibly shows what's selected instead of reverting to
+  // whatever partial word she'd typed to find it.
+  function handleComboboxSelect(option: GoalComboboxOption) {
+    handleBankGoalSelect(option.id);
+    setBankSearch(option.text);
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -133,31 +169,6 @@ export default function GoalFormModal({
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <div>
-            <label
-              htmlFor="goal-area"
-              className="block text-sm font-medium text-stone-700"
-            >
-              Area
-            </label>
-            <select
-              id="goal-area"
-              value={areaId}
-              onChange={(e) => {
-                setAreaId(e.target.value);
-                setSelectedBankGoalId("");
-              }}
-              className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-            >
-              {areas.length === 0 && <option value="">No areas yet</option>}
-              {areas.map((area) => (
-                <option key={area.id} value={area.id}>
-                  {area.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
             <span className="block text-sm font-medium text-stone-700">
               Goal text
             </span>
@@ -185,23 +196,28 @@ export default function GoalFormModal({
               </label>
             </div>
 
+            {/* Searching here (across every area at once) comes before
+                picking an Area below — she never has to know/pick a
+                category first, since selecting a result auto-syncs the
+                Area field to it (handleComboboxSelect). */}
             {textSource === "bank" && (
-              <select
-                value={selectedBankGoalId}
-                onChange={(e) => handleBankGoalSelect(e.target.value)}
-                className="mt-2 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-              >
-                <option value="">
-                  {bankGoalsForArea.length === 0
-                    ? "No bank goals in this area yet"
-                    : "Select a bank goal…"}
-                </option>
-                {bankGoalsForArea.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.text}
-                  </option>
-                ))}
-              </select>
+              <GoalCombobox
+                value={bankSearch}
+                onChange={setBankSearch}
+                options={visibleBankGoals.map((g) => ({
+                  id: g.id,
+                  text: g.text,
+                  categoryName: areaNameById.get(g.area_id) ?? "Uncategorized",
+                }))}
+                onSelect={handleComboboxSelect}
+                placeholder="Search the bank by goal text…"
+                emptyMessage={
+                  searchingAcrossAreas
+                    ? "No bank goals match your search"
+                    : "No bank goals in this area yet"
+                }
+                className="mt-2"
+              />
             )}
 
             <textarea
@@ -211,6 +227,31 @@ export default function GoalFormModal({
               className="mt-2 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
               placeholder="e.g. Will produce /r/ in initial position of words with 80% accuracy"
             />
+          </div>
+
+          <div>
+            <label
+              htmlFor="goal-area"
+              className="block text-sm font-medium text-stone-700"
+            >
+              Area
+            </label>
+            <select
+              id="goal-area"
+              value={areaId}
+              onChange={(e) => {
+                setAreaId(e.target.value);
+                setSelectedBankGoalId("");
+              }}
+              className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            >
+              {areas.length === 0 && <option value="">No areas yet</option>}
+              {areas.map((area) => (
+                <option key={area.id} value={area.id}>
+                  {area.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

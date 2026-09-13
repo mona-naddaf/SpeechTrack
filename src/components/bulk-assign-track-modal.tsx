@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { matchesSearch } from "@/lib/search";
+import SearchInput from "@/components/search-input";
 
 type CategoryOption = { id: string; name: string };
 
@@ -90,10 +92,21 @@ export default function BulkAssignTrackModal({
   const [newTrackName, setNewTrackName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+
+  // Filtered first, then grouped — a search matches across every
+  // area/subject at once instead of needing one picked first. Anything
+  // already checked stays checked/selected even while it's filtered out
+  // of view (the "Selected" list below always reflects `selected`
+  // directly, not this filtered/grouped view).
+  const filteredBankGoals = useMemo(
+    () => bankGoals.filter((g) => matchesSearch(g.text, search)),
+    [bankGoals, search]
+  );
 
   const groups = useMemo(() => {
     const byCategory = new Map<string, BulkAssignBankGoal[]>();
-    for (const g of bankGoals) {
+    for (const g of filteredBankGoals) {
       const list = byCategory.get(g.categoryId) ?? [];
       list.push(g);
       byCategory.set(g.categoryId, list);
@@ -101,7 +114,7 @@ export default function BulkAssignTrackModal({
     return categories
       .map((c) => ({ category: c, goals: byCategory.get(c.id) ?? [] }))
       .filter((g) => g.goals.length > 0);
-  }, [bankGoals, categories]);
+  }, [filteredBankGoals, categories]);
 
   const selectedInTrack = Array.from(selected.values())
     .filter((s) => s.inTrack)
@@ -261,9 +274,26 @@ export default function BulkAssignTrackModal({
           as picking one at a time.
         </p>
 
-        <div className="mt-4 max-h-64 overflow-y-auto rounded-lg border border-stone-200 p-3">
+        {/* Search box + its live-filtered results merged into one
+            bordered, scrollable block — matches update directly beneath
+            the box as she types, no separate step to reveal them. */}
+        <div className="mt-4 max-h-72 overflow-y-auto rounded-lg border border-stone-200">
+          {bankGoals.length > 0 && (
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder="Search the bank by goal text…"
+              variant="attached"
+              className="sticky top-0 z-10 bg-white"
+            />
+          )}
+          <div className="p-3">
           {groups.length === 0 && (
-            <p className="text-sm text-stone-500">No goals in the bank yet.</p>
+            <p className="text-sm text-stone-500">
+              {bankGoals.length === 0
+                ? "No goals in the bank yet."
+                : "No bank goals match your search."}
+            </p>
           )}
           {groups.map(({ category, goals }) => (
             <div key={category.id} className="mb-3 last:mb-0">
@@ -285,6 +315,7 @@ export default function BulkAssignTrackModal({
               </div>
             </div>
           ))}
+          </div>
         </div>
 
         {selected.size > 0 && (

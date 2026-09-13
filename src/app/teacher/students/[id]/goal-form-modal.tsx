@@ -8,6 +8,8 @@ import type {
   TeacherGoalWithRelations,
   TeacherSubject,
 } from "@/lib/types";
+import { matchesSearch } from "@/lib/search";
+import GoalCombobox, { type GoalComboboxOption } from "@/components/goal-combobox";
 
 export type GoalFormValues = {
   subjectId: string;
@@ -45,9 +47,15 @@ export default function GoalFormModal({
   const [subjectId, setSubjectId] = useState(
     initialGoal?.subject_id ?? subjects[0]?.id ?? ""
   );
-  const [textSource, setTextSource] = useState<TextSource>("write");
+  // Defaults to the bank-search flow on add (search first, subject
+  // auto-syncs to whatever she picks) — edit keeps "write" so an
+  // existing goal's text shows straight in the textarea, ready to edit.
+  const [textSource, setTextSource] = useState<TextSource>(
+    mode === "edit" ? "write" : "bank"
+  );
   const [text, setText] = useState(initialGoal?.text ?? "");
   const [selectedBankGoalId, setSelectedBankGoalId] = useState("");
+  const [bankSearch, setBankSearch] = useState("");
   const [baseline, setBaseline] = useState(initialGoal?.baseline ?? "");
   const [targetPercent, setTargetPercent] = useState(
     initialGoal?.target_percent !== undefined &&
@@ -69,9 +77,24 @@ export default function GoalFormModal({
     [bankGoals, subjectId]
   );
 
+  const subjectNameById = useMemo(
+    () => new Map(subjects.map((s) => [s.id, s.name])),
+    [subjects]
+  );
+
+  // Typing a search term searches EVERY subject at once, not just the one
+  // currently selected above — she shouldn't need to know/remember a
+  // goal's category to find it. With nothing typed, this falls back to
+  // exactly the subject-scoped quick-pick list it's always been.
+  const visibleBankGoals = useMemo(() => {
+    if (!bankSearch.trim()) return bankGoalsForSubject;
+    return bankGoals.filter((g) => matchesSearch(g.text, bankSearch));
+  }, [bankGoals, bankGoalsForSubject, bankSearch]);
+  const searchingAcrossSubjects = bankSearch.trim().length > 0;
+
   function handleBankGoalSelect(id: string) {
     setSelectedBankGoalId(id);
-    const found = bankGoalsForSubject.find((g) => g.id === id);
+    const found = bankGoals.find((g) => g.id === id);
     if (found) {
       setText(found.text);
       // Bank goals can carry a default response format / target % — load
@@ -81,7 +104,20 @@ export default function GoalFormModal({
       setTargetPercent(
         found.target_percent !== null ? String(found.target_percent) : ""
       );
+      // A cross-subject search can surface a goal from a different
+      // subject than the one currently selected above — keep the two in
+      // sync so the goal she's about to create lands in its actual subject.
+      setSubjectId(found.subject_id);
     }
+  }
+
+  // Picking a live combobox result: same effect as handleBankGoalSelect,
+  // plus the input's own value becomes the picked goal's text so the
+  // combobox visibly shows what's selected instead of reverting to
+  // whatever partial word she'd typed to find it.
+  function handleComboboxSelect(option: GoalComboboxOption) {
+    handleBankGoalSelect(option.id);
+    setBankSearch(option.text);
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -133,31 +169,6 @@ export default function GoalFormModal({
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <div>
-            <label
-              htmlFor="goal-subject"
-              className="block text-sm font-medium text-stone-700"
-            >
-              Subject
-            </label>
-            <select
-              id="goal-subject"
-              value={subjectId}
-              onChange={(e) => {
-                setSubjectId(e.target.value);
-                setSelectedBankGoalId("");
-              }}
-              className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-            >
-              {subjects.length === 0 && <option value="">No subjects yet</option>}
-              {subjects.map((subject) => (
-                <option key={subject.id} value={subject.id}>
-                  {subject.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
             <span className="block text-sm font-medium text-stone-700">
               Goal text
             </span>
@@ -185,23 +196,28 @@ export default function GoalFormModal({
               </label>
             </div>
 
+            {/* Searching here (across every subject at once) comes before
+                picking a Subject below — she never has to know/pick a
+                category first, since selecting a result auto-syncs the
+                Subject field to it (handleComboboxSelect). */}
             {textSource === "bank" && (
-              <select
-                value={selectedBankGoalId}
-                onChange={(e) => handleBankGoalSelect(e.target.value)}
-                className="mt-2 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-              >
-                <option value="">
-                  {bankGoalsForSubject.length === 0
-                    ? "No bank goals in this subject yet"
-                    : "Select a bank goal…"}
-                </option>
-                {bankGoalsForSubject.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.text}
-                  </option>
-                ))}
-              </select>
+              <GoalCombobox
+                value={bankSearch}
+                onChange={setBankSearch}
+                options={visibleBankGoals.map((g) => ({
+                  id: g.id,
+                  text: g.text,
+                  categoryName: subjectNameById.get(g.subject_id) ?? "Uncategorized",
+                }))}
+                onSelect={handleComboboxSelect}
+                placeholder="Search the bank by goal text…"
+                emptyMessage={
+                  searchingAcrossSubjects
+                    ? "No bank goals match your search"
+                    : "No bank goals in this subject yet"
+                }
+                className="mt-2"
+              />
             )}
 
             <textarea
@@ -211,6 +227,31 @@ export default function GoalFormModal({
               className="mt-2 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
               placeholder="e.g. Will complete addition worksheets with 80% accuracy"
             />
+          </div>
+
+          <div>
+            <label
+              htmlFor="goal-subject"
+              className="block text-sm font-medium text-stone-700"
+            >
+              Subject
+            </label>
+            <select
+              id="goal-subject"
+              value={subjectId}
+              onChange={(e) => {
+                setSubjectId(e.target.value);
+                setSelectedBankGoalId("");
+              }}
+              className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            >
+              {subjects.length === 0 && <option value="">No subjects yet</option>}
+              {subjects.map((subject) => (
+                <option key={subject.id} value={subject.id}>
+                  {subject.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

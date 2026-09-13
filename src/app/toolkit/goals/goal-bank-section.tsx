@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { Plus, Target } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Area, ResponseFormatOption, ShareVisibility } from "@/lib/types";
+import { matchesSearch } from "@/lib/search";
+import SearchInput from "@/components/search-input";
 import BankGoalFormModal, { type BankGoalFormValues } from "./bank-goal-form-modal";
 import DeleteBankGoalConfirmModal from "./delete-bank-goal-confirm-modal";
 import GoalExcelImport, { type ImportedBankGoal } from "@/components/goal-excel-import";
@@ -60,17 +62,26 @@ export default function GoalBankSection({
   const [deletingGoal, setDeletingGoal] = useState<BankGoalWithRelations | null>(
     null
   );
+  const [search, setSearch] = useState("");
+
+  // Filtered first, then grouped — so a search matches across every area
+  // at once instead of needing one picked first, and an area with no
+  // matches just doesn't render its heading at all.
+  const filteredGoals = useMemo(
+    () => goals.filter((g) => matchesSearch(g.text, search)),
+    [goals, search]
+  );
 
   const groups = useMemo(() => {
     const byArea = new Map<string, BankGoalWithRelations[]>();
-    for (const goal of goals) {
+    for (const goal of filteredGoals) {
       const key = goal.area?.name ?? "Uncategorized";
       const list = byArea.get(key) ?? [];
       list.push(goal);
       byArea.set(key, list);
     }
     return Array.from(byArea.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [goals]);
+  }, [filteredGoals]);
 
   async function refetchGoal(id: string): Promise<BankGoalWithRelations | null> {
     const supabase = createClient();
@@ -212,58 +223,78 @@ export default function GoalBankSection({
         </div>
       )}
 
-      {groups.length > 0 && (
-        <div className="mt-4 space-y-6">
-          {groups.map(([areaName, areaGoals]) => (
-            <div key={areaName}>
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-stone-400">
-                {areaName}
-              </h3>
-              <div className="mt-2 grid gap-3 sm:grid-cols-2">
-                {areaGoals.map((goal) => (
-                  <div
-                    key={goal.id}
-                    className="flex flex-col rounded-2xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md p-4"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="flex-1 text-sm text-stone-900">
-                        {goal.text}
-                      </p>
-                      <span
-                        className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${VISIBILITY_CLASSES[goal.visibility]}`}
-                      >
-                        {VISIBILITY_LABELS[goal.visibility]}
-                      </span>
-                    </div>
+      {/* Search box + its live-filtered results merged into one bordered
+          block — matches update directly beneath the box as she types,
+          no separate step to reveal them. */}
+      {goals.length > 0 && (
+        <div className="mt-4 overflow-hidden rounded-2xl border border-stone-200 bg-white">
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Search all areas by goal text…"
+            variant="attached"
+          />
 
-                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-stone-500">
-                      {goal.response_format && (
-                        <span>{goal.response_format.name}</span>
-                      )}
-                      {goal.target_percent !== null && (
-                        <span>Target: {goal.target_percent}%</span>
-                      )}
-                    </div>
+          {groups.length === 0 && (
+            <p className="p-4 text-sm text-stone-500">
+              No bank goals match your search.
+            </p>
+          )}
 
-                    <div className="mt-3 flex justify-end gap-1">
-                      <button
-                        onClick={() => setEditingGoal(goal)}
-                        className="rounded-lg px-3 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-100"
+          {groups.length > 0 && (
+            <div className="space-y-6 p-4">
+              {groups.map(([areaName, areaGoals]) => (
+                <div key={areaName}>
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-stone-400">
+                    {areaName}
+                  </h3>
+                  <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                    {areaGoals.map((goal) => (
+                      <div
+                        key={goal.id}
+                        className="flex flex-col rounded-2xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md p-4"
                       >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => setDeletingGoal(goal)}
-                        className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
-                      >
-                        Delete
-                      </button>
-                    </div>
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="flex-1 text-sm text-stone-900">
+                            {goal.text}
+                          </p>
+                          <span
+                            className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${VISIBILITY_CLASSES[goal.visibility]}`}
+                          >
+                            {VISIBILITY_LABELS[goal.visibility]}
+                          </span>
+                        </div>
+
+                        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-stone-500">
+                          {goal.response_format && (
+                            <span>{goal.response_format.name}</span>
+                          )}
+                          {goal.target_percent !== null && (
+                            <span>Target: {goal.target_percent}%</span>
+                          )}
+                        </div>
+
+                        <div className="mt-3 flex justify-end gap-1">
+                          <button
+                            onClick={() => setEditingGoal(goal)}
+                            className="rounded-lg px-3 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-100"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => setDeletingGoal(goal)}
+                            className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
         </div>
       )}
 

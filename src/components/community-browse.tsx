@@ -5,6 +5,8 @@ import { Check, ExternalLink, Library, Plus, Sliders, Star, Target } from "lucid
 import { createClient } from "@/lib/supabase/client";
 import type { CommunityItemType, CommunityRatingRow, ResponseFormatType } from "@/lib/types";
 import { RESPONSE_FORMAT_TYPE_LABELS } from "@/lib/response-format-types";
+import { matchesSearch } from "@/lib/search";
+import SearchInput from "@/components/search-input";
 
 type Category = { id: string; name: string };
 
@@ -169,6 +171,10 @@ export default function CommunityBrowse({
 }: Props) {
   const [tab, setTab] = useState<Tab>("goals");
   const [categoryFilter, setCategoryFilter] = useState("");
+  // Goals-tab only — combines with categoryFilter above rather than
+  // replacing it, so she can narrow by area/subject AND search by text
+  // at the same time.
+  const [goalSearch, setGoalSearch] = useState("");
   // Grows locally as find-or-create discovers/creates categories while
   // copying items, so a second copy in the same visit reuses them
   // instead of re-creating (or re-querying) every time.
@@ -255,6 +261,7 @@ export default function CommunityBrowse({
   function switchTab(next: Tab) {
     setTab(next);
     setCategoryFilter("");
+    setGoalSearch("");
     setError(null);
   }
 
@@ -272,8 +279,13 @@ export default function CommunityBrowse({
   }, [tab, goals, formats, materials]);
 
   const filteredGoals = useMemo(
-    () => goals.filter((g) => !categoryFilter || g.categoryName === categoryFilter),
-    [goals, categoryFilter]
+    () =>
+      goals.filter(
+        (g) =>
+          (!categoryFilter || g.categoryName === categoryFilter) &&
+          matchesSearch(g.text, goalSearch)
+      ),
+    [goals, categoryFilter, goalSearch]
   );
   const filteredFormats = useMemo(
     () =>
@@ -636,19 +648,44 @@ export default function CommunityBrowse({
 
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
 
+      {/* Search box + its live-filtered results merged into one bordered
+          block when there's anything to search — matches update directly
+          beneath the box as she types, no separate step to reveal them.
+          With nothing shared yet at all, there's nothing to search, so
+          GoalsTab just renders its own empty state unwrapped. */}
       {tab === "goals" && (
-        <GoalsTab
-          goals={filteredGoals}
-          currentUserId={currentUserId}
-          authorName={authorName}
-          onAdd={handleAddGoal}
-          AddButton={AddButton}
-          ratingSummaries={goalRatingSummaries}
-          onRate={(itemId, rating) =>
-            handleRate(goalItemType, itemId, rating, setGoalRatingsState)
+        <div
+          className={
+            goals.length > 0
+              ? "mt-3 overflow-hidden rounded-2xl border border-stone-200 bg-white"
+              : undefined
           }
-          RatingControl={RatingControl}
-        />
+        >
+          {goals.length > 0 && (
+            <SearchInput
+              value={goalSearch}
+              onChange={setGoalSearch}
+              placeholder="Search shared goals by text…"
+              variant="attached"
+            />
+          )}
+          <div className={goals.length > 0 ? "p-4" : undefined}>
+            <GoalsTab
+              goals={filteredGoals}
+              isFiltered={categoryFilter !== "" || goalSearch.trim() !== ""}
+              currentUserId={currentUserId}
+              authorName={authorName}
+              onAdd={handleAddGoal}
+              AddButton={AddButton}
+              ratingSummaries={goalRatingSummaries}
+              onRate={(itemId, rating) =>
+                handleRate(goalItemType, itemId, rating, setGoalRatingsState)
+              }
+              RatingControl={RatingControl}
+              embedded={goals.length > 0}
+            />
+          </div>
+        </div>
       )}
       {tab === "formats" && (
         <FormatsTab
@@ -715,6 +752,7 @@ function EmptyState({ label }: { label: string }) {
 
 function GoalsTab({
   goals,
+  isFiltered,
   currentUserId,
   authorName,
   onAdd,
@@ -722,8 +760,13 @@ function GoalsTab({
   ratingSummaries,
   onRate,
   RatingControl,
+  embedded = false,
 }: {
   goals: CommonSharedGoal[];
+  /** True when a category filter and/or search is narrowing the list —
+   *  changes the empty-state message so "nothing matches" doesn't read
+   *  as "nothing has ever been shared". */
+  isFiltered: boolean;
   currentUserId: string;
   authorName: (ownerId: string) => string;
   onAdd: (goal: CommonSharedGoal) => void;
@@ -731,18 +774,30 @@ function GoalsTab({
   ratingSummaries: Map<string, RatingSummary>;
   onRate: (itemId: string, rating: number) => void;
   RatingControl: RatingControlComponent;
+  /** True when rendered inside the merged search+results container
+   *  (community-browse.tsx's own wrapper already provides the top
+   *  spacing/padding there) — drops this component's own top margin so
+   *  it sits flush under the attached search box instead of leaving a
+   *  gap. */
+  embedded?: boolean;
 }) {
   const others = goals.filter((g) => g.ownerId !== currentUserId);
   const mine = goals.filter((g) => g.ownerId === currentUserId);
 
   return (
-    <div className="mt-4 space-y-8">
+    <div className={embedded ? "space-y-8" : "mt-4 space-y-8"}>
       <section>
         <h2 className="text-sm font-semibold uppercase tracking-wide text-stone-400">
           Browse &amp; add
         </h2>
         {others.length === 0 ? (
-          <EmptyState label="No shared goals from other accounts yet." />
+          <EmptyState
+            label={
+              isFiltered
+                ? "No shared goals match your search/filter."
+                : "No shared goals from other accounts yet."
+            }
+          />
         ) : (
           <div className="mt-2 grid gap-3 sm:grid-cols-2">
             {others.map((goal) => (
