@@ -29,6 +29,7 @@ import TrackLadder from "@/components/track-ladder";
 import TreatmentPlanProgress from "@/components/treatment-plan-progress";
 import GoalFormModal, { type GoalFormValues } from "./goal-form-modal";
 import DeleteGoalConfirmModal from "./delete-goal-confirm-modal";
+import DeleteTrackConfirmModal from "./delete-track-confirm-modal";
 
 const GOAL_SELECT_COLUMNS =
   "id, student_id, area_id, text, response_format_id, baseline, target_percent, status, visible_to_parent, track_id, step_order, created_at, area:areas(id, name), response_format:response_formats(id, name), track:goal_tracks(id, name)";
@@ -69,6 +70,7 @@ export default function GoalsSection({
   const [showBulkAssignModal, setShowBulkAssignModal] = useState(false);
   const [showApplyTemplateModal, setShowApplyTemplateModal] = useState(false);
   const [savingTrackId, setSavingTrackId] = useState<string | null>(null);
+  const [deletingTrackId, setDeletingTrackId] = useState<string | null>(null);
   const [editingGoal, setEditingGoal] = useState<GoalWithRelations | null>(
     null
   );
@@ -371,6 +373,43 @@ export default function GoalsSection({
     return null;
   }
 
+  // Deletes the track AND every one of its step goals — not just the
+  // grouping, which would otherwise leave orphaned goals with a track_id
+  // pointing at nothing (goals.track_id is "on delete set null", so
+  // deleting the track row first would even fail outright: it'd null out
+  // track_id on those goals while step_order stayed set, violating
+  // goals_track_step_pairing_check). Goals are deleted first, then the
+  // now-empty track row. Never touches track_templates/track_template_steps
+  // — a track has no reference back to whatever template it was saved as
+  // or applied from, so this can't affect one either way.
+  async function handleDeleteTrack() {
+    if (!deletingTrackId) return null;
+
+    const supabase = createClient();
+    const { error: goalsError } = await supabase
+      .from("goals")
+      .delete()
+      .eq("track_id", deletingTrackId);
+
+    if (goalsError) {
+      return goalsError.message;
+    }
+
+    const { error: trackError } = await supabase
+      .from("goal_tracks")
+      .delete()
+      .eq("id", deletingTrackId);
+
+    if (trackError) {
+      return trackError.message;
+    }
+
+    setGoals((prev) => prev.filter((g) => g.track_id !== deletingTrackId));
+    setGoalTracks((prev) => prev.filter((t) => t.id !== deletingTrackId));
+    setDeletingTrackId(null);
+    return null;
+  }
+
   // Optimistic — flips the checkbox immediately, then persists in the
   // background and rolls back with an inline error if the save fails.
   async function handleToggleVisibleToParent(goal: GoalWithRelations) {
@@ -479,6 +518,7 @@ export default function GoalsSection({
                       onStepClick={handleStepClick}
                       onReorder={handleLadderReorder}
                       onSaveAsTemplate={() => setSavingTrackId(track.trackId)}
+                      onDeleteTrack={() => setDeletingTrackId(track.trackId)}
                     />
                   ))}
                 </div>
@@ -661,6 +701,19 @@ export default function GoalsSection({
               setSavingTrackId(null);
               setCelebration("🎉 Template saved!");
             }}
+          />
+        );
+      })()}
+
+      {deletingTrackId && (() => {
+        const track = tracks.find((t) => t.trackId === deletingTrackId);
+        if (!track) return null;
+        return (
+          <DeleteTrackConfirmModal
+            trackName={track.name}
+            stepCount={track.steps.length}
+            onCancel={() => setDeletingTrackId(null)}
+            onConfirm={handleDeleteTrack}
           />
         );
       })()}

@@ -1,4 +1,4 @@
-import { BookmarkPlus, Check, ChevronDown, ChevronUp, Lock, Pause } from "lucide-react";
+import { BookmarkPlus, Check, ChevronDown, ChevronUp, Lock, Pause, Trash2 } from "lucide-react";
 import type { GoalStatus } from "@/lib/types";
 
 export type TrackLadderStep = {
@@ -15,6 +15,8 @@ type Props = {
   onReorder: (stepId: string, direction: "up" | "down") => void;
   /** Omit to hide the "Save as template" action entirely. */
   onSaveAsTemplate?: () => void;
+  /** Omit to hide the "Delete track" action entirely. */
+  onDeleteTrack?: () => void;
 };
 
 const NODE_CLASSES: Record<GoalStatus, string> = {
@@ -61,6 +63,7 @@ export default function TrackLadder({
   onStepClick,
   onReorder,
   onSaveAsTemplate,
+  onDeleteTrack,
 }: Props) {
   const sorted = [...steps].sort((a, b) => a.step_order - b.step_order);
   const masteredCount = sorted.filter((s) => s.status === "mastered").length;
@@ -81,6 +84,16 @@ export default function TrackLadder({
               className="rounded-md p-1 text-stone-400 transition-colors hover:bg-stone-100 hover:text-brand-700"
             >
               <BookmarkPlus className="h-4 w-4" />
+            </button>
+          )}
+          {onDeleteTrack && (
+            <button
+              type="button"
+              onClick={onDeleteTrack}
+              title="Delete this track and all its steps"
+              className="rounded-md p-1 text-stone-400 transition-colors hover:bg-red-50 hover:text-red-600"
+            >
+              <Trash2 className="h-4 w-4" />
             </button>
           )}
         </div>
