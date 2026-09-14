@@ -32,6 +32,13 @@ type QueueTables = {
   goalsTable: "goals" | "teacher_goals";
   tracksTable: "goal_tracks" | "teacher_goal_tracks";
   ownerColumn: "slp_id" | "teacher_id";
+  /** Only needed for a sensible auto-generated track name in the "behind a
+   *  single goal" case below — same category table BulkAssignTrackModal/
+   *  ApplyTrackTemplateModal already take as a prop. postgrest resolves
+   *  the join via the existing area_id/subject_id foreign key on its own,
+   *  same as every other `area:areas(...)`/`subject:teacher_subjects(...)`
+   *  select in this app — no need to name that column here too. */
+  categoryTable: "areas" | "teacher_subjects";
 };
 
 export type QueuePlacementResult =
@@ -50,10 +57,15 @@ export type QueuePlacementResult =
 const AUTO_TRACK_NAME_MAX = 60;
 
 /** Names a track created behind the scenes for the "behind a single
- *  goal" case, from the existing goal's own text — she never has to make
- *  up a track name for what's meant to be a lightweight, implicit
- *  dependency. */
-function autoTrackName(goalText: string): string {
+ *  goal" case — she never has to make up a track name for what's meant
+ *  to be a lightweight, implicit dependency (and can always rename it
+ *  later — see TrackLadder's rename action). Prefers the anchor goal's
+ *  own category (short and readable, e.g. "Articulation") over its full
+ *  goal text (long and clunky as a heading); falls back to a truncated
+ *  version of the text itself only if the category lookup comes back
+ *  empty for some reason. */
+function autoTrackName(goalText: string, categoryName: string | null): string {
+  if (categoryName && categoryName.trim()) return categoryName.trim();
   const trimmed = goalText.trim();
   return trimmed.length > AUTO_TRACK_NAME_MAX
     ? `${trimmed.slice(0, AUTO_TRACK_NAME_MAX - 1)}…`
@@ -124,7 +136,7 @@ export async function resolveQueuePlacement(
   studentId: string,
   choice: QueueBehindChoice
 ): Promise<QueuePlacementResult> {
-  const { goalsTable, tracksTable, ownerColumn } = tables;
+  const { goalsTable, tracksTable, ownerColumn, categoryTable } = tables;
 
   if (choice.type === "track") {
     const { data: anchor, error: anchorError } = await (
@@ -155,7 +167,7 @@ export async function resolveQueuePlacement(
   const { data: anchor, error: anchorError } = await (
     supabase.from(goalsTable) as any
   )
-    .select("id, text, track_id, step_order")
+    .select(`id, text, track_id, step_order, category:${categoryTable}(name)`)
     .eq("id", choice.goalId)
     .maybeSingle();
 
@@ -165,6 +177,14 @@ export async function resolveQueuePlacement(
       error: anchorError?.message ?? "Couldn't find that goal.",
     };
   }
+
+  // Same to-one-relation quirk noted throughout the rest of the app
+  // (no generated Database types, so postgrest-js's types default a
+  // joined relation to an array even though this one is always a single
+  // object or null at runtime).
+  const categoryName = Array.isArray(anchor.category)
+    ? (anchor.category[0]?.name ?? null)
+    : (anchor.category?.name ?? null);
 
   if (anchor.track_id !== null && anchor.step_order !== null) {
     const { error, stepOrder } = await makeRoomAfter(
@@ -183,7 +203,7 @@ export async function resolveQueuePlacement(
     .insert({
       [ownerColumn]: ownerId,
       student_id: studentId,
-      name: autoTrackName(anchor.text),
+      name: autoTrackName(anchor.text, categoryName),
     })
     .select("id, name")
     .single();

@@ -1,4 +1,13 @@
-import { BookmarkPlus, Check, ChevronDown, ChevronUp, Lock, Pause, Trash2 } from "lucide-react";
+import {
+  BookmarkPlus,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Lock,
+  Pause,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import type { GoalStatus } from "@/lib/types";
 
 export type TrackLadderStep = {
@@ -13,6 +22,8 @@ type Props = {
   steps: TrackLadderStep[];
   onStepClick: (stepId: string) => void;
   onReorder: (stepId: string, direction: "up" | "down") => void;
+  /** Omit to hide the "Rename track" action entirely. */
+  onRenameTrack?: () => void;
   /** Omit to hide the "Save as template" action entirely. */
   onSaveAsTemplate?: () => void;
   /** Omit to hide the "Delete track" action entirely. */
@@ -62,6 +73,7 @@ export default function TrackLadder({
   steps,
   onStepClick,
   onReorder,
+  onRenameTrack,
   onSaveAsTemplate,
   onDeleteTrack,
 }: Props) {
@@ -76,6 +88,16 @@ export default function TrackLadder({
           <span className="rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-500">
             {masteredCount}/{sorted.length} mastered
           </span>
+          {onRenameTrack && (
+            <button
+              type="button"
+              onClick={onRenameTrack}
+              title="Rename this track"
+              className="rounded-md p-1 text-stone-400 transition-colors hover:bg-stone-100 hover:text-brand-700"
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+          )}
           {onSaveAsTemplate && (
             <button
               type="button"

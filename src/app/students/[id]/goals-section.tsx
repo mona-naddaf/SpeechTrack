@@ -31,6 +31,7 @@ import { resolveQueuePlacement } from "@/lib/goal-queue-placement";
 import GoalFormModal, { type GoalFormValues } from "./goal-form-modal";
 import DeleteGoalConfirmModal from "./delete-goal-confirm-modal";
 import DeleteTrackConfirmModal from "./delete-track-confirm-modal";
+import RenameTrackModal from "./rename-track-modal";
 
 const GOAL_SELECT_COLUMNS =
   "id, student_id, area_id, text, response_format_id, baseline, target_percent, status, visible_to_parent, track_id, step_order, created_at, area:areas(id, name), response_format:response_formats(id, name), track:goal_tracks(id, name)";
@@ -72,6 +73,7 @@ export default function GoalsSection({
   const [showApplyTemplateModal, setShowApplyTemplateModal] = useState(false);
   const [savingTrackId, setSavingTrackId] = useState<string | null>(null);
   const [deletingTrackId, setDeletingTrackId] = useState<string | null>(null);
+  const [renamingTrackId, setRenamingTrackId] = useState<string | null>(null);
   const [editingGoal, setEditingGoal] = useState<GoalWithRelations | null>(
     null
   );
@@ -182,6 +184,7 @@ export default function GoalsSection({
     goalsTable: "goals" as const,
     tracksTable: "goal_tracks" as const,
     ownerColumn: "slp_id" as const,
+    categoryTable: "areas" as const,
   };
 
   // Folds a resolveQueuePlacement() result's new track (if any) into
@@ -481,6 +484,41 @@ export default function GoalsSection({
     return null;
   }
 
+  // Works for any track — not just the ones auto-created by the "queued
+  // behind a single goal" flow, whose default name is what made renaming
+  // worth adding in the first place. The name lives in two places in
+  // local state: each step goal's own joined `track.name` (what the
+  // ladder heading actually reads from) and the separate goalTracks list
+  // (what BulkAssignTrackModal's "Add to <existing track>" picker reads
+  // from) — both need updating or one of the two would keep showing the
+  // old name until a reload.
+  async function handleRenameTrack(newName: string) {
+    if (!renamingTrackId) return null;
+
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("goal_tracks")
+      .update({ name: newName })
+      .eq("id", renamingTrackId);
+
+    if (error) {
+      return error.message;
+    }
+
+    setGoals((prev) =>
+      prev.map((g) =>
+        g.track_id === renamingTrackId && g.track
+          ? { ...g, track: { ...g.track, name: newName } }
+          : g
+      )
+    );
+    setGoalTracks((prev) =>
+      prev.map((t) => (t.id === renamingTrackId ? { ...t, name: newName } : t))
+    );
+    setRenamingTrackId(null);
+    return null;
+  }
+
   // Optimistic — flips the checkbox immediately, then persists in the
   // background and rolls back with an inline error if the save fails.
   async function handleToggleVisibleToParent(goal: GoalWithRelations) {
@@ -588,6 +626,7 @@ export default function GoalsSection({
                       }))}
                       onStepClick={handleStepClick}
                       onReorder={handleLadderReorder}
+                      onRenameTrack={() => setRenamingTrackId(track.trackId)}
                       onSaveAsTemplate={() => setSavingTrackId(track.trackId)}
                       onDeleteTrack={() => setDeletingTrackId(track.trackId)}
                     />
@@ -789,6 +828,18 @@ export default function GoalsSection({
             stepCount={track.steps.length}
             onCancel={() => setDeletingTrackId(null)}
             onConfirm={handleDeleteTrack}
+          />
+        );
+      })()}
+
+      {renamingTrackId && (() => {
+        const track = tracks.find((t) => t.trackId === renamingTrackId);
+        if (!track) return null;
+        return (
+          <RenameTrackModal
+            initialName={track.name}
+            onCancel={() => setRenamingTrackId(null)}
+            onConfirm={handleRenameTrack}
           />
         );
       })()}
