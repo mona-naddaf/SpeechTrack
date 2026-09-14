@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Search } from "lucide-react";
 
 export type GoalComboboxOption = {
@@ -41,19 +41,6 @@ export default function GoalCombobox({
   className = "",
 }: Props) {
   const [open, setOpen] = useState(false);
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  function handleFocus() {
-    if (closeTimer.current) clearTimeout(closeTimer.current);
-    setOpen(true);
-  }
-
-  // Delayed rather than immediate: a click on an option blurs the input
-  // first, and an instant close would unmount the button before its own
-  // onClick gets a chance to fire.
-  function handleBlur() {
-    closeTimer.current = setTimeout(() => setOpen(false), 150);
-  }
 
   function handleSelect(option: GoalComboboxOption) {
     onSelect(option);
@@ -70,8 +57,17 @@ export default function GoalCombobox({
           onChange(e.target.value);
           setOpen(true);
         }}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
+        onFocus={() => setOpen(true)}
+        // Also open on a plain click, not just on focus — once the field
+        // already has focus (e.g. right after Escape closed the panel, or
+        // after picking a result handed focus back here), a click doesn't
+        // fire a new focus event, so relying on onFocus alone left the
+        // list stuck closed with no way to reopen it short of tabbing
+        // away and back. This is what "browse without typing" needs to
+        // actually be reachable at all times, not just on the very first
+        // click into the box.
+        onClick={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
         onKeyDown={(e) => {
           if (e.key === "Escape") setOpen(false);
         }}
@@ -88,6 +84,16 @@ export default function GoalCombobox({
               <button
                 key={option.id}
                 type="button"
+                // Keeps focus on the input instead of letting the browser's
+                // default mousedown behavior shift it to this button. That
+                // used to be handled by delaying the blur-triggered close
+                // with a 150ms timer instead — a race that a slower click
+                // (or a slower re-render) could lose, closing the panel
+                // before its own onClick ever fired, which read as "I
+                // clicked a result and nothing happened." Blocking the
+                // focus change here means the input never blurs on this
+                // click at all, so onClick below always gets to run.
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleSelect(option)}
                 className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-stone-700 hover:bg-stone-50"
               >
