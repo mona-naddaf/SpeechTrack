@@ -10,6 +10,11 @@ import type {
 } from "@/lib/types";
 import { matchesSearch } from "@/lib/search";
 import GoalCombobox, { type GoalComboboxOption } from "@/components/goal-combobox";
+import QueueBehindPicker, {
+  draftToChoice,
+  type QueueBehindDraft,
+} from "@/components/queue-behind-picker";
+import type { QueueBehindChoice } from "@/lib/goal-queue-placement";
 
 export type GoalFormValues = {
   subjectId: string;
@@ -21,6 +26,11 @@ export type GoalFormValues = {
   /** Set only when this goal is being created by picking "From goal
    *  bank" — the bank template's own id. Ignored on edit. */
   sourceBankGoalId: string | null;
+  /** Set only when status is "queued" and this goal doesn't already
+   *  belong to a track — what to attach it behind. Null when status
+   *  isn't "queued", or the goal is already a track step (its existing
+   *  placement is left untouched — see needsQueuePlacement below). */
+  queueBehind: QueueBehindChoice | null;
 };
 
 type TextSource = "write" | "bank";
@@ -30,6 +40,17 @@ type Props = {
   subjects: TeacherSubject[];
   responseFormats: ResponseFormatOption[];
   bankGoals: TeacherBankGoal[];
+  /** This student's full current goal list (every status, tracked or
+   *  not) — used only to build the "queued behind a single goal" picker's
+   *  options below, unrelated to the "From goal bank" picking above. */
+  studentGoals: TeacherGoalWithRelations[];
+  /** Same student's tracks, each with its steps already in step_order —
+   *  powers the "queued behind a track" picker's track + position selects. */
+  studentTracks: {
+    trackId: string;
+    name: string;
+    steps: TeacherGoalWithRelations[];
+  }[];
   initialGoal?: TeacherGoalWithRelations | null;
   onCancel: () => void;
   onSubmit: (values: GoalFormValues) => Promise<string | null>;
@@ -40,6 +61,8 @@ export default function GoalFormModal({
   subjects,
   responseFormats,
   bankGoals,
+  studentGoals,
+  studentTracks,
   initialGoal,
   onCancel,
   onSubmit,
@@ -71,6 +94,69 @@ export default function GoalFormModal({
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // A goal already sitting in a track keeps its existing placement no
+  // matter what status she picks here — flipping it back to "Queued" is
+  // just the manual override that skips its automatic turn, not a new
+  // dependency. Only a goal with no track yet (a fresh one, or an older
+  // one saved "Queued" from before this picker existed) needs one picked.
+  const needsQueuePlacement = status === "queued" && !initialGoal?.track_id;
+
+  const queueableTracks = useMemo(
+    () =>
+      studentTracks.map((t) => ({
+        id: t.trackId,
+        name: t.name,
+        steps: t.steps.map((g) => ({ id: g.id, text: g.text })),
+      })),
+    [studentTracks]
+  );
+  const queueableGoals = useMemo(
+    () =>
+      studentGoals
+        .filter(
+          (g) =>
+            g.id !== initialGoal?.id &&
+            (g.status === "active" || g.status === "mastered")
+        )
+        .map((g) => ({
+          id: g.id,
+          text: g.text,
+          categoryName: g.subject?.name ?? "Uncategorized",
+          trackName: g.track?.name ?? null,
+        })),
+    [studentGoals, initialGoal]
+  );
+  const [queueBehindDraft, setQueueBehindDraft] = useState<QueueBehindDraft>(
+    () => {
+      const firstTrack = studentTracks[0];
+      const firstGoal = studentGoals.find(
+        (g) =>
+          g.id !== initialGoal?.id &&
+          (g.status === "active" || g.status === "mastered")
+      );
+      return {
+        mode: studentTracks.length > 0 ? "track" : "goal",
+        trackId: firstTrack?.trackId ?? "",
+        afterGoalId: firstTrack?.steps[firstTrack.steps.length - 1]?.id ?? "",
+        goalId: firstGoal?.id ?? "",
+      };
+    }
+  );
+
+  function handleQueueDraftChange(patch: Partial<QueueBehindDraft>) {
+    setQueueBehindDraft((prev) => {
+      const next = { ...prev, ...patch };
+      // Switching tracks resets the position back to "append at the end"
+      // of whichever track is now picked, rather than carrying over a
+      // step id that isn't even one of its steps.
+      if (patch.trackId && patch.trackId !== prev.trackId) {
+        const t = queueableTracks.find((tr) => tr.id === patch.trackId);
+        next.afterGoalId = t?.steps[t.steps.length - 1]?.id ?? "";
+      }
+      return next;
+    });
+  }
 
   const bankGoalsForSubject = useMemo(
     () => bankGoals.filter((g) => g.subject_id === subjectId),
@@ -142,6 +228,21 @@ export default function GoalFormModal({
       targetValue = parsed;
     }
 
+    let queueBehind: QueueBehindChoice | null = null;
+    if (needsQueuePlacement) {
+      if (queueableTracks.length === 0 && queueableGoals.length === 0) {
+        setError(
+          "This student doesn't have another goal or track yet to queue this behind — pick a different status for now."
+        );
+        return;
+      }
+      queueBehind = draftToChoice(queueBehindDraft);
+      if (!queueBehind) {
+        setError("Choose what this is queued behind.");
+        return;
+      }
+    }
+
     setLoading(true);
     setError(null);
     const result = await onSubmit({
@@ -153,6 +254,7 @@ export default function GoalFormModal({
       status,
       sourceBankGoalId:
         textSource === "bank" ? selectedBankGoalId || null : null,
+      queueBehind,
     });
     setLoading(false);
     if (result) {
@@ -328,11 +430,22 @@ export default function GoalFormModal({
               <option value="active">Active</option>
               <option value="on_hold">On hold</option>
               <option value="mastered">Mastered</option>
-              {/* Only meaningful for a goal that's part of a track — picking
-                  it here is the manual override that skips the automatic
-                  wait for its turn (requirement 6). */}
+              {/* For a goal already part of a track, picking it here is
+                  just the manual override that skips its automatic wait
+                  for its turn (requirement 6) — its existing placement is
+                  untouched. For anything else, needsQueuePlacement kicks
+                  in below and she has to say what it's queued behind. */}
               <option value="queued">Queued</option>
             </select>
+
+            {needsQueuePlacement && (
+              <QueueBehindPicker
+                tracks={queueableTracks}
+                goals={queueableGoals}
+                draft={queueBehindDraft}
+                onChange={handleQueueDraftChange}
+              />
+            )}
           </div>
 
           {error && <p className="text-sm text-red-600">{error}</p>}

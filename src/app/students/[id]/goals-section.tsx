@@ -27,6 +27,7 @@ import ApplyTrackTemplateModal, {
 } from "@/components/apply-track-template-modal";
 import TrackLadder from "@/components/track-ladder";
 import TreatmentPlanProgress from "@/components/treatment-plan-progress";
+import { resolveQueuePlacement } from "@/lib/goal-queue-placement";
 import GoalFormModal, { type GoalFormValues } from "./goal-form-modal";
 import DeleteGoalConfirmModal from "./delete-goal-confirm-modal";
 import DeleteTrackConfirmModal from "./delete-track-confirm-modal";
@@ -177,12 +178,50 @@ export default function GoalsSection({
     return (data ?? []) as unknown as GoalWithRelations[];
   }
 
+  const QUEUE_TABLES = {
+    goalsTable: "goals" as const,
+    tracksTable: "goal_tracks" as const,
+    ownerColumn: "slp_id" as const,
+  };
+
+  // Folds a resolveQueuePlacement() result's new track (if any) into
+  // local state — same shape/spot handleBulkAssignDone already adds a
+  // freshly-created track in, just triggered from the goal form instead.
+  function addTrackIfNew(newTrack: { id: string; name: string } | null) {
+    if (!newTrack) return;
+    setGoalTracks((prev) => [
+      {
+        id: newTrack.id,
+        name: newTrack.name,
+        student_id: studentId,
+        created_at: new Date().toISOString(),
+      },
+      ...prev,
+    ]);
+  }
+
   async function handleAdd(values: GoalFormValues) {
     const supabase = createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return "You need to be signed in.";
+
+    let trackId: string | null = null;
+    let stepOrder: number | null = null;
+    if (values.queueBehind) {
+      const placement = await resolveQueuePlacement(
+        supabase,
+        QUEUE_TABLES,
+        user.id,
+        studentId,
+        values.queueBehind
+      );
+      if (!placement.ok) return placement.error;
+      trackId = placement.trackId;
+      stepOrder = placement.stepOrder;
+      addTrackIfNew(placement.newTrack);
+    }
 
     const { data, error } = await supabase
       .from("goals")
@@ -196,6 +235,8 @@ export default function GoalsSection({
         target_percent: values.targetPercent,
         status: values.status,
         source_bank_goal_id: values.sourceBankGoalId,
+        track_id: trackId,
+        step_order: stepOrder,
       })
       .select("id")
       .single();
@@ -204,9 +245,17 @@ export default function GoalsSection({
       return error?.message ?? "Something went wrong. Please try again.";
     }
 
-    const fullGoal = await refetchGoal(data.id);
-    if (fullGoal) {
-      setGoals((prev) => sortByNewest([...prev, fullGoal]));
+    // A queue-behind placement can touch OTHER existing goals too (steps
+    // shifted down to make room, or an anchor goal migrated into a
+    // brand-new track) — refetch the whole list rather than just the one
+    // goal just created, same as the mastery-advance refetch below.
+    if (values.queueBehind) {
+      setGoals(await refetchAllGoals());
+    } else {
+      const fullGoal = await refetchGoal(data.id);
+      if (fullGoal) {
+        setGoals((prev) => sortByNewest([...prev, fullGoal]));
+      }
     }
     setShowAddModal(false);
     return null;
@@ -227,6 +276,25 @@ export default function GoalsSection({
     const justUnmastered = wasMastered && !isNowMastered;
 
     const supabase = createClient();
+
+    let trackFields: { track_id: string; step_order: number } | null = null;
+    if (values.queueBehind) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return "You need to be signed in.";
+      const placement = await resolveQueuePlacement(
+        supabase,
+        QUEUE_TABLES,
+        user.id,
+        studentId,
+        values.queueBehind
+      );
+      if (!placement.ok) return placement.error;
+      trackFields = { track_id: placement.trackId, step_order: placement.stepOrder };
+      addTrackIfNew(placement.newTrack);
+    }
+
     const { error } = await supabase
       .from("goals")
       .update({
@@ -236,6 +304,7 @@ export default function GoalsSection({
         baseline: values.baseline || null,
         target_percent: values.targetPercent,
         status: values.status,
+        ...(trackFields ?? {}),
         ...(justMastered ? { mastered_at: new Date().toISOString() } : {}),
         ...(justUnmastered ? { mastered_at: null } : {}),
       })
@@ -246,9 +315,11 @@ export default function GoalsSection({
     }
 
     // A track step's mastery can auto-activate its next step in the same
-    // update (see the DB trigger) — refetch the whole list so that sibling
-    // shows up too, not just the goal that was actually edited here.
-    if (justMastered && editingGoal.track_id) {
+    // update (see the DB trigger), and a queue-behind placement can shift
+    // sibling steps or migrate another goal into a brand-new track —
+    // either way, refetch the whole list so goals other than the one just
+    // edited pick up their changes too.
+    if ((justMastered && editingGoal.track_id) || values.queueBehind) {
       setGoals(await refetchAllGoals());
     } else {
       const fullGoal = await refetchGoal(editingGoal.id);
@@ -598,6 +669,8 @@ export default function GoalsSection({
           areas={areas}
           responseFormats={responseFormats}
           bankGoals={bankGoals}
+          studentGoals={goals}
+          studentTracks={tracks}
           onCancel={() => setShowAddModal(false)}
           onSubmit={handleAdd}
         />
@@ -609,6 +682,8 @@ export default function GoalsSection({
           areas={areas}
           responseFormats={responseFormats}
           bankGoals={bankGoals}
+          studentGoals={goals}
+          studentTracks={tracks}
           initialGoal={editingGoal}
           onCancel={() => setEditingGoal(null)}
           onSubmit={handleEdit}
