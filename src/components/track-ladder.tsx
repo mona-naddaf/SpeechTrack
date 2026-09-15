@@ -1,7 +1,11 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import {
   BookmarkPlus,
   Check,
   ChevronDown,
+  ChevronRight,
   ChevronUp,
   Lock,
   Pause,
@@ -18,6 +22,9 @@ export type TrackLadderStep = {
 };
 
 type Props = {
+  /** Used only to remember this track's own collapsed/expanded state
+   *  (see useTrackCollapsed below) — never sent anywhere. */
+  trackId: string;
   trackName: string;
   steps: TrackLadderStep[];
   onStepClick: (stepId: string) => void;
@@ -61,14 +68,71 @@ const TEXT_CLASSES: Record<GoalStatus, string> = {
   queued: "text-stone-400",
 };
 
+const COLLAPSE_STORAGE_KEY = "bloomtrack:track-ladder-collapsed";
+
+/** Whether a track ladder starts collapsed the first time she ever sees
+ *  it — a long ladder is exactly the kind of clutter the rest of the
+ *  student page already collapses by default (see section-preferences.tsx),
+ *  so a track she hasn't touched yet opens the same way. */
+const DEFAULT_COLLAPSED = true;
+
+/** Remembers one track's collapsed/expanded state, scoped to that track
+ *  specifically (not global, not per-student) — collapsing one track
+ *  doesn't affect any other, on this student's page or anyone else's.
+ *  All tracks share one localStorage object keyed by track id (a UUID,
+ *  so SLP and Teacher tracks — separate tables — never collide); a
+ *  track that's since been deleted just leaves a harmless unread entry
+ *  behind rather than needing active cleanup. Same "default now, read
+ *  the real value a moment after mount" split as SectionPreferencesProvider,
+ *  for the same reason: server and first client render must match. */
+function useTrackCollapsed(trackId: string) {
+  const [collapsed, setCollapsedState] = useState(DEFAULT_COLLAPSED);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(COLLAPSE_STORAGE_KEY);
+      const saved = raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
+      if (trackId in saved) setCollapsedState(saved[trackId]);
+    } catch {
+      // localStorage unavailable or corrupt — DEFAULT_COLLAPSED already
+      // set above is a fine fallback.
+    }
+  }, [trackId]);
+
+  function toggle() {
+    setCollapsedState((prev) => {
+      const next = !prev;
+      try {
+        const raw = localStorage.getItem(COLLAPSE_STORAGE_KEY);
+        const saved = raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
+        saved[trackId] = next;
+        localStorage.setItem(COLLAPSE_STORAGE_KEY, JSON.stringify(saved));
+      } catch {
+        // Private browsing / storage disabled — the preference just
+        // won't survive a reload, a fine degradation for a UI nicety.
+      }
+      return next;
+    });
+  }
+
+  return { collapsed, toggle };
+}
+
 /** A student's treatment-plan track, drawn as a vertical connected ladder
  *  of steps rather than a grid of identical goal cards — mastered steps
  *  filled/checked, the current step highlighted, and steps still waiting
  *  their turn shown locked/greyed. Clicking a step opens the same edit
  *  modal a normal goal card's "Edit" button does; the up/down arrows swap
  *  step_order with the adjacent step (goals-section.tsx's
- *  handleReorderStep — status is never touched by a reorder). */
+ *  handleReorderStep — status is never touched by a reorder).
+ *
+ *  Collapsible: collapsed shows just the track name and its current step
+ *  (the active one, or the last step if the whole track is already
+ *  mastered) so a long treatment plan doesn't turn the goals section into
+ *  a wall of ladders; expanded shows every step same as before this
+ *  existed. See useTrackCollapsed above for how/where that's remembered. */
 export default function TrackLadder({
+  trackId,
   trackName,
   steps,
   onStepClick,
@@ -77,13 +141,28 @@ export default function TrackLadder({
   onSaveAsTemplate,
   onDeleteTrack,
 }: Props) {
+  const { collapsed, toggle } = useTrackCollapsed(trackId);
   const sorted = [...steps].sort((a, b) => a.step_order - b.step_order);
   const masteredCount = sorted.filter((s) => s.status === "mastered").length;
+  const currentStep =
+    sorted.find((s) => s.status === "active") ?? sorted[sorted.length - 1] ?? null;
 
   return (
     <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="font-semibold text-stone-900">{trackName}</h3>
+        <button
+          type="button"
+          onClick={toggle}
+          aria-expanded={!collapsed}
+          className="flex min-w-0 items-center gap-1.5 text-left font-semibold text-stone-900 transition-colors hover:text-brand-700"
+        >
+          {collapsed ? (
+            <ChevronRight className="h-4 w-4 shrink-0 text-stone-400" />
+          ) : (
+            <ChevronDown className="h-4 w-4 shrink-0 text-stone-400" />
+          )}
+          <span className="truncate">{trackName}</span>
+        </button>
         <div className="flex shrink-0 items-center gap-2">
           <span className="rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-500">
             {masteredCount}/{sorted.length} mastered
@@ -121,57 +200,76 @@ export default function TrackLadder({
         </div>
       </div>
 
-      <div className="mt-3">
-        {sorted.map((step, i) => {
-          const isLast = i === sorted.length - 1;
-          return (
-            <div key={step.id} className="flex gap-3">
-              <div className="flex flex-col items-center">
-                <StepNode status={step.status} />
-                {!isLast && (
-                  <div
-                    className={`my-0.5 w-0.5 flex-1 rounded ${
-                      step.status === "mastered" ? "bg-accent-300" : "bg-stone-200"
-                    }`}
-                  />
-                )}
-              </div>
-
-              <div
-                className={`flex flex-1 items-start justify-between gap-2 ${isLast ? "" : "pb-4"}`}
+      {collapsed ? (
+        <div className="mt-3">
+          {currentStep ? (
+            <div className="flex items-center gap-3">
+              <StepNode status={currentStep.status} />
+              <button
+                type="button"
+                onClick={() => onStepClick(currentStep.id)}
+                className={`flex-1 rounded-lg py-1 text-left text-sm transition-colors hover:text-brand-700 ${TEXT_CLASSES[currentStep.status]}`}
               >
-                <button
-                  type="button"
-                  onClick={() => onStepClick(step.id)}
-                  className={`flex-1 rounded-lg py-1 text-left text-sm transition-colors hover:text-brand-700 ${TEXT_CLASSES[step.status]}`}
+                {currentStep.text}
+              </button>
+            </div>
+          ) : (
+            <p className="text-sm text-stone-500">No steps yet.</p>
+          )}
+        </div>
+      ) : (
+        <div className="mt-3">
+          {sorted.map((step, i) => {
+            const isLast = i === sorted.length - 1;
+            return (
+              <div key={step.id} className="flex gap-3">
+                <div className="flex flex-col items-center">
+                  <StepNode status={step.status} />
+                  {!isLast && (
+                    <div
+                      className={`my-0.5 w-0.5 flex-1 rounded ${
+                        step.status === "mastered" ? "bg-accent-300" : "bg-stone-200"
+                      }`}
+                    />
+                  )}
+                </div>
+
+                <div
+                  className={`flex flex-1 items-start justify-between gap-2 ${isLast ? "" : "pb-4"}`}
                 >
-                  {step.text}
-                </button>
-                <div className="flex shrink-0 items-center gap-0.5">
                   <button
                     type="button"
-                    onClick={() => onReorder(step.id, "up")}
-                    disabled={i === 0}
-                    aria-label="Move step earlier"
-                    className="rounded-md p-1 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600 disabled:pointer-events-none disabled:opacity-30"
+                    onClick={() => onStepClick(step.id)}
+                    className={`flex-1 rounded-lg py-1 text-left text-sm transition-colors hover:text-brand-700 ${TEXT_CLASSES[step.status]}`}
                   >
-                    <ChevronUp className="h-3.5 w-3.5" />
+                    {step.text}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => onReorder(step.id, "down")}
-                    disabled={isLast}
-                    aria-label="Move step later"
-                    className="rounded-md p-1 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600 disabled:pointer-events-none disabled:opacity-30"
-                  >
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  </button>
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    <button
+                      type="button"
+                      onClick={() => onReorder(step.id, "up")}
+                      disabled={i === 0}
+                      aria-label="Move step earlier"
+                      className="rounded-md p-1 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600 disabled:pointer-events-none disabled:opacity-30"
+                    >
+                      <ChevronUp className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onReorder(step.id, "down")}
+                      disabled={isLast}
+                      aria-label="Move step later"
+                      className="rounded-md p-1 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600 disabled:pointer-events-none disabled:opacity-30"
+                    >
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

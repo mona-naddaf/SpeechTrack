@@ -624,6 +624,7 @@ export default function GoalsSection({
                   {tracks.map((track) => (
                     <TrackLadder
                       key={track.trackId}
+                      trackId={track.trackId}
                       trackName={track.name}
                       steps={track.steps.map((g) => ({
                         id: g.id,
