@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { ArrowLeft, Gamepad2, Library, ListTree, Sliders, Smile, Target, Users } from "lucide-react";
+import { ArrowLeft, Library, ListTree, Sliders, Smile, Users } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { Area } from "@/lib/types";
-import { flattenAssessmentAreas, type RawAssessmentWithAreasJoin } from "@/lib/assessment";
-import AssessmentsList from "./assessments-list";
+import { getUserRole } from "@/lib/role";
+import type { TeacherReinforcementBoard } from "@/lib/types";
+import ReinforcementBoardsList from "./reinforcement-boards-list";
 
-export default async function AssessmentsPage() {
+export default async function TeacherReinforcementBoardsPage() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -16,102 +16,86 @@ export default async function AssessmentsPage() {
     redirect("/login");
   }
 
-  const [assessmentsResult, areasResult] = await Promise.all([
-    supabase
-      .from("assessments")
-      .select(
-        "id, name, description, kind, formality, created_at, assessment_areas(areas(id, name))"
-      )
-      .order("created_at", { ascending: false }),
-    supabase.from("areas").select("id, name").order("name", { ascending: true }),
-  ]);
-  const { error } = assessmentsResult;
-  const assessments = flattenAssessmentAreas(
-    (assessmentsResult.data ?? []) as unknown as RawAssessmentWithAreasJoin[]
-  );
+  if (getUserRole(user) !== "teacher") {
+    redirect("/dashboard");
+  }
+
+  const { data: boards, error } = await supabase
+    .from("teacher_reinforcement_boards")
+    .select("id, teacher_id, name, type, step_count, config, created_at")
+    .eq("teacher_id", user.id)
+    .order("created_at", { ascending: false });
 
   return (
     <main className="flex-1 bg-cream-50 px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-3xl">
         <div className="flex items-center justify-between gap-4">
           <Link
-            href="/dashboard"
+            href="/teacher/dashboard"
             className="inline-flex items-center gap-1 text-sm text-stone-500 transition-colors hover:text-brand-800"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to dashboard
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Link
-              href="/toolkit/goals"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
-            >
-              <Target className="h-4 w-4" />
-              Goal bank
-            </Link>
-            <Link
-              href="/toolkit/formats"
+              href="/teacher/toolkit/subjects"
               className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
             >
               <Sliders className="h-4 w-4" />
-              Response formats
+              Subjects &amp; formats
             </Link>
             <Link
-              href="/toolkit/behavior-types"
+              href="/teacher/toolkit/behavior-types"
               className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
             >
               <Smile className="h-4 w-4" />
               Behavior types
             </Link>
             <Link
-              href="/toolkit/materials"
+              href="/teacher/toolkit/materials"
               className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
             >
               <Library className="h-4 w-4" />
               Materials
             </Link>
             <Link
-              href="/toolkit/track-templates"
+              href="/teacher/toolkit/track-templates"
               className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
             >
               <ListTree className="h-4 w-4" />
               Track templates
             </Link>
             <Link
-              href="/toolkit/community"
+              href="/teacher/toolkit/community"
               className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
             >
               <Users className="h-4 w-4" />
               Community
             </Link>
-            <Link
-              href="/toolkit/reinforcement-boards"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
-            >
-              <Gamepad2 className="h-4 w-4" />
-              Reinforcement bank
-            </Link>
           </div>
         </div>
 
         <div className="mt-4">
-          <h1 className="text-2xl font-bold text-stone-900">Assessments</h1>
+          <h1 className="text-2xl font-bold text-stone-900">
+            Reinforcement bank
+          </h1>
           <p className="mt-1 text-stone-600">
-            Build reusable assessments here, then run them against a student
-            from their page.
+            Fun mini-game animations to reward a child during live
+            sessions. Build a board once here, then tap through it to
+            preview and test — session integration is coming later.
           </p>
         </div>
 
         {error && (
           <p className="mt-4 text-sm text-red-600">
-            Couldn&apos;t load assessments: {error.message}
+            Couldn&apos;t load reinforcement boards: {error.message}
           </p>
         )}
 
         <div className="mt-6">
-          <AssessmentsList
-            initialAssessments={assessments}
-            areas={(areasResult.data ?? []) as Area[]}
+          <ReinforcementBoardsList
+            initialBoards={(boards ?? []) as TeacherReinforcementBoard[]}
           />
         </div>
       </div>

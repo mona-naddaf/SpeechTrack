@@ -920,3 +920,30 @@ export type CommunityCategoryRow = { itemId: string; categoryName: string };
  *  to more than one goal, so this is a flat list rather than
  *  one-per-material. */
 export type CommunityLinkedGoalRow = { materialId: string; goalId: string; goalText: string };
+
+// ============================================================
+// Reinforcement Bank — see 0038_reinforcement_boards.sql and
+// src/lib/reinforcement-games.ts (the `type` -> mini-game registry).
+// ============================================================
+
+export type ReinforcementBoard = {
+  id: string;
+  slp_id: string;
+  name: string;
+  type: string;
+  step_count: number;
+  config: Record<string, unknown>;
+  created_at: string;
+};
+
+/** The Teacher equivalent of ReinforcementBoard — teacher_id in place of
+ *  slp_id, otherwise identical. */
+export type TeacherReinforcementBoard = {
+  id: string;
+  teacher_id: string;
+  name: string;
+  type: string;
+  step_count: number;
+  config: Record<string, unknown>;
+  created_at: string;
+};

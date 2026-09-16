@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, ClipboardList, Library, ListTree, Sliders, Target, Users } from "lucide-react";
+import { ArrowLeft, ClipboardList, Gamepad2, Library, ListTree, Sliders, Target, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { BehaviorType } from "@/lib/types";
 import BehaviorTypesSection from "./behavior-types-section";
@@ -73,6 +73,13 @@ export default async function BehaviorTypesPage() {
             >
               <Users className="h-4 w-4" />
               Community
+            </Link>
+            <Link
+              href="/toolkit/reinforcement-boards"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
+            >
+              <Gamepad2 className="h-4 w-4" />
+              Reinforcement bank
             </Link>
           </div>
         </div>

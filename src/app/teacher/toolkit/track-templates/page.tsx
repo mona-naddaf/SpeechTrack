@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Library, ListChecks, Sliders, Smile, Users } from "lucide-react";
+import { ArrowLeft, Gamepad2, Library, ListChecks, Sliders, Smile, Users } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/role";
@@ -84,6 +84,13 @@ export default async function TeacherTrackTemplatesPage() {
             >
               <Users className="h-4 w-4" />
               Community
+            </Link>
+            <Link
+              href="/teacher/toolkit/reinforcement-boards"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
+            >
+              <Gamepad2 className="h-4 w-4" />
+              Reinforcement bank
             </Link>
           </div>
         </div>

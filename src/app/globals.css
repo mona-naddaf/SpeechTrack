@@ -46,3 +46,77 @@
     animation: none;
   }
 }
+
+/* Reinforcement Bank mini-games (src/components/reinforcement-games/) —
+   the per-tap "hop"/"thrust" bounce on the character, a slow idle flag
+   wave, and the smooth glide between step positions they all share. */
+@keyframes reinforcement-hop {
+  0% {
+    transform: translateY(0) scale(1, 1);
+  }
+  30% {
+    transform: translateY(-22px) scale(1.05, 0.95);
+  }
+  55% {
+    transform: translateY(0) scale(0.96, 1.06);
+  }
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+}
+
+.animate-reinforcement-hop {
+  animation: reinforcement-hop 0.5s ease-out;
+}
+
+@keyframes reinforcement-thrust {
+  0% {
+    transform: translateY(0) scale(1, 1);
+  }
+  25% {
+    transform: translateY(3px) scale(0.95, 1.06);
+  }
+  60% {
+    transform: translateY(-7px) scale(1.05, 0.95);
+  }
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+}
+
+.animate-reinforcement-thrust {
+  animation: reinforcement-thrust 0.45s ease-out;
+}
+
+@keyframes flag-wave {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(6deg);
+  }
+}
+
+.animate-flag-wave {
+  animation: flag-wave 2.4s ease-in-out infinite;
+  transform-origin: 0% 100%;
+}
+
+.reinforcement-mover {
+  transition:
+    left 0.5s ease-out,
+    bottom 0.5s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-reinforcement-hop,
+  .animate-reinforcement-thrust,
+  .animate-flag-wave {
+    animation: none;
+  }
+
+  .reinforcement-mover {
+    transition: none;
+  }
+}

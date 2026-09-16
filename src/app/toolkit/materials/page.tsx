@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, ClipboardList, ListTree, Sliders, Smile, Target, Users } from "lucide-react";
+import { ArrowLeft, ClipboardList, Gamepad2, ListTree, Sliders, Smile, Target, Users } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Area, MaterialGoalOption } from "@/lib/types";
@@ -95,6 +95,13 @@ export default async function MaterialsPage() {
             >
               <Users className="h-4 w-4" />
               Community
+            </Link>
+            <Link
+              href="/toolkit/reinforcement-boards"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
+            >
+              <Gamepad2 className="h-4 w-4" />
+              Reinforcement bank
             </Link>
           </div>
         </div>
