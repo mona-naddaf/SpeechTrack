@@ -7,6 +7,8 @@ import { useReinforcementProgress } from "./use-reinforcement-progress";
 
 type Props = {
   stepCount: number;
+  /** Fires once each time the critter reaches the goal. */
+  onLevelCleared?: () => void;
 };
 
 // The track's usable horizontal range, as a % of its width — kept
@@ -44,9 +46,9 @@ function HopCritter() {
   );
 }
 
-export default function HopToGoalGame({ stepCount }: Props) {
+export default function HopToGoalGame({ stepCount, onLevelCleared }: Props) {
   const { index, goalIndex, celebrating, handleTap, handleCelebrationDone } =
-    useReinforcementProgress(stepCount);
+    useReinforcementProgress(stepCount, onLevelCleared);
 
   const positionPct = useMemo(
     () => (i: number) =>

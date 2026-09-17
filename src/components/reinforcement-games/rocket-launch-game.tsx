@@ -7,6 +7,8 @@ import { useReinforcementProgress } from "./use-reinforcement-progress";
 
 type Props = {
   stepCount: number;
+  /** Fires once each time the rocket reaches the planet. */
+  onLevelCleared?: () => void;
 };
 
 // How far up the track (as a % of its height) the planet sits — kept
@@ -54,9 +56,9 @@ function Planet() {
   );
 }
 
-export default function RocketLaunchGame({ stepCount }: Props) {
+export default function RocketLaunchGame({ stepCount, onLevelCleared }: Props) {
   const { index, goalIndex, celebrating, handleTap, handleCelebrationDone } =
-    useReinforcementProgress(stepCount);
+    useReinforcementProgress(stepCount, onLevelCleared);
 
   const positionPct = useMemo(
     () => (i: number) => (i / goalIndex) * TRACK_SPAN_PCT,

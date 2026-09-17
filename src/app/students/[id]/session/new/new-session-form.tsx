@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getTodayLocalDateString } from "@/lib/date";
 import type { MaterialChip, SessionGoal, Trial } from "@/lib/types";
 import type { MaterialUsageSummary } from "@/lib/progress";
+import ReinforcementSessionPanel from "@/components/reinforcement-session-panel";
 import GoalTrialCard from "./goal-trial-card";
 import type { AddMaterialResult } from "./goal-material-section";
 
@@ -266,6 +267,14 @@ export default function NewSessionForm({
           className="mt-1 w-full max-w-xs rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
         />
       </div>
+
+      <ReinforcementSessionPanel
+        boardsTable="reinforcement_boards"
+        sessionsTable="sessions"
+        storageNamespace="slp"
+        toolkitHref="/toolkit/reinforcement-boards"
+        ensureSessionId={ensureSession}
+      />
 
       {error && (
         <p className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-600">

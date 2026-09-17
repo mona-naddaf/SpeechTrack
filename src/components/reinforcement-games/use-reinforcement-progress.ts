@@ -9,8 +9,14 @@ import { fireCelebrationConfetti } from "@/lib/confetti";
  *  Reaching the goal fires confetti and flips `celebrating`; the caller
  *  shows a CelebrationToast and calls `handleCelebrationDone` when it
  *  auto-dismisses, which resets back to the start so the board is ready
- *  to reinforce again. */
-export function useReinforcementProgress(stepCount: number) {
+ *  to reinforce again. `onLevelCleared` (optional) fires once per
+ *  goal-reached, for callers that need to count completed levels — e.g.
+ *  the session-logging page's Reinforcement panel
+ *  (src/components/reinforcement-session-panel.tsx). */
+export function useReinforcementProgress(
+  stepCount: number,
+  onLevelCleared?: () => void
+) {
   const goalIndex = stepCount + 1;
   const [index, setIndex] = useState(0);
   const [celebrating, setCelebrating] = useState(false);
@@ -18,7 +24,12 @@ export function useReinforcementProgress(stepCount: number) {
   useEffect(() => {
     if (celebrating) {
       fireCelebrationConfetti();
+      onLevelCleared?.();
     }
+    // onLevelCleared intentionally omitted: it may be a fresh closure each
+    // render (e.g. a counter callback), and re-firing this effect on that
+    // alone would double-count without index/celebrating also changing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [celebrating]);
 
   const handleTap = useCallback(() => {

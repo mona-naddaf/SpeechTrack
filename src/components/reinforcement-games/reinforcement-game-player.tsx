@@ -6,6 +6,7 @@ import RocketLaunchGame from "./rocket-launch-game";
 type Props = {
   type: string;
   stepCount: number;
+  onLevelCleared?: () => void;
 };
 
 /** Maps a reinforcement board's `type` column to its mini-game
@@ -14,9 +15,17 @@ type Props = {
  *  template that isn't in this build yet), since `type` is a
  *  free-form-ish key stored in the database rather than something the
  *  schema itself constrains. */
-export default function ReinforcementGamePlayer({ type, stepCount }: Props) {
+export default function ReinforcementGamePlayer({
+  type,
+  stepCount,
+  onLevelCleared,
+}: Props) {
   if (type === "rocket_launch") {
-    return <RocketLaunchGame stepCount={stepCount} />;
+    return (
+      <RocketLaunchGame stepCount={stepCount} onLevelCleared={onLevelCleared} />
+    );
   }
-  return <HopToGoalGame stepCount={stepCount} />;
+  return (
+    <HopToGoalGame stepCount={stepCount} onLevelCleared={onLevelCleared} />
+  );
 }
