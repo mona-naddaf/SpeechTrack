@@ -8,6 +8,7 @@ import type {
   AttendanceRecord,
   ClassroomStrategy,
   ClassroomStrategyLogWithPraise,
+  FutureGoalNote,
   GoalTrack,
   GoalWithRelations,
   HomePracticeItem,
@@ -84,6 +85,7 @@ export default async function StudentDetailPage({
     bankGoalsResult,
     goalTracksResult,
     trackTemplatesResult,
+    futureGoalNotesResult,
     sessionsResult,
     homePracticeResult,
     practiceLogsResult,
@@ -137,6 +139,13 @@ export default async function StudentDetailPage({
         "id, slp_id, name, area_id, created_at, area:areas(id, name), steps:track_template_steps(id, template_id, order_index, goal_text, response_format_id, target_percent, created_at, response_format:response_formats(id, name))"
       )
       .order("created_at", { ascending: false }),
+    supabase
+      .from("future_goal_notes")
+      .select("id, student_id, text, created_at, resolved_at")
+      .eq("slp_id", user.id)
+      .eq("student_id", id)
+      .is("resolved_at", null)
+      .order("created_at", { ascending: true }),
     supabase
       .from("sessions")
       .select("id, student_id, date, note, visible_to_parent, created_at")
@@ -432,6 +441,10 @@ export default async function StudentDetailPage({
                   }
                   trackTemplates={trackTemplates}
                   materialsByGoalId={materialsByGoalId}
+                  initialFutureGoalNotes={
+                    (futureGoalNotesResult.data ??
+                      []) as unknown as FutureGoalNote[]
+                  }
                 />
               ),
             },

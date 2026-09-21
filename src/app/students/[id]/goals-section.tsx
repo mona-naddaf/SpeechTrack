@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Target } from "lucide-react";
+import { ChevronDown, ChevronRight, Lightbulb, Plus, Target } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type {
   Area,
   BankGoal,
+  FutureGoalNote,
   GoalTrack,
   GoalWithRelations,
   MaterialChip,
@@ -52,6 +53,9 @@ type Props = {
    *  shown as clickable chips right on the card. Missing entries render
    *  no chips. */
   materialsByGoalId: Record<string, MaterialChip[]>;
+  /** This student's unresolved future-goal-idea notes, for the collapsed
+   *  "Future goals" area below the goal list. */
+  initialFutureGoalNotes: FutureGoalNote[];
 };
 
 export default function GoalsSection({
@@ -64,11 +68,20 @@ export default function GoalsSection({
   initialGoalTracks,
   trackTemplates,
   materialsByGoalId,
+  initialFutureGoalNotes,
 }: Props) {
   const [goals, setGoals] = useState<GoalWithRelations[]>(initialGoals);
   const [goalTracks, setGoalTracks] = useState<GoalTrack[]>(initialGoalTracks);
   const [listError] = useState<string | null>(initialGoalsError);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [futureGoalNotes, setFutureGoalNotes] = useState<FutureGoalNote[]>(
+    initialFutureGoalNotes
+  );
+  const [showFutureGoals, setShowFutureGoals] = useState(false);
+  const [promotingNote, setPromotingNote] = useState<FutureGoalNote | null>(
+    null
+  );
+  const [futureGoalError, setFutureGoalError] = useState<string | null>(null);
   const [showBulkAssignModal, setShowBulkAssignModal] = useState(false);
   const [showApplyTemplateModal, setShowApplyTemplateModal] = useState(false);
   const [savingTrackId, setSavingTrackId] = useState<string | null>(null);
@@ -262,6 +275,42 @@ export default function GoalsSection({
     }
     setShowAddModal(false);
     return null;
+  }
+
+  // Reuses handleAdd's exact insert logic (including queue placement),
+  // then also resolves the future-goal note it was promoted from — but
+  // only once the goal insert itself actually succeeds.
+  async function handlePromoteFutureGoal(values: GoalFormValues) {
+    const result = await handleAdd(values);
+    if (result) return result;
+
+    if (promotingNote) {
+      const supabase = createClient();
+      await supabase
+        .from("future_goal_notes")
+        .update({ resolved_at: new Date().toISOString() })
+        .eq("id", promotingNote.id);
+      setFutureGoalNotes((prev) =>
+        prev.filter((n) => n.id !== promotingNote.id)
+      );
+    }
+    setPromotingNote(null);
+    return null;
+  }
+
+  async function handleDeleteFutureGoal(id: string) {
+    setFutureGoalError(null);
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("future_goal_notes")
+      .update({ resolved_at: new Date().toISOString() })
+      .eq("id", id);
+
+    if (error) {
+      setFutureGoalError(error.message);
+      return;
+    }
+    setFutureGoalNotes((prev) => prev.filter((n) => n.id !== id));
   }
 
   async function handleEdit(values: GoalFormValues) {
@@ -700,7 +749,85 @@ export default function GoalsSection({
               )}
             </div>
           )}
+
+          <div className="mt-6 rounded-2xl border border-dashed border-stone-300 bg-white">
+            <button
+              type="button"
+              onClick={() => setShowFutureGoals((v) => !v)}
+              aria-expanded={showFutureGoals}
+              className="flex w-full items-center justify-between gap-2 px-4 py-3"
+            >
+              <span className="flex items-center gap-2 text-sm font-semibold text-stone-700">
+                {showFutureGoals ? (
+                  <ChevronDown className="h-4 w-4 shrink-0 text-stone-400" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 shrink-0 text-stone-400" />
+                )}
+                <Lightbulb className="h-4 w-4 shrink-0 text-amber-500" />
+                Future goals
+              </span>
+              {futureGoalNotes.length > 0 && (
+                <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">
+                  {futureGoalNotes.length}
+                </span>
+              )}
+            </button>
+
+            {showFutureGoals && (
+              <div className="space-y-2 px-4 pb-4">
+                {futureGoalError && (
+                  <p className="text-sm text-red-600">{futureGoalError}</p>
+                )}
+                {futureGoalNotes.length === 0 ? (
+                  <p className="text-sm text-stone-500">
+                    No future goal ideas yet — jot one down from a session.
+                  </p>
+                ) : (
+                  futureGoalNotes.map((note) => (
+                    <div
+                      key={note.id}
+                      className="flex items-start justify-between gap-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2"
+                    >
+                      <span className="flex-1 text-sm text-stone-700">
+                        {note.text}
+                      </span>
+                      <div className="flex shrink-0 gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setPromotingNote(note)}
+                          className="rounded-lg px-2 py-1 text-xs font-medium text-brand-700 transition-colors hover:bg-brand-50"
+                        >
+                          Promote to goal
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteFutureGoal(note.id)}
+                          className="rounded-lg px-2 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
         </>
+      )}
+
+      {promotingNote && (
+        <GoalFormModal
+          mode="add"
+          areas={areas}
+          responseFormats={responseFormats}
+          bankGoals={bankGoals}
+          studentGoals={goals}
+          studentTracks={tracks}
+          initialText={promotingNote.text}
+          onCancel={() => setPromotingNote(null)}
+          onSubmit={handlePromoteFutureGoal}
+        />
       )}
 
       {showAddModal && (

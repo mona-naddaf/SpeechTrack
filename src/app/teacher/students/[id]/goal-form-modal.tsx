@@ -52,6 +52,11 @@ type Props = {
     steps: TeacherGoalWithRelations[];
   }[];
   initialGoal?: TeacherGoalWithRelations | null;
+  /** Prefills the text box (and forces "Write new" over "From goal bank")
+   *  on add — used when this modal is opened by promoting a future-goal
+   *  idea note. Ignored on edit, where initialGoal's text already does
+   *  this. */
+  initialText?: string;
   onCancel: () => void;
   onSubmit: (values: GoalFormValues) => Promise<string | null>;
 };
@@ -64,6 +69,7 @@ export default function GoalFormModal({
   studentGoals,
   studentTracks,
   initialGoal,
+  initialText,
   onCancel,
   onSubmit,
 }: Props) {
@@ -72,11 +78,12 @@ export default function GoalFormModal({
   );
   // Defaults to the bank-search flow on add (search first, subject
   // auto-syncs to whatever she picks) — edit keeps "write" so an
-  // existing goal's text shows straight in the textarea, ready to edit.
+  // existing goal's text shows straight in the textarea, ready to edit,
+  // and so does a promoted future-goal note (its text is already final).
   const [textSource, setTextSource] = useState<TextSource>(
-    mode === "edit" ? "write" : "bank"
+    mode === "edit" || initialText ? "write" : "bank"
   );
-  const [text, setText] = useState(initialGoal?.text ?? "");
+  const [text, setText] = useState(initialGoal?.text ?? initialText ?? "");
   const [selectedBankGoalId, setSelectedBankGoalId] = useState("");
   const [bankSearch, setBankSearch] = useState("");
   const [baseline, setBaseline] = useState(initialGoal?.baseline ?? "");

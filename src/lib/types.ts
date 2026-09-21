@@ -185,6 +185,22 @@ export type GoalWithRelations = Goal & {
   track: { id: string; name: string } | null;
 };
 
+/** A lightweight, unstructured reminder for a future goal to consider for
+ *  this student — no area/target/format yet, just text. Created from the
+ *  session page's quick-note input; promoted into a real goal (prefilling
+ *  GoalFormModal's text) or dismissed from the student page's "Future
+ *  goals" area, either of which sets resolved_at rather than deleting the
+ *  row. Identical shape on both future_goal_notes and
+ *  teacher_future_goal_notes (0040_future_goal_notes.sql), so this one
+ *  type covers both sides. */
+export type FutureGoalNote = {
+  id: string;
+  student_id: string;
+  text: string;
+  created_at: string;
+  resolved_at: string | null;
+};
+
 /** A goal-bank template (student_id is null) — just enough to list/pick from,
  *  plus the optional defaults it can hand off when picked for a student. */
 export type BankGoal = {

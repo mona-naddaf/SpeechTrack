@@ -1,33 +1,72 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getTodayLocalDateString } from "@/lib/date";
-import type { MaterialChip, SessionGoal, Trial } from "@/lib/types";
+import type {
+  Area,
+  BankGoal,
+  GoalWithRelations,
+  MaterialChip,
+  ResponseFormatOption,
+  SessionGoal,
+  Trial,
+} from "@/lib/types";
 import type { MaterialUsageSummary } from "@/lib/progress";
+import { resolveQueuePlacement } from "@/lib/goal-queue-placement";
 import ReinforcementSessionPanel from "@/components/reinforcement-session-panel";
+import FutureGoalNoteQuickAdd from "@/components/future-goal-note-quick-add";
 import GoalTrialCard from "./goal-trial-card";
 import type { AddMaterialResult } from "./goal-material-section";
+import GoalFormModal, { type GoalFormValues } from "../../goal-form-modal";
+
+const GOAL_SELECT_COLUMNS =
+  "id, student_id, area_id, text, response_format_id, baseline, target_percent, status, visible_to_parent, track_id, step_order, created_at, area:areas(id, name), response_format:response_formats(id, name), track:goal_tracks(id, name)";
+
+const QUEUE_TABLES = {
+  goalsTable: "goals" as const,
+  tracksTable: "goal_tracks" as const,
+  ownerColumn: "slp_id" as const,
+  categoryTable: "areas" as const,
+};
 
 type Props = {
   studentId: string;
   goals: SessionGoal[];
   initialMaterialsByGoalId: Record<string, MaterialChip[]>;
   lastUsedByGoalId: Record<string, Record<string, MaterialUsageSummary>>;
+  areas: Area[];
+  responseFormats: ResponseFormatOption[];
+  bankGoals: BankGoal[];
+  /** This student's full goal list (every status, tracked or not) — used
+   *  only to power the "+ Add goal" modal's queue-behind picker, same as
+   *  goals-section.tsx's own studentGoals/studentTracks. Grows in place
+   *  when a goal is added mid-session. */
+  initialStudentGoals: GoalWithRelations[];
 };
 
 export default function NewSessionForm({
   studentId,
-  goals,
+  goals: initialGoals,
   initialMaterialsByGoalId,
   lastUsedByGoalId,
+  areas,
+  responseFormats,
+  bankGoals,
+  initialStudentGoals,
 }: Props) {
   const router = useRouter();
   const [date, setDate] = useState(getTodayLocalDateString());
   const [note, setNote] = useState("");
   const [shareNoteWithParent, setShareNoteWithParent] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [goals, setGoals] = useState<SessionGoal[]>(initialGoals);
+  const [allGoals, setAllGoals] = useState<GoalWithRelations[]>(
+    initialStudentGoals
+  );
+  const [showAddGoalModal, setShowAddGoalModal] = useState(false);
   const [trialsByGoal, setTrialsByGoal] = useState<Record<string, Trial[]>>(
     {}
   );
@@ -217,6 +256,107 @@ export default function NewSessionForm({
     return { material: data };
   }
 
+  // Same grouping goals-section.tsx's own useMemo does, just scoped to
+  // what the "+ Add goal" modal's queue-behind picker needs — no track
+  // ladders are ever rendered on this page, so standalone goals aren't
+  // split out here.
+  const studentTracks = useMemo(() => {
+    const byTrackId = new Map<
+      string,
+      { name: string; steps: GoalWithRelations[] }
+    >();
+    for (const goal of allGoals) {
+      if (goal.track_id && goal.track) {
+        const entry = byTrackId.get(goal.track_id) ?? {
+          name: goal.track.name,
+          steps: [],
+        };
+        entry.steps.push(goal);
+        byTrackId.set(goal.track_id, entry);
+      }
+    }
+    return Array.from(byTrackId.entries()).map(([trackId, { name, steps }]) => ({
+      trackId,
+      name,
+      steps: [...steps].sort((a, b) => (a.step_order ?? 0) - (b.step_order ?? 0)),
+    }));
+  }, [allGoals]);
+
+  // Same insert (and queue-placement) logic as goals-section.tsx's own
+  // handleAdd — duplicated here rather than shared since this component
+  // has no access to that one's local state. A newly active goal is
+  // appended straight into the trial-card list so she can start tallying
+  // it without leaving this session; a queued/on-hold/mastered one only
+  // updates allGoals (for future queue placements), same as anywhere else
+  // that only shows active goals for logging.
+  async function handleAddGoal(values: GoalFormValues): Promise<string | null> {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return "You need to be signed in.";
+
+    let trackId: string | null = null;
+    let stepOrder: number | null = null;
+    if (values.queueBehind) {
+      const placement = await resolveQueuePlacement(
+        supabase,
+        QUEUE_TABLES,
+        user.id,
+        studentId,
+        values.queueBehind
+      );
+      if (!placement.ok) return placement.error;
+      trackId = placement.trackId;
+      stepOrder = placement.stepOrder;
+    }
+
+    const { data, error } = await supabase
+      .from("goals")
+      .insert({
+        slp_id: user.id,
+        student_id: studentId,
+        area_id: values.areaId,
+        text: values.text,
+        response_format_id: values.responseFormatId,
+        baseline: values.baseline || null,
+        target_percent: values.targetPercent,
+        status: values.status,
+        source_bank_goal_id: values.sourceBankGoalId,
+        track_id: trackId,
+        step_order: stepOrder,
+      })
+      .select("id")
+      .single();
+
+    if (error || !data) {
+      return error?.message ?? "Something went wrong. Please try again.";
+    }
+
+    const { data: refreshedGoals } = await supabase
+      .from("goals")
+      .select(GOAL_SELECT_COLUMNS)
+      .eq("student_id", studentId)
+      .order("created_at", { ascending: false });
+    setAllGoals((refreshedGoals ?? []) as unknown as GoalWithRelations[]);
+
+    if (values.status === "active") {
+      const { data: newSessionGoal } = await supabase
+        .from("goals")
+        .select(
+          "id, text, source_bank_goal_id, area:areas(id, name), response_format:response_formats(id, name, type, config)"
+        )
+        .eq("id", data.id)
+        .single();
+      if (newSessionGoal) {
+        setGoals((prev) => [newSessionGoal as unknown as SessionGoal, ...prev]);
+      }
+    }
+
+    setShowAddGoalModal(false);
+    return null;
+  }
+
   async function handleSave() {
     setError(null);
     const totalTrials = Object.values(trialsByGoal).reduce(
@@ -282,10 +422,22 @@ export default function NewSessionForm({
         </p>
       )}
 
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-stone-900">Goals</h2>
+        <button
+          type="button"
+          onClick={() => setShowAddGoalModal(true)}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md"
+        >
+          <Plus className="h-4 w-4" />
+          Add goal
+        </button>
+      </div>
+
       {goals.length === 0 && (
         <div className="rounded-xl border border-dashed border-stone-300 bg-white p-10 text-center text-stone-500">
-          This student has no active goals yet. Add a goal on their page
-          first, or just save a note below.
+          This student has no active goals yet. Add one above, or just save
+          a note below.
         </div>
       )}
 
@@ -311,6 +463,12 @@ export default function NewSessionForm({
           />
         ))}
       </div>
+
+      <FutureGoalNoteQuickAdd
+        notesTable="future_goal_notes"
+        ownerColumn="slp_id"
+        studentId={studentId}
+      />
 
       <div className="rounded-2xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md p-4">
         <label
@@ -350,6 +508,19 @@ export default function NewSessionForm({
           </button>
         </div>
       </div>
+
+      {showAddGoalModal && (
+        <GoalFormModal
+          mode="add"
+          areas={areas}
+          responseFormats={responseFormats}
+          bankGoals={bankGoals}
+          studentGoals={allGoals}
+          studentTracks={studentTracks}
+          onCancel={() => setShowAddGoalModal(false)}
+          onSubmit={handleAddGoal}
+        />
+      )}
     </div>
   );
 }

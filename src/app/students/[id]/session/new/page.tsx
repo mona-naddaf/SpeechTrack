@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import type { SessionGoal } from "@/lib/types";
+import type { GoalWithRelations, SessionGoal } from "@/lib/types";
 import {
   resolveMaterialChipsByGoal,
   type RawGoalMaterialLink,
@@ -13,6 +13,7 @@ import {
   type RawMaterialTrialJoin,
 } from "@/lib/progress";
 import AvatarBadge from "@/components/avatar-badge";
+import FutureGoalNotesBanner from "@/components/future-goal-notes-banner";
 import NewSessionForm from "./new-session-form";
 
 export default async function NewSessionPage({
@@ -91,6 +92,44 @@ export default async function NewSessionPage({
     (materialTrialsResult.data ?? []) as unknown as RawMaterialTrialJoin[]
   );
 
+  // Everything the "+ Add goal" quick action needs to open the exact same
+  // Set-a-goal flow as the student page, without leaving this session —
+  // same queries as goals-section.tsx's own data-fetching page.
+  const [
+    { data: allGoalsData },
+    { data: areasData },
+    { data: responseFormatsData },
+    { data: bankGoalsData },
+    { data: futureGoalNotesData },
+  ] = await Promise.all([
+    supabase
+      .from("goals")
+      .select(
+        "id, student_id, area_id, text, response_format_id, baseline, target_percent, status, visible_to_parent, track_id, step_order, created_at, area:areas(id, name), response_format:response_formats(id, name), track:goal_tracks(id, name)"
+      )
+      .eq("student_id", id)
+      .order("created_at", { ascending: false }),
+    supabase.from("areas").select("id, name").order("name", { ascending: true }),
+    supabase
+      .from("response_formats")
+      .select("id, name")
+      .eq("slp_id", user.id)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("goals")
+      .select("id, area_id, text, response_format_id, target_percent")
+      .eq("slp_id", user.id)
+      .is("student_id", null)
+      .order("text", { ascending: true }),
+    supabase
+      .from("future_goal_notes")
+      .select("id, text")
+      .eq("slp_id", user.id)
+      .eq("student_id", id)
+      .is("resolved_at", null)
+      .order("created_at", { ascending: true }),
+  ]);
+
   return (
     <main className="flex-1 bg-cream-50 px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-3xl">
@@ -116,12 +155,20 @@ export default async function NewSessionPage({
           </p>
         )}
 
+        <FutureGoalNotesBanner notes={futureGoalNotesData ?? []} />
+
         <div className="mt-6">
           <NewSessionForm
             studentId={student.id}
             goals={sessionGoals}
             initialMaterialsByGoalId={materialsByGoalId}
             lastUsedByGoalId={lastUsedByGoalId}
+            areas={areasData ?? []}
+            responseFormats={responseFormatsData ?? []}
+            bankGoals={bankGoalsData ?? []}
+            initialStudentGoals={
+              (allGoalsData ?? []) as unknown as GoalWithRelations[]
+            }
           />
         </div>
       </div>

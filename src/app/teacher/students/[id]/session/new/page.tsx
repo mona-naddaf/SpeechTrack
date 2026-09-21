@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/role";
-import type { TeacherSessionGoal } from "@/lib/types";
+import type { TeacherGoalWithRelations, TeacherSessionGoal } from "@/lib/types";
 import {
   resolveMaterialChipsByGoal,
   type RawGoalMaterialLink,
@@ -14,6 +14,7 @@ import {
   type RawMaterialTrialJoin,
 } from "@/lib/progress";
 import AvatarBadge from "@/components/avatar-badge";
+import FutureGoalNotesBanner from "@/components/future-goal-notes-banner";
 import NewSessionForm from "./new-session-form";
 
 export default async function NewTeacherSessionPage({
@@ -109,6 +110,47 @@ export default async function NewTeacherSessionPage({
     (materialTrialsResult.data ?? []) as unknown as RawMaterialTrialJoin[]
   );
 
+  // Everything the "+ Add goal" quick action needs to open the exact same
+  // Set-a-goal flow as the student page, without leaving this session —
+  // same queries as goals-section.tsx's own data-fetching page.
+  const [
+    { data: allGoalsData },
+    { data: subjectsData },
+    { data: responseFormatsData },
+    { data: bankGoalsData },
+    { data: futureGoalNotesData },
+  ] = await Promise.all([
+    supabase
+      .from("teacher_goals")
+      .select(
+        "id, student_id, subject_id, text, response_format_id, baseline, target_percent, status, visible_to_parent, track_id, step_order, created_at, subject:teacher_subjects(id, name), response_format:teacher_response_formats(id, name), track:teacher_goal_tracks(id, name)"
+      )
+      .eq("student_id", id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("teacher_subjects")
+      .select("id, name")
+      .order("name", { ascending: true }),
+    supabase
+      .from("teacher_response_formats")
+      .select("id, name")
+      .eq("teacher_id", user.id)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("teacher_goals")
+      .select("id, subject_id, text, response_format_id, target_percent")
+      .eq("teacher_id", user.id)
+      .is("student_id", null)
+      .order("text", { ascending: true }),
+    supabase
+      .from("teacher_future_goal_notes")
+      .select("id, text")
+      .eq("teacher_id", user.id)
+      .eq("student_id", id)
+      .is("resolved_at", null)
+      .order("created_at", { ascending: true }),
+  ]);
+
   return (
     <main className="flex-1 bg-cream-50 px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-3xl">
@@ -134,12 +176,20 @@ export default async function NewTeacherSessionPage({
           </p>
         )}
 
+        <FutureGoalNotesBanner notes={futureGoalNotesData ?? []} />
+
         <div className="mt-6">
           <NewSessionForm
             studentId={student.id}
             goals={sessionGoals}
             initialMaterialsByGoalId={materialsByGoalId}
             lastUsedByGoalId={lastUsedByGoalId}
+            subjects={subjectsData ?? []}
+            responseFormats={responseFormatsData ?? []}
+            bankGoals={bankGoalsData ?? []}
+            initialStudentGoals={
+              (allGoalsData ?? []) as unknown as TeacherGoalWithRelations[]
+            }
           />
         </div>
       </div>
