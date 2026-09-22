@@ -12,5 +12,6 @@ const nextConfig = {
 
 export default nextConfig;
 
-// Redeploy trigger: force a fresh Vercel build (previous push to main didn't
-// get picked up by the GitHub webhook).
+// Redeploy trigger: force a fresh Vercel build now that the repo is public
+// (previous attempt may have hit the Hobby-plan private-repo collaborator
+// block).
