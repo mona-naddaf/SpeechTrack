@@ -121,86 +121,88 @@ export default function SaveTrackAsTemplateModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-stone-900/50 px-4 py-8">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-        <h2 className="text-lg font-bold text-stone-900">Save as template</h2>
-        <p className="mt-1 text-sm text-stone-500">
-          Captures this track&apos;s current {steps.length} step
-          {steps.length === 1 ? "" : "s"} into a reusable template. This
-          student&apos;s track is left exactly as it is.
-        </p>
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/50">
+      <div className="flex min-h-full items-center justify-center px-4 py-8">
+        <div className="max-h-[85vh] w-full max-w-sm overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+          <h2 className="text-lg font-bold text-stone-900">Save as template</h2>
+          <p className="mt-1 text-sm text-stone-500">
+            Captures this track&apos;s current {steps.length} step
+            {steps.length === 1 ? "" : "s"} into a reusable template. This
+            student&apos;s track is left exactly as it is.
+          </p>
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-          <div>
-            <label
-              htmlFor="template-name"
-              className="block text-sm font-medium text-stone-700"
-            >
-              Template name
-            </label>
-            <input
-              id="template-name"
-              type="text"
-              autoFocus
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-            />
-          </div>
+          <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+            <div>
+              <label
+                htmlFor="template-name"
+                className="block text-sm font-medium text-stone-700"
+              >
+                Template name
+              </label>
+              <input
+                id="template-name"
+                type="text"
+                autoFocus
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              />
+            </div>
 
-          <div>
-            <label
-              htmlFor="template-category"
-              className="block text-sm font-medium text-stone-700"
-            >
-              {categoryLabel}
-            </label>
-            <select
-              id="template-category"
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-            >
-              {categories.length === 0 && <option value="">None yet</option>}
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
+            <div>
+              <label
+                htmlFor="template-category"
+                className="block text-sm font-medium text-stone-700"
+              >
+                {categoryLabel}
+              </label>
+              <select
+                id="template-category"
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              >
+                {categories.length === 0 && <option value="">None yet</option>}
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <ol className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-stone-200 p-3 text-sm text-stone-600">
+              {steps.map((step, i) => (
+                <li key={i} className="flex gap-2">
+                  <span className="shrink-0 font-medium text-stone-400">
+                    {i + 1}.
+                  </span>
+                  <span>{step.text}</span>
+                </li>
               ))}
-            </select>
-          </div>
+            </ol>
 
-          <ol className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-stone-200 p-3 text-sm text-stone-600">
-            {steps.map((step, i) => (
-              <li key={i} className="flex gap-2">
-                <span className="shrink-0 font-medium text-stone-400">
-                  {i + 1}.
-                </span>
-                <span>{step.text}</span>
-              </li>
-            ))}
-          </ol>
+            {error && <p className="text-sm text-red-600">{error}</p>}
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
-
-          <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onCancel}
-              disabled={loading}
-              className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
-            >
-              {loading ? "Saving…" : "Save template"}
-            </button>
-          </div>
-        </form>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={onCancel}
+                disabled={loading}
+                className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
+              >
+                {loading ? "Saving…" : "Save template"}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

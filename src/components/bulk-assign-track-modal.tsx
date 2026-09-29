@@ -263,159 +263,161 @@ export default function BulkAssignTrackModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-stone-900/50 px-4 py-8">
-      <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
-        <h2 className="text-lg font-bold text-stone-900">
-          Assign multiple goals from the bank
-        </h2>
-        <p className="mt-1 text-sm text-stone-500">
-          Pick as many as you need. Any of them can optionally be grouped
-          into a sequenced track — the rest start active right away, same
-          as picking one at a time.
-        </p>
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/50">
+      <div className="flex min-h-full items-center justify-center px-4 py-8">
+        <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+          <h2 className="text-lg font-bold text-stone-900">
+            Assign multiple goals from the bank
+          </h2>
+          <p className="mt-1 text-sm text-stone-500">
+            Pick as many as you need. Any of them can optionally be grouped
+            into a sequenced track — the rest start active right away, same
+            as picking one at a time.
+          </p>
 
-        {/* Search box + its live-filtered results merged into one
-            bordered, scrollable block — matches update directly beneath
-            the box as she types, no separate step to reveal them. */}
-        <div className="mt-4 max-h-72 overflow-y-auto rounded-lg border border-stone-200">
-          {bankGoals.length > 0 && (
-            <SearchInput
-              value={search}
-              onChange={setSearch}
-              placeholder="Search the bank by goal text…"
-              variant="attached"
-              className="sticky top-0 z-10 bg-white"
-            />
-          )}
-          <div className="p-3">
-          {groups.length === 0 && (
-            <p className="text-sm text-stone-500">
-              {bankGoals.length === 0
-                ? "No goals in the bank yet."
-                : "No bank goals match your search."}
-            </p>
-          )}
-          {groups.map(({ category, goals }) => (
-            <div key={category.id} className="mb-3 last:mb-0">
-              <p className="text-xs font-semibold uppercase tracking-wide text-stone-400">
-                {category.name}
+          {/* Search box + its live-filtered results merged into one
+              bordered, scrollable block — matches update directly beneath
+              the box as she types, no separate step to reveal them. */}
+          <div className="mt-4 max-h-72 overflow-y-auto rounded-lg border border-stone-200">
+            {bankGoals.length > 0 && (
+              <SearchInput
+                value={search}
+                onChange={setSearch}
+                placeholder="Search the bank by goal text…"
+                variant="attached"
+                className="sticky top-0 z-10 bg-white"
+              />
+            )}
+            <div className="p-3">
+            {groups.length === 0 && (
+              <p className="text-sm text-stone-500">
+                {bankGoals.length === 0
+                  ? "No goals in the bank yet."
+                  : "No bank goals match your search."}
               </p>
-              <div className="mt-1 space-y-1">
-                {goals.map((g) => (
-                  <label key={g.id} className="flex items-center gap-2 text-sm text-stone-700">
-                    <input
-                      type="checkbox"
-                      checked={selected.has(g.id)}
-                      onChange={(e) => toggleSelected(g.id, e.target.checked)}
-                      className="h-3.5 w-3.5 rounded border-stone-300 text-brand-600 focus:ring-brand-500"
-                    />
-                    {g.text}
-                  </label>
-                ))}
-              </div>
-            </div>
-          ))}
-          </div>
-        </div>
-
-        {selected.size > 0 && (
-          <div className="mt-4 rounded-lg border border-stone-200 p-3">
-            <p className="text-sm font-medium text-stone-700">
-              Selected ({selected.size})
-            </p>
-            <div className="mt-2 space-y-2">
-              {Array.from(selected.values()).map((item) => {
-                const bankGoal = bankGoals.find((g) => g.id === item.bankGoalId);
-                if (!bankGoal) return null;
-                return (
-                  <div
-                    key={item.bankGoalId}
-                    className="flex flex-wrap items-center gap-2 text-sm"
-                  >
-                    <span className="flex-1 text-stone-700">{bankGoal.text}</span>
-                    <label className="flex items-center gap-1.5 text-xs text-stone-500">
+            )}
+            {groups.map(({ category, goals }) => (
+              <div key={category.id} className="mb-3 last:mb-0">
+                <p className="text-xs font-semibold uppercase tracking-wide text-stone-400">
+                  {category.name}
+                </p>
+                <div className="mt-1 space-y-1">
+                  {goals.map((g) => (
+                    <label key={g.id} className="flex items-center gap-2 text-sm text-stone-700">
                       <input
                         type="checkbox"
-                        checked={item.inTrack}
-                        onChange={(e) => toggleInTrack(item.bankGoalId, e.target.checked)}
+                        checked={selected.has(g.id)}
+                        onChange={(e) => toggleSelected(g.id, e.target.checked)}
                         className="h-3.5 w-3.5 rounded border-stone-300 text-brand-600 focus:ring-brand-500"
                       />
-                      Part of a track
+                      {g.text}
                     </label>
-                    {item.inTrack && (
-                      <label className="flex items-center gap-1 text-xs text-stone-500">
-                        Step
+                  ))}
+                </div>
+              </div>
+            ))}
+            </div>
+          </div>
+
+          {selected.size > 0 && (
+            <div className="mt-4 rounded-lg border border-stone-200 p-3">
+              <p className="text-sm font-medium text-stone-700">
+                Selected ({selected.size})
+              </p>
+              <div className="mt-2 space-y-2">
+                {Array.from(selected.values()).map((item) => {
+                  const bankGoal = bankGoals.find((g) => g.id === item.bankGoalId);
+                  if (!bankGoal) return null;
+                  return (
+                    <div
+                      key={item.bankGoalId}
+                      className="flex flex-wrap items-center gap-2 text-sm"
+                    >
+                      <span className="flex-1 text-stone-700">{bankGoal.text}</span>
+                      <label className="flex items-center gap-1.5 text-xs text-stone-500">
                         <input
-                          type="number"
-                          min={1}
-                          value={item.order}
-                          onChange={(e) =>
-                            setOrder(item.bankGoalId, Number(e.target.value) || 1)
-                          }
-                          className="w-14 rounded border border-stone-300 px-1.5 py-0.5"
+                          type="checkbox"
+                          checked={item.inTrack}
+                          onChange={(e) => toggleInTrack(item.bankGoalId, e.target.checked)}
+                          className="h-3.5 w-3.5 rounded border-stone-300 text-brand-600 focus:ring-brand-500"
                         />
+                        Part of a track
                       </label>
+                      {item.inTrack && (
+                        <label className="flex items-center gap-1 text-xs text-stone-500">
+                          Step
+                          <input
+                            type="number"
+                            min={1}
+                            value={item.order}
+                            onChange={(e) =>
+                              setOrder(item.bankGoalId, Number(e.target.value) || 1)
+                            }
+                            className="w-14 rounded border border-stone-300 px-1.5 py-0.5"
+                          />
+                        </label>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {selectedInTrack.length > 0 && (
+                <div className="mt-3 border-t border-stone-100 pt-3">
+                  <p className="text-xs font-medium text-stone-600">Track</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <select
+                      value={trackChoice}
+                      onChange={(e) => setTrackChoice(e.target.value)}
+                      className="rounded-lg border border-stone-300 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                    >
+                      <option value="new">Create a new track…</option>
+                      {existingTracks.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          Add to &quot;{t.name}&quot;
+                        </option>
+                      ))}
+                    </select>
+                    {trackChoice === "new" && (
+                      <input
+                        type="text"
+                        value={newTrackName}
+                        onChange={(e) => setNewTrackName(e.target.value)}
+                        placeholder="Track name, e.g. /l/ sound"
+                        className="flex-1 rounded-lg border border-stone-300 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                      />
                     )}
                   </div>
-                );
-              })}
-            </div>
-
-            {selectedInTrack.length > 0 && (
-              <div className="mt-3 border-t border-stone-100 pt-3">
-                <p className="text-xs font-medium text-stone-600">Track</p>
-                <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <select
-                    value={trackChoice}
-                    onChange={(e) => setTrackChoice(e.target.value)}
-                    className="rounded-lg border border-stone-300 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                  >
-                    <option value="new">Create a new track…</option>
-                    {existingTracks.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        Add to &quot;{t.name}&quot;
-                      </option>
-                    ))}
-                  </select>
-                  {trackChoice === "new" && (
-                    <input
-                      type="text"
-                      value={newTrackName}
-                      onChange={(e) => setNewTrackName(e.target.value)}
-                      placeholder="Track name, e.g. /l/ sound"
-                      className="flex-1 rounded-lg border border-stone-300 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                    />
-                  )}
+                  <p className="mt-1 text-xs text-stone-400">
+                    {trackChoice === "new"
+                      ? "The lowest step number starts active; the rest wait their turn."
+                      : "These will be appended after the track's current steps, queued until their turn."}
+                  </p>
                 </div>
-                <p className="mt-1 text-xs text-stone-400">
-                  {trackChoice === "new"
-                    ? "The lowest step number starts active; the rest wait their turn."
-                    : "These will be appended after the track's current steps, queued until their turn."}
-                </p>
-              </div>
-            )}
+              )}
+            </div>
+          )}
+
+          {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+
+          <div className="mt-4 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={loading}
+              className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={loading || selected.size === 0}
+              className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
+            >
+              {loading ? "Assigning…" : `Assign ${selected.size || ""}`}
+            </button>
           </div>
-        )}
-
-        {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-
-        <div className="mt-4 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={loading}
-            className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={loading || selected.size === 0}
-            className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
-          >
-            {loading ? "Assigning…" : `Assign ${selected.size || ""}`}
-          </button>
         </div>
       </div>
     </div>

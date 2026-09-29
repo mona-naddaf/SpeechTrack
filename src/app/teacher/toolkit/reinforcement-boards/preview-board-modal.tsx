@@ -19,32 +19,34 @@ export default function PreviewBoardModal({ board, onClose }: Props) {
     board.type;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-stone-900/50 px-4 py-8">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-bold text-stone-900">{board.name}</h2>
-            <p className="text-sm text-stone-500">
-              {gameLabel} · {board.step_count} steps
-            </p>
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/50">
+      <div className="flex min-h-full items-center justify-center px-4 py-8">
+        <div className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold text-stone-900">{board.name}</h2>
+              <p className="text-sm text-stone-500">
+                {gameLabel} · {board.step_count} steps
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="rounded-lg p-1.5 text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-700"
+              aria-label="Close preview"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-700"
-            aria-label="Close preview"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
 
-        <div className="mt-4">
-          <ReinforcementGamePlayer type={board.type} stepCount={board.step_count} />
-        </div>
+          <div className="mt-4">
+            <ReinforcementGamePlayer type={board.type} stepCount={board.step_count} />
+          </div>
 
-        <p className="mt-4 text-xs text-stone-500">
-          Tap Reinforce to try it out — this is just a preview, nothing is
-          saved.
-        </p>
+          <p className="mt-4 text-xs text-stone-500">
+            Tap Reinforce to try it out — this is just a preview, nothing is
+            saved.
+          </p>
+        </div>
       </div>
     </div>
   );

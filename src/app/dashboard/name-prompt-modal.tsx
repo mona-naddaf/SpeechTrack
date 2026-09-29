@@ -70,55 +70,57 @@ export default function NamePromptModal({ userId }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/50 px-4">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100">
-          <Sparkles className="h-5 w-5 text-amber-600" />
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/50">
+      <div className="flex min-h-full items-center justify-center px-4 py-8">
+        <div className="max-h-[85vh] w-full max-w-sm overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100">
+            <Sparkles className="h-5 w-5 text-amber-600" />
+          </div>
+          <h2 className="mt-3 text-lg font-bold text-stone-900">
+            What should we call you?
+          </h2>
+          <p className="mt-2 text-sm text-stone-600">
+            Add your name so the dashboard can greet you properly.
+          </p>
+
+          <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+            <div>
+              <label htmlFor="prompt-full-name" className="sr-only">
+                Full name
+              </label>
+              <input
+                id="prompt-full-name"
+                type="text"
+                autoFocus
+                autoComplete="name"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="e.g. Mona"
+                className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              />
+            </div>
+
+            {error && <p className="text-sm text-red-600">{error}</p>}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={dismissForSession}
+                disabled={loading}
+                className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
+              >
+                Not now
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
+              >
+                {loading ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </form>
         </div>
-        <h2 className="mt-3 text-lg font-bold text-stone-900">
-          What should we call you?
-        </h2>
-        <p className="mt-2 text-sm text-stone-600">
-          Add your name so the dashboard can greet you properly.
-        </p>
-
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-          <div>
-            <label htmlFor="prompt-full-name" className="sr-only">
-              Full name
-            </label>
-            <input
-              id="prompt-full-name"
-              type="text"
-              autoFocus
-              autoComplete="name"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="e.g. Mona"
-              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-            />
-          </div>
-
-          {error && <p className="text-sm text-red-600">{error}</p>}
-
-          <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={dismissForSession}
-              disabled={loading}
-              className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
-            >
-              Not now
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
-            >
-              {loading ? "Saving…" : "Save"}
-            </button>
-          </div>
-        </form>
       </div>
     </div>
   );

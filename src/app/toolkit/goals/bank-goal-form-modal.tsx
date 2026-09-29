@@ -92,125 +92,127 @@ export default function BankGoalFormModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-stone-900/50 px-4 py-8">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-        <h2 className="text-lg font-bold text-stone-900">
-          {mode === "add" ? "Add bank goal" : "Edit bank goal"}
-        </h2>
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/50">
+      <div className="flex min-h-full items-center justify-center px-4 py-8">
+        <div className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+          <h2 className="text-lg font-bold text-stone-900">
+            {mode === "add" ? "Add bank goal" : "Edit bank goal"}
+          </h2>
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-          <div>
-            <label
-              htmlFor="bank-goal-area"
-              className="block text-sm font-medium text-stone-700"
-            >
-              Area
-            </label>
-            <select
-              id="bank-goal-area"
-              value={areaId}
-              onChange={(e) => setAreaId(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-            >
-              {areas.length === 0 && <option value="">No areas yet</option>}
-              {areas.map((area) => (
-                <option key={area.id} value={area.id}>
-                  {area.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label
-              htmlFor="bank-goal-text"
-              className="block text-sm font-medium text-stone-700"
-            >
-              Goal text
-            </label>
-            <textarea
-              id="bank-goal-text"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              rows={3}
-              className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-              placeholder="e.g. Will produce /r/ in initial position of words with 80% accuracy"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} className="mt-4 space-y-4">
             <div>
               <label
-                htmlFor="bank-goal-format"
+                htmlFor="bank-goal-area"
                 className="block text-sm font-medium text-stone-700"
               >
-                Default response format{" "}
-                <span className="text-stone-400">(optional)</span>
+                Area
               </label>
               <select
-                id="bank-goal-format"
-                value={responseFormatId}
-                onChange={(e) => setResponseFormatId(e.target.value)}
+                id="bank-goal-area"
+                value={areaId}
+                onChange={(e) => setAreaId(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
               >
-                <option value="">None</option>
-                {responseFormats.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.name}
+                {areas.length === 0 && <option value="">No areas yet</option>}
+                {areas.map((area) => (
+                  <option key={area.id} value={area.id}>
+                    {area.name}
                   </option>
                 ))}
               </select>
             </div>
+
             <div>
               <label
-                htmlFor="bank-goal-target"
+                htmlFor="bank-goal-text"
                 className="block text-sm font-medium text-stone-700"
               >
-                Target % <span className="text-stone-400">(optional)</span>
+                Goal text
               </label>
-              <input
-                id="bank-goal-target"
-                type="number"
-                min={0}
-                max={100}
-                value={targetPercent}
-                onChange={(e) => setTargetPercent(e.target.value)}
+              <textarea
+                id="bank-goal-text"
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                rows={3}
                 className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                placeholder="e.g. Will produce /r/ in initial position of words with 80% accuracy"
               />
             </div>
-          </div>
 
-          <VisibilityField
-            value={visibility}
-            onChange={setVisibility}
-            options={VISIBILITY_OPTIONS}
-            gatedValue="shared"
-          />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label
+                  htmlFor="bank-goal-format"
+                  className="block text-sm font-medium text-stone-700"
+                >
+                  Default response format{" "}
+                  <span className="text-stone-400">(optional)</span>
+                </label>
+                <select
+                  id="bank-goal-format"
+                  value={responseFormatId}
+                  onChange={(e) => setResponseFormatId(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                >
+                  <option value="">None</option>
+                  {responseFormats.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label
+                  htmlFor="bank-goal-target"
+                  className="block text-sm font-medium text-stone-700"
+                >
+                  Target % <span className="text-stone-400">(optional)</span>
+                </label>
+                <input
+                  id="bank-goal-target"
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={targetPercent}
+                  onChange={(e) => setTargetPercent(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                />
+              </div>
+            </div>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+            <VisibilityField
+              value={visibility}
+              onChange={setVisibility}
+              options={VISIBILITY_OPTIONS}
+              gatedValue="shared"
+            />
 
-          <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onCancel}
-              disabled={loading}
-              className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
-            >
-              {loading
-                ? "Saving…"
-                : mode === "add"
-                  ? "Add to bank"
-                  : "Save changes"}
-            </button>
-          </div>
-        </form>
+            {error && <p className="text-sm text-red-600">{error}</p>}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={onCancel}
+                disabled={loading}
+                className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
+              >
+                {loading
+                  ? "Saving…"
+                  : mode === "add"
+                    ? "Add to bank"
+                    : "Save changes"}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

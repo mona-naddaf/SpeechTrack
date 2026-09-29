@@ -14,35 +14,37 @@ type Props = {
  *  this one is z-[60]. */
 export default function SetDisplayNameModal({ onCancel, onSaved }: Props) {
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-stone-900/50 px-4 py-8">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100">
-          <Sparkles className="h-5 w-5 text-amber-600" />
-        </div>
-        <h2 className="mt-3 text-lg font-bold text-stone-900">
-          Set a display name first
-        </h2>
-        <p className="mt-2 text-sm text-stone-600">
-          Sharing something credits it to a name, so pick one before marking
-          this as shared. You can change it later from Settings.
-        </p>
+    <div className="fixed inset-0 z-[60] overflow-y-auto bg-stone-900/50">
+      <div className="flex min-h-full items-center justify-center px-4 py-8">
+        <div className="max-h-[85vh] w-full max-w-sm overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100">
+            <Sparkles className="h-5 w-5 text-amber-600" />
+          </div>
+          <h2 className="mt-3 text-lg font-bold text-stone-900">
+            Set a display name first
+          </h2>
+          <p className="mt-2 text-sm text-stone-600">
+            Sharing something credits it to a name, so pick one before marking
+            this as shared. You can change it later from Settings.
+          </p>
 
-        <div className="mt-4">
-          <DisplayNameForm
-            initialValue=""
-            autoFocus
-            submitLabel="Save and continue"
-            onSaved={onSaved}
-          />
-        </div>
+          <div className="mt-4">
+            <DisplayNameForm
+              initialValue=""
+              autoFocus
+              submitLabel="Save and continue"
+              onSaved={onSaved}
+            />
+          </div>
 
-        <button
-          type="button"
-          onClick={onCancel}
-          className="mt-2 w-full rounded-lg px-4 py-2 text-sm font-medium text-stone-500 transition-colors hover:bg-stone-100"
-        >
-          Cancel
-        </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="mt-2 w-full rounded-lg px-4 py-2 text-sm font-medium text-stone-500 transition-colors hover:bg-stone-100"
+          >
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
   );

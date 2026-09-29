@@ -83,72 +83,74 @@ export default function GenerateReportButton({ studentId, studentName }: Props) 
       </button>
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-stone-900/50 px-4 py-8">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <h2 className="text-lg font-bold text-stone-900">Generate report</h2>
-            <p className="mt-1 text-sm text-stone-500">
-              Creates a downloadable, editable Word document summarizing{" "}
-              {studentName}&apos;s goals, sessions, attendance, and behaviour
-              over the selected period.
-            </p>
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/50">
+          <div className="flex min-h-full items-center justify-center px-4 py-8">
+            <div className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+              <h2 className="text-lg font-bold text-stone-900">Generate report</h2>
+              <p className="mt-1 text-sm text-stone-500">
+                Creates a downloadable, editable Word document summarizing{" "}
+                {studentName}&apos;s goals, sessions, attendance, and behaviour
+                over the selected period.
+              </p>
 
-            <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label
-                    htmlFor="report-start-date"
-                    className="block text-sm font-medium text-stone-700"
-                  >
-                    Start date
-                  </label>
-                  <input
-                    id="report-start-date"
-                    type="date"
-                    value={startDate}
-                    max={endDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                  />
+              <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label
+                      htmlFor="report-start-date"
+                      className="block text-sm font-medium text-stone-700"
+                    >
+                      Start date
+                    </label>
+                    <input
+                      id="report-start-date"
+                      type="date"
+                      value={startDate}
+                      max={endDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="report-end-date"
+                      className="block text-sm font-medium text-stone-700"
+                    >
+                      End date
+                    </label>
+                    <input
+                      id="report-end-date"
+                      type="date"
+                      value={endDate}
+                      min={startDate}
+                      max={getTodayLocalDateString()}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label
-                    htmlFor="report-end-date"
-                    className="block text-sm font-medium text-stone-700"
+
+                {error && <p className="text-sm text-red-600">{error}</p>}
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    disabled={loading}
+                    className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
                   >
-                    End date
-                  </label>
-                  <input
-                    id="report-end-date"
-                    type="date"
-                    value={endDate}
-                    min={startDate}
-                    max={getTodayLocalDateString()}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                  />
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
+                  >
+                    {loading ? "Generating…" : "Generate"}
+                  </button>
                 </div>
-              </div>
-
-              {error && <p className="text-sm text-red-600">{error}</p>}
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  disabled={loading}
-                  className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
-                >
-                  {loading ? "Generating…" : "Generate"}
-                </button>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
         </div>
       )}

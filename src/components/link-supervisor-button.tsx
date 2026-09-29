@@ -59,71 +59,73 @@ export default function LinkSupervisorButton() {
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/50 px-4">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-            <h2 className="text-lg font-bold text-stone-900">
-              Link to a supervisor
-            </h2>
-            <p className="mt-2 text-sm text-stone-600">
-              Enter the invite code your supervisor shared with you.
-            </p>
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/50">
+          <div className="flex min-h-full items-center justify-center px-4 py-8">
+            <div className="max-h-[85vh] w-full max-w-sm overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+              <h2 className="text-lg font-bold text-stone-900">
+                Link to a supervisor
+              </h2>
+              <p className="mt-2 text-sm text-stone-600">
+                Enter the invite code your supervisor shared with you.
+              </p>
 
-            {success ? (
-              <>
-                <p className="mt-4 text-sm text-accent-700">
-                  You&apos;re linked! Your supervisor can now see you on
-                  their dashboard.
-                </p>
-                <div className="flex justify-end pt-4">
-                  <button
-                    type="button"
-                    onClick={close}
-                    className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md"
-                  >
-                    Done
-                  </button>
-                </div>
-              </>
-            ) : (
-              <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-                <div>
-                  <label htmlFor="supervisor-invite-code" className="sr-only">
-                    Invite code
-                  </label>
-                  <input
-                    id="supervisor-invite-code"
-                    type="text"
-                    autoFocus
-                    autoComplete="off"
-                    maxLength={6}
-                    value={code}
-                    onChange={(e) => setCode(e.target.value.toUpperCase())}
-                    placeholder="e.g. AB12CD"
-                    className="w-full rounded-lg border border-stone-300 px-3 py-2 text-center text-lg font-semibold tracking-widest focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                  />
-                </div>
+              {success ? (
+                <>
+                  <p className="mt-4 text-sm text-accent-700">
+                    You&apos;re linked! Your supervisor can now see you on
+                    their dashboard.
+                  </p>
+                  <div className="flex justify-end pt-4">
+                    <button
+                      type="button"
+                      onClick={close}
+                      className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md"
+                    >
+                      Done
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+                  <div>
+                    <label htmlFor="supervisor-invite-code" className="sr-only">
+                      Invite code
+                    </label>
+                    <input
+                      id="supervisor-invite-code"
+                      type="text"
+                      autoFocus
+                      autoComplete="off"
+                      maxLength={6}
+                      value={code}
+                      onChange={(e) => setCode(e.target.value.toUpperCase())}
+                      placeholder="e.g. AB12CD"
+                      className="w-full rounded-lg border border-stone-300 px-3 py-2 text-center text-lg font-semibold tracking-widest focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                    />
+                  </div>
 
-                {error && <p className="text-sm text-red-600">{error}</p>}
+                  {error && <p className="text-sm text-red-600">{error}</p>}
 
-                <div className="flex justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={close}
-                    disabled={loading}
-                    className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loading || !code.trim()}
-                    className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
-                  >
-                    {loading ? "Linking…" : "Link"}
-                  </button>
-                </div>
-              </form>
-            )}
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={close}
+                      disabled={loading}
+                      className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={loading || !code.trim()}
+                      className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
+                    >
+                      {loading ? "Linking…" : "Link"}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
           </div>
         </div>
       )}

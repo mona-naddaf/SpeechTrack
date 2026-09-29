@@ -203,129 +203,131 @@ export default function ApplyTrackTemplateModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-stone-900/50 px-4 py-8">
-      <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
-        <h2 className="text-lg font-bold text-stone-900">Apply a track template</h2>
-        <p className="mt-1 text-sm text-stone-500">
-          Creates a new track for this student from one of your saved
-          templates — the first step starts active, the rest wait their
-          turn. Adjust response format or target % per step if this
-          student needs something different.
-        </p>
-
-        {templates.length === 0 ? (
-          <p className="mt-4 rounded-lg bg-cream-50 p-3 text-sm text-stone-600">
-            No saved templates yet — build one in the Track Templates
-            library, or save an existing track as a template from its
-            ladder view.
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/50">
+      <div className="flex min-h-full items-center justify-center px-4 py-8">
+        <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+          <h2 className="text-lg font-bold text-stone-900">Apply a track template</h2>
+          <p className="mt-1 text-sm text-stone-500">
+            Creates a new track for this student from one of your saved
+            templates — the first step starts active, the rest wait their
+            turn. Adjust response format or target % per step if this
+            student needs something different.
           </p>
-        ) : (
-          <>
-            <div className="mt-4">
-              <label
-                htmlFor="apply-template-select"
-                className="block text-sm font-medium text-stone-700"
-              >
-                Template
-              </label>
-              <select
-                id="apply-template-select"
-                value={templateId}
-                onChange={(e) => handleTemplateChange(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-              >
-                {templates.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name} ({t.steps.length} step{t.steps.length === 1 ? "" : "s"})
-                  </option>
-                ))}
-              </select>
-            </div>
 
-            <div className="mt-4">
-              <label
-                htmlFor="apply-template-track-name"
-                className="block text-sm font-medium text-stone-700"
-              >
-                New track name
-              </label>
-              <input
-                id="apply-template-track-name"
-                type="text"
-                value={trackName}
-                onChange={(e) => setTrackName(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-              />
-            </div>
+          {templates.length === 0 ? (
+            <p className="mt-4 rounded-lg bg-cream-50 p-3 text-sm text-stone-600">
+              No saved templates yet — build one in the Track Templates
+              library, or save an existing track as a template from its
+              ladder view.
+            </p>
+          ) : (
+            <>
+              <div className="mt-4">
+                <label
+                  htmlFor="apply-template-select"
+                  className="block text-sm font-medium text-stone-700"
+                >
+                  Template
+                </label>
+                <select
+                  id="apply-template-select"
+                  value={templateId}
+                  onChange={(e) => handleTemplateChange(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                >
+                  {templates.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.steps.length} step{t.steps.length === 1 ? "" : "s"})
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            <div className="mt-4 max-h-72 space-y-3 overflow-y-auto rounded-lg border border-stone-200 p-3">
-              {sortedSteps.map((step, i) => {
-                const override = overrideFor(step);
-                return (
-                  <div key={step.id} className="rounded-lg border border-stone-100 p-3">
-                    <p className="text-sm font-medium text-stone-800">
-                      <span className="text-stone-400">{i + 1}.</span> {step.goal_text}
-                    </p>
-                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                      <label className="block text-xs font-medium text-stone-500">
-                        Response format
-                        <select
-                          value={override.responseFormatId}
-                          onChange={(e) =>
-                            setOverride(step, { responseFormatId: e.target.value })
-                          }
-                          className="mt-1 w-full rounded-lg border border-stone-300 px-2 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                        >
-                          <option value="">None</option>
-                          {responseFormats.map((f) => (
-                            <option key={f.id} value={f.id}>
-                              {f.name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className="block text-xs font-medium text-stone-500">
-                        Target %
-                        <input
-                          type="number"
-                          min={0}
-                          max={100}
-                          value={override.targetPercent}
-                          onChange={(e) =>
-                            setOverride(step, { targetPercent: e.target.value })
-                          }
-                          className="mt-1 w-full rounded-lg border border-stone-300 px-2 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                        />
-                      </label>
+              <div className="mt-4">
+                <label
+                  htmlFor="apply-template-track-name"
+                  className="block text-sm font-medium text-stone-700"
+                >
+                  New track name
+                </label>
+                <input
+                  id="apply-template-track-name"
+                  type="text"
+                  value={trackName}
+                  onChange={(e) => setTrackName(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                />
+              </div>
+
+              <div className="mt-4 max-h-72 space-y-3 overflow-y-auto rounded-lg border border-stone-200 p-3">
+                {sortedSteps.map((step, i) => {
+                  const override = overrideFor(step);
+                  return (
+                    <div key={step.id} className="rounded-lg border border-stone-100 p-3">
+                      <p className="text-sm font-medium text-stone-800">
+                        <span className="text-stone-400">{i + 1}.</span> {step.goal_text}
+                      </p>
+                      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                        <label className="block text-xs font-medium text-stone-500">
+                          Response format
+                          <select
+                            value={override.responseFormatId}
+                            onChange={(e) =>
+                              setOverride(step, { responseFormatId: e.target.value })
+                            }
+                            className="mt-1 w-full rounded-lg border border-stone-300 px-2 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                          >
+                            <option value="">None</option>
+                            {responseFormats.map((f) => (
+                              <option key={f.id} value={f.id}>
+                                {f.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="block text-xs font-medium text-stone-500">
+                          Target %
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={override.targetPercent}
+                            onChange={(e) =>
+                              setOverride(step, { targetPercent: e.target.value })
+                            }
+                            className="mt-1 w-full rounded-lg border border-stone-300 px-2 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                          />
+                        </label>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
+                  );
+                })}
+              </div>
+            </>
+          )}
 
-        {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+          {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
 
-        <div className="mt-4 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={loading}
-            className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
-          >
-            Cancel
-          </button>
-          {templates.length > 0 && (
+          <div className="mt-4 flex justify-end gap-2">
             <button
               type="button"
-              onClick={handleSubmit}
+              onClick={onCancel}
               disabled={loading}
-              className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
+              className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
             >
-              {loading ? "Applying…" : "Apply template"}
+              Cancel
             </button>
-          )}
+            {templates.length > 0 && (
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={loading}
+                className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
+              >
+                {loading ? "Applying…" : "Apply template"}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

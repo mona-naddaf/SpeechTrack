@@ -266,215 +266,217 @@ export default function GoalFormModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-stone-900/50 px-4 py-8">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-        <h2 className="text-lg font-bold text-stone-900">
-          {mode === "add" ? "Set a goal" : "Edit goal"}
-        </h2>
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/50">
+      <div className="flex min-h-full items-center justify-center px-4 py-8">
+        <div className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+          <h2 className="text-lg font-bold text-stone-900">
+            {mode === "add" ? "Set a goal" : "Edit goal"}
+          </h2>
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-          <div>
-            <span className="block text-sm font-medium text-stone-700">
-              Goal text
-            </span>
-            <div className="mt-1 flex gap-4 text-sm text-stone-600">
-              <label className="flex items-center gap-1.5">
-                <input
-                  type="radio"
-                  name="text-source"
-                  checked={textSource === "write"}
-                  onChange={() => {
-                    setTextSource("write");
-                    setSelectedBankGoalId("");
-                  }}
+          <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+            <div>
+              <span className="block text-sm font-medium text-stone-700">
+                Goal text
+              </span>
+              <div className="mt-1 flex gap-4 text-sm text-stone-600">
+                <label className="flex items-center gap-1.5">
+                  <input
+                    type="radio"
+                    name="text-source"
+                    checked={textSource === "write"}
+                    onChange={() => {
+                      setTextSource("write");
+                      setSelectedBankGoalId("");
+                    }}
+                  />
+                  Write new
+                </label>
+                <label className="flex items-center gap-1.5">
+                  <input
+                    type="radio"
+                    name="text-source"
+                    checked={textSource === "bank"}
+                    onChange={() => setTextSource("bank")}
+                  />
+                  From goal bank
+                </label>
+              </div>
+
+              {/* Searching here (across every area at once) comes before
+                  picking an Area below — she never has to know/pick a
+                  category first, since selecting a result auto-syncs the
+                  Area field to it (handleComboboxSelect). */}
+              {textSource === "bank" && (
+                <GoalCombobox
+                  value={bankSearch}
+                  onChange={setBankSearch}
+                  options={visibleBankGoals.map((g) => ({
+                    id: g.id,
+                    text: g.text,
+                    categoryName: areaNameById.get(g.area_id) ?? "Uncategorized",
+                  }))}
+                  onSelect={handleComboboxSelect}
+                  placeholder="Search the bank by goal text…"
+                  emptyMessage={
+                    searchingAcrossAreas
+                      ? "No bank goals match your search"
+                      : "No bank goals in this area yet"
+                  }
+                  className="mt-2"
                 />
-                Write new
-              </label>
-              <label className="flex items-center gap-1.5">
-                <input
-                  type="radio"
-                  name="text-source"
-                  checked={textSource === "bank"}
-                  onChange={() => setTextSource("bank")}
-                />
-                From goal bank
-              </label>
+              )}
+
+              <textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                rows={3}
+                className="mt-2 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                placeholder="e.g. Will produce /r/ in initial position of words with 80% accuracy"
+              />
             </div>
 
-            {/* Searching here (across every area at once) comes before
-                picking an Area below — she never has to know/pick a
-                category first, since selecting a result auto-syncs the
-                Area field to it (handleComboboxSelect). */}
-            {textSource === "bank" && (
-              <GoalCombobox
-                value={bankSearch}
-                onChange={setBankSearch}
-                options={visibleBankGoals.map((g) => ({
-                  id: g.id,
-                  text: g.text,
-                  categoryName: areaNameById.get(g.area_id) ?? "Uncategorized",
-                }))}
-                onSelect={handleComboboxSelect}
-                placeholder="Search the bank by goal text…"
-                emptyMessage={
-                  searchingAcrossAreas
-                    ? "No bank goals match your search"
-                    : "No bank goals in this area yet"
-                }
-                className="mt-2"
-              />
-            )}
-
-            <textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              rows={3}
-              className="mt-2 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-              placeholder="e.g. Will produce /r/ in initial position of words with 80% accuracy"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="goal-area"
-              className="block text-sm font-medium text-stone-700"
-            >
-              Area
-            </label>
-            <select
-              id="goal-area"
-              value={areaId}
-              onChange={(e) => {
-                setAreaId(e.target.value);
-                setSelectedBankGoalId("");
-              }}
-              className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-            >
-              {areas.length === 0 && <option value="">No areas yet</option>}
-              {areas.map((area) => (
-                <option key={area.id} value={area.id}>
-                  {area.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
             <div>
               <label
-                htmlFor="goal-baseline"
+                htmlFor="goal-area"
                 className="block text-sm font-medium text-stone-700"
               >
-                Baseline <span className="text-stone-400">(optional)</span>
+                Area
               </label>
-              <input
-                id="goal-baseline"
-                type="text"
-                value={baseline}
-                onChange={(e) => setBaseline(e.target.value)}
+              <select
+                id="goal-area"
+                value={areaId}
+                onChange={(e) => {
+                  setAreaId(e.target.value);
+                  setSelectedBankGoalId("");
+                }}
                 className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                placeholder="e.g. 20%"
-              />
+              >
+                {areas.length === 0 && <option value="">No areas yet</option>}
+                {areas.map((area) => (
+                  <option key={area.id} value={area.id}>
+                    {area.name}
+                  </option>
+                ))}
+              </select>
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label
+                  htmlFor="goal-baseline"
+                  className="block text-sm font-medium text-stone-700"
+                >
+                  Baseline <span className="text-stone-400">(optional)</span>
+                </label>
+                <input
+                  id="goal-baseline"
+                  type="text"
+                  value={baseline}
+                  onChange={(e) => setBaseline(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                  placeholder="e.g. 20%"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="goal-target"
+                  className="block text-sm font-medium text-stone-700"
+                >
+                  Target %
+                </label>
+                <input
+                  id="goal-target"
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={targetPercent}
+                  onChange={(e) => setTargetPercent(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                />
+              </div>
+            </div>
+
             <div>
               <label
-                htmlFor="goal-target"
+                htmlFor="goal-format"
                 className="block text-sm font-medium text-stone-700"
               >
-                Target %
+                Response format
               </label>
-              <input
-                id="goal-target"
-                type="number"
-                min={0}
-                max={100}
-                value={targetPercent}
-                onChange={(e) => setTargetPercent(e.target.value)}
+              <select
+                id="goal-format"
+                value={responseFormatId}
+                onChange={(e) => setResponseFormatId(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-              />
+              >
+                <option value="">None</option>
+                {responseFormats.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
+                  </option>
+                ))}
+              </select>
             </div>
-          </div>
 
-          <div>
-            <label
-              htmlFor="goal-format"
-              className="block text-sm font-medium text-stone-700"
-            >
-              Response format
-            </label>
-            <select
-              id="goal-format"
-              value={responseFormatId}
-              onChange={(e) => setResponseFormatId(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-            >
-              <option value="">None</option>
-              {responseFormats.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
-          </div>
+            <div>
+              <label
+                htmlFor="goal-status"
+                className="block text-sm font-medium text-stone-700"
+              >
+                Status
+              </label>
+              <select
+                id="goal-status"
+                value={status}
+                onChange={(e) => setStatus(e.target.value as Goal["status"])}
+                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              >
+                <option value="active">Active</option>
+                <option value="on_hold">On hold</option>
+                <option value="mastered">Mastered</option>
+                {/* For a goal already part of a track, picking it here is
+                    just the manual override that skips its automatic wait
+                    for its turn (requirement 6) — its existing placement is
+                    untouched. For anything else, needsQueuePlacement kicks
+                    in below and she has to say what it's queued behind. */}
+                <option value="queued">Queued</option>
+              </select>
 
-          <div>
-            <label
-              htmlFor="goal-status"
-              className="block text-sm font-medium text-stone-700"
-            >
-              Status
-            </label>
-            <select
-              id="goal-status"
-              value={status}
-              onChange={(e) => setStatus(e.target.value as Goal["status"])}
-              className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-            >
-              <option value="active">Active</option>
-              <option value="on_hold">On hold</option>
-              <option value="mastered">Mastered</option>
-              {/* For a goal already part of a track, picking it here is
-                  just the manual override that skips its automatic wait
-                  for its turn (requirement 6) — its existing placement is
-                  untouched. For anything else, needsQueuePlacement kicks
-                  in below and she has to say what it's queued behind. */}
-              <option value="queued">Queued</option>
-            </select>
+              {needsQueuePlacement && (
+                <QueueBehindPicker
+                  tracks={queueableTracks}
+                  goals={queueableGoals}
+                  draft={queueBehindDraft}
+                  onChange={handleQueueDraftChange}
+                />
+              )}
+            </div>
 
-            {needsQueuePlacement && (
-              <QueueBehindPicker
-                tracks={queueableTracks}
-                goals={queueableGoals}
-                draft={queueBehindDraft}
-                onChange={handleQueueDraftChange}
-              />
-            )}
-          </div>
+            {error && <p className="text-sm text-red-600">{error}</p>}
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
-
-          <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onCancel}
-              disabled={loading}
-              className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
-            >
-              {loading
-                ? "Saving…"
-                : mode === "add"
-                  ? "Set goal"
-                  : "Save changes"}
-            </button>
-          </div>
-        </form>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={onCancel}
+                disabled={loading}
+                className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
+              >
+                {loading
+                  ? "Saving…"
+                  : mode === "add"
+                    ? "Set goal"
+                    : "Save changes"}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
