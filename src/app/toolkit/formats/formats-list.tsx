@@ -31,6 +31,7 @@ const CREATABLE_TYPES: ResponseFormatType[] = [
   "rating_scale",
   "cueing_hierarchy",
   "sentence_structure",
+  "language_sample",
 ];
 
 type Props = {
@@ -174,7 +175,8 @@ export default function FormatsList({ initialFormats }: Props) {
             </div>
           </div>
 
-          {format.type === "cueing_hierarchy" && (
+          {(format.type === "cueing_hierarchy" ||
+              format.type === "language_sample") && (
             <ul className="mt-4 flex flex-wrap gap-2">
               {(format.config.levels ?? []).map(
                 (level: CueingLevel, i: number) => {
@@ -243,7 +245,13 @@ export default function FormatsList({ initialFormats }: Props) {
             </div>
           )}
 
-          {!["cueing_hierarchy", "correct_incorrect", "rating_scale", "sentence_structure"].includes(
+          {![
+              "cueing_hierarchy",
+              "correct_incorrect",
+              "rating_scale",
+              "sentence_structure",
+              "language_sample",
+            ].includes(
             format.type
           ) && (
             <p className="mt-1 text-sm text-stone-500">
@@ -298,6 +306,16 @@ export default function FormatsList({ initialFormats }: Props) {
           format={editingFormat}
           onCancel={() => setEditingFormat(null)}
           onSaved={handleSaved}
+        />
+      )}
+
+      {editingFormat && editingFormat.type === "language_sample" && (
+        <CueingHierarchyEditorModal
+          format={editingFormat}
+          onCancel={() => setEditingFormat(null)}
+          onSaved={handleSaved}
+          title="Edit language sample"
+          description="Rename the format and set the support levels an utterance can be produced under — add, remove, rename, recolor, or mark which count as independent."
         />
       )}
 

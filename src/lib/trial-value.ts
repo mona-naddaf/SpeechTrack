@@ -5,6 +5,21 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 /** Human-readable rendering of a trial's jsonb `value` — used in CSV
  *  exports and anywhere else a trial needs to show up as plain text. */
 export function formatTrialValue(value: Record<string, unknown>): string {
+  // "language_sample": {utterance, meaning, appropriate, level} — checked
+  // before the plain `level` case below, which would otherwise match it
+  // and drop the utterance itself.
+  if (typeof value.utterance === "string") {
+    const meaning = typeof value.meaning === "string" && value.meaning ? ` (meaning: ${value.meaning})` : "";
+    const appropriate =
+      typeof value.appropriate === "boolean"
+        ? value.appropriate
+          ? ", appropriate in context"
+          : ", not appropriate in context"
+        : "";
+    const level = typeof value.level === "string" ? `, ${value.level}` : "";
+    return `"${value.utterance}"${meaning}${appropriate}${level}`;
+  }
+
   if (typeof value.level === "string") return value.level;
   if (typeof value.rating === "number") return String(value.rating);
   if (typeof value.correct === "boolean") return value.correct ? "Correct" : "Incorrect";

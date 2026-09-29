@@ -2,7 +2,8 @@ import type { ResponseFormatType } from "./types";
 
 /**
  * Every response format type the app knows about. "cueing_hierarchy",
- * "correct_incorrect", "rating_scale", and "sentence_structure" are
+ * "correct_incorrect", "rating_scale", "sentence_structure", and
+ * "language_sample" are
  * creatable with a real editor (see CREATABLE_TYPES in formats-list.tsx)
  * — the rest are shown as placeholders on the formats page until they're
  * built out.
@@ -32,6 +33,12 @@ export const RESPONSE_FORMAT_TYPE_LABELS: {
     label: "Sentence structure",
     description:
       "Track each part of a multi-part utterance (e.g. Subject + is/are + Verb + -ing + Object) separately in one trial.",
+  },
+  {
+    type: "language_sample",
+    label: "Language sample",
+    description:
+      "Collect the child's actual utterances — what they said, what it meant, whether it fit the context, and the support level it came with.",
   },
   {
     type: "pronunciation",

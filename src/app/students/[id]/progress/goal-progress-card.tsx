@@ -1,4 +1,5 @@
-import { formatDateRange } from "@/lib/date";
+import { formatDate, formatDateRange } from "@/lib/date";
+import { getColorOption } from "@/lib/colors";
 import { GOAL_STATUS_CLASSES, GOAL_STATUS_LABELS } from "@/lib/goal-status";
 import type { GoalProgressReport } from "@/lib/progress";
 import LevelBreakdownBars from "./level-breakdown-bars";
@@ -12,7 +13,8 @@ type Props = {
 /** One goal's full progress report — status pill, trial count/date range,
  *  level breakdown (cueing goals) or a per-component breakdown (sentence
  *  structure goals — reuses the same LevelBreakdownBars, once per
- *  component), trend chart, and the auto-generated written summary with
+ *  component), the utterance log (language sample goals), trend chart,
+ *  and the auto-generated written summary with
  *  its "Copy summary" button.
  *
  *  The single source of truth for this card: the SLP progress page, the
@@ -57,7 +59,7 @@ export default function GoalProgressCard({ report }: Props) {
         </p>
       ) : (
         <div className="mt-4 space-y-4">
-          {report.isCueing && (
+          {(report.isCueing || report.isLanguageSample) && (
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">
                 Level breakdown
@@ -85,6 +87,46 @@ export default function GoalProgressCard({ report }: Props) {
                   <LevelBreakdownBars entries={component.levelBreakdown} />
                 </div>
               ))}
+            </div>
+          )}
+
+          {report.isLanguageSample && report.utteranceLog.length > 0 && (
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">
+                Utterance log{" "}
+                <span className="font-normal normal-case tracking-normal">
+                  ({report.appropriateCount} of {report.utteranceLog.length} appropriate
+                  in context)
+                </span>
+              </p>
+              <ul className="max-h-80 divide-y divide-stone-100 overflow-y-auto rounded-lg border border-stone-100">
+                {report.utteranceLog.map((entry, i) => (
+                  <li
+                    key={i}
+                    className="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-2 text-sm"
+                  >
+                    <span className="w-24 shrink-0 text-xs text-stone-400">
+                      {formatDate(entry.date)}
+                    </span>
+                    <span className="font-medium text-stone-900">
+                      &ldquo;{entry.utterance}&rdquo;
+                    </span>
+                    {entry.meaning && (
+                      <span className="text-stone-500">— {entry.meaning}</span>
+                    )}
+                    <span
+                      className={`text-xs font-medium ${entry.appropriate ? "text-green-700" : "text-red-700"}`}
+                    >
+                      {entry.appropriate ? "Appropriate" : "Not appropriate"}
+                    </span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs ${getColorOption(entry.color).badgeClass}`}
+                    >
+                      {entry.level}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 

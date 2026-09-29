@@ -14,7 +14,8 @@ type CreatableType =
   | "correct_incorrect"
   | "rating_scale"
   | "cueing_hierarchy"
-  | "sentence_structure";
+  | "sentence_structure"
+  | "language_sample";
 
 const TYPE_OPTIONS: { type: CreatableType; label: string; description: string }[] = [
   {
@@ -37,6 +38,12 @@ const TYPE_OPTIONS: { type: CreatableType; label: string; description: string }[
     label: "Sentence structure",
     description:
       "Score each part of a multi-part utterance (Subject, Verb, Object, ...) separately in one trial.",
+  },
+  {
+    type: "language_sample",
+    label: "Language sample",
+    description:
+      "Record each utterance the child produces — the word(s), meaning, whether it fit the context, and the support level.",
   },
 ];
 
@@ -104,7 +111,7 @@ export default function NewFormatModal({ onCancel, onCreated }: Props) {
         ],
       };
       openEditor = true;
-    } else {
+    } else if (type === "sentence_structure") {
       // sentence_structure — a sensible Subject/Verb/Object starting point
       // plus the same two default levels cueing_hierarchy starts with
       // (same scale, same editor UI); she customizes both right after
@@ -118,6 +125,19 @@ export default function NewFormatModal({ onCancel, onCreated }: Props) {
         levels: [
           { name: "Independent", color: "green", is_independent: true },
           { name: "With support", color: "amber", is_independent: false },
+        ],
+      };
+      openEditor = true;
+    } else {
+      // language_sample — a typical language-stimulation support scale,
+      // most to least independent; fully editable right after creating
+      // (same levels editor as cueing_hierarchy).
+      config = {
+        levels: [
+          { name: "Spontaneous", color: "green", is_independent: true },
+          { name: "Natural after delayed modeling", color: "teal", is_independent: false },
+          { name: "After modeling", color: "amber", is_independent: false },
+          { name: "Prompted", color: "clay", is_independent: false },
         ],
       };
       openEditor = true;
@@ -301,6 +321,14 @@ export default function NewFormatModal({ onCancel, onCreated }: Props) {
               You&apos;ll start with Subject/Verb/Object and two levels —
               fully editable (add, remove, rename, reorder) right after
               creating it.
+            </p>
+          )}
+
+          {type === "language_sample" && (
+            <p className="text-sm text-stone-500">
+              You&apos;ll start with four support levels (Spontaneous, Natural
+              after delayed modeling, After modeling, Prompted) — rename,
+              recolor, add, or remove them right after creating it.
             </p>
           )}
 

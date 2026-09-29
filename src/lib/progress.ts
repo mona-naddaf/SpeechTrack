@@ -52,6 +52,18 @@ export type ComponentBreakdown = {
   independentPercent: number;
 };
 
+/** One "language_sample" trial, flattened for the chronological utterance
+ *  log on the progress card / Word report. `color` is the level's current
+ *  color (grey if the level has since been renamed/removed). */
+export type UtteranceLogEntry = {
+  date: string;
+  utterance: string;
+  meaning: string;
+  appropriate: boolean;
+  level: string;
+  color: string;
+};
+
 export type GoalProgressReport = {
   goal: ProgressGoal;
   totalTrials: number;
@@ -61,6 +73,9 @@ export type GoalProgressReport = {
   isCueing: boolean;
   isRating: boolean;
   isSentenceStructure: boolean;
+  /** "language_sample" goals get the same level breakdown/trend a cueing
+   *  goal does (each trial carries a single `level`), plus utteranceLog. */
+  isLanguageSample: boolean;
   /** What the trend/current-percent numbers represent, for chart/summary labels. */
   metricLabel: string;
   /** For "sentence_structure", this is the *combined* breakdown across
@@ -71,6 +86,12 @@ export type GoalProgressReport = {
    *  component (extras are excluded here: they're a one-off per attempt,
    *  not a stable dimension to report on across sessions). */
   componentBreakdown: ComponentBreakdown[];
+  /** Only populated for "language_sample" — every utterance collected,
+   *  oldest first, so the qualitative sample can be reviewed over time. */
+  utteranceLog: UtteranceLogEntry[];
+  /** "language_sample" only: how many of utteranceLog were marked
+   *  appropriate in context. */
+  appropriateCount: number;
   trend: TrendPoint[];
   currentPercent: number | null;
   trendDirection: TrendDirection;
@@ -150,6 +171,7 @@ export function buildGoalReport(
   const isCueing = goal.response_format?.type === "cueing_hierarchy";
   const isRating = goal.response_format?.type === "rating_scale";
   const isSentenceStructure = goal.response_format?.type === "sentence_structure";
+  const isLanguageSample = goal.response_format?.type === "language_sample";
 
   const sessionDates = Array.from(
     new Set(goalTrials.map((t) => t.session_date))
@@ -166,6 +188,7 @@ export function buildGoalReport(
 
   let levelBreakdown: LevelBreakdownEntry[] = [];
   let componentBreakdown: ComponentBreakdown[] = [];
+  let utteranceLog: UtteranceLogEntry[] = [];
   let trend: TrendPoint[] = [];
   let metricLabel = "% correct";
 
@@ -200,9 +223,30 @@ export function buildGoalReport(
         percent: dayPicks.length > 0 ? Math.round((independentCount / dayPicks.length) * 100) : 0,
       };
     });
-  } else if (isCueing) {
+  } else if (isCueing || isLanguageSample) {
     metricLabel = "% independent";
     const levels = goal.response_format?.config.levels ?? [];
+
+    if (isLanguageSample) {
+      const colorByLevel = new Map(levels.map((l) => [l.name, l.color]));
+      utteranceLog = goalTrials
+        .filter((t) => typeof t.value.utterance === "string")
+        .map((t) => {
+          const level = typeof t.value.level === "string" ? t.value.level : "";
+          return {
+            date: t.session_date,
+            utterance: t.value.utterance as string,
+            meaning: typeof t.value.meaning === "string" ? t.value.meaning : "",
+            appropriate: t.value.appropriate === true,
+            level,
+            color: colorByLevel.get(level) ?? "grey",
+          };
+        })
+        // Trials arrive oldest-first by created_at; a stable sort by
+        // session date keeps that order within a day while still placing
+        // a backdated session's utterances where they belong.
+        .sort((a, b) => a.date.localeCompare(b.date));
+    }
     const counts = new Map<string, number>();
     for (const trial of goalTrials) {
       const level = typeof trial.value.level === "string" ? trial.value.level : null;
@@ -281,7 +325,7 @@ export function buildGoalReport(
     currentPercent,
     sessionCount: sessionDates.length,
     trendDirection,
-    isCueing,
+    isCueing: isCueing || isLanguageSample,
     isRating,
     isSentenceStructure,
   });
@@ -295,7 +339,10 @@ export function buildGoalReport(
     isCueing,
     isRating,
     isSentenceStructure,
+    isLanguageSample,
     componentBreakdown,
+    utteranceLog,
+    appropriateCount: utteranceLog.filter((u) => u.appropriate).length,
     metricLabel,
     levelBreakdown,
     trend,

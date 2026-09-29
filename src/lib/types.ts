@@ -65,6 +65,7 @@ export type ResponseFormatType =
   | "correct_incorrect"
   | "rating_scale"
   | "sentence_structure"
+  | "language_sample"
   | "pronunciation"
   | "open_text"
   | "behaviour_description"
@@ -106,6 +107,26 @@ export type SentenceStructureComponent = {
 export type SentenceStructureConfig = {
   components: SentenceStructureComponent[];
   levels: CueingLevel[];
+};
+
+/** Config shape for a "language_sample" format: just the editable
+ *  support-level scale (same CueingLevel shape/editor a Cueing hierarchy
+ *  uses) — the utterance/meaning/appropriateness fields are fixed per
+ *  trial, not configured. */
+export type LanguageSampleConfig = {
+  levels: CueingLevel[];
+};
+
+/** One "language_sample" trial's jsonb `value`: the child's actual
+ *  utterance, its meaning/gloss, whether it was appropriate in context,
+ *  and the support level (a CueingLevel name) it was produced under.
+ *  `level` deliberately uses the same key a cueing_hierarchy trial does,
+ *  so level-based tallies read it the same way. */
+export type LanguageSampleTrialValue = {
+  utterance: string;
+  meaning: string;
+  appropriate: boolean;
+  level: string;
 };
 
 /** The full shape response_formats.config can take, across every format

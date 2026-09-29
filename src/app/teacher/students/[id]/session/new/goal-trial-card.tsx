@@ -6,6 +6,7 @@ import type { MaterialChip, TeacherSessionGoal, Trial } from "@/lib/types";
 import type { MaterialUsageSummary } from "@/lib/progress";
 import { getColorOption } from "@/lib/colors";
 import SentenceStructureTrialBody from "@/components/sentence-structure-trial-body";
+import LanguageSampleTrialBody from "@/components/language-sample-trial-body";
 import GoalMaterialSection, {
   type AddMaterialResult,
 } from "./goal-material-section";
@@ -59,9 +60,10 @@ export default function GoalTrialCard({
   // "sentence_structure" trials don't fit this single-value shape at all
   // (each trial holds a whole components[]/extras[] row) — its own tally
   // is computed inside SentenceStructureTrialBody instead, so it's simply
-  // skipped here.
+  // skipped here. Same for "language_sample" — LanguageSampleTrialBody
+  // tallies its own levels alongside the utterance list.
   const tally: Record<string, number> = {};
-  if (formatType !== "sentence_structure") {
+  if (formatType !== "sentence_structure" && formatType !== "language_sample") {
     for (const trial of trials) {
       let key: string;
       if (formatType === "cueing_hierarchy") {
@@ -107,6 +109,13 @@ export default function GoalTrialCard({
           trials={trials}
           logging={logging}
           onLogAttempt={handleLog}
+        />
+      ) : formatType === "language_sample" ? (
+        <LanguageSampleTrialBody
+          levels={format?.config.levels ?? []}
+          trials={trials}
+          logging={logging}
+          onLogUtterance={handleLog}
         />
       ) : formatType === "cueing_hierarchy" ? (
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">

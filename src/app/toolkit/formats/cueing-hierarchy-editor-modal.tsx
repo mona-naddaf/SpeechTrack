@@ -9,12 +9,18 @@ type Props = {
   format: ResponseFormat;
   onCancel: () => void;
   onSaved: (updated: ResponseFormat) => void;
+  /** Overrides for format types whose config is also just a name + a
+   *  level scale (e.g. "language_sample") and so reuse this editor as-is. */
+  title?: string;
+  description?: string;
 };
 
 export default function CueingHierarchyEditorModal({
   format,
   onCancel,
   onSaved,
+  title = "Edit cueing hierarchy",
+  description = "Rename the format, add or remove levels, change colors, or mark a level as an independent response.",
 }: Props) {
   const initialLevels = (format.config.levels ?? []) as CueingLevel[];
   const [name, setName] = useState(format.name);
@@ -62,13 +68,8 @@ export default function CueingHierarchyEditorModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-stone-900/50 px-4 py-8">
       <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
-        <h2 className="text-lg font-bold text-stone-900">
-          Edit cueing hierarchy
-        </h2>
-        <p className="mt-1 text-sm text-stone-500">
-          Rename the format, add or remove levels, change colors, or mark a
-          level as an independent response.
-        </p>
+        <h2 className="text-lg font-bold text-stone-900">{title}</h2>
+        <p className="mt-1 text-sm text-stone-500">{description}</p>
 
         <div className="mt-4">
           <label

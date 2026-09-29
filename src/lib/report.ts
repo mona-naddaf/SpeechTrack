@@ -253,7 +253,7 @@ export async function buildStudentReportDocx(
       children.push(bodyLine(`Trend: ${TREND_LABELS[report.trendDirection]}`));
 
       if (report.totalTrials > 0) {
-        if (report.isCueing && report.levelBreakdown.length > 0) {
+        if ((report.isCueing || report.isLanguageSample) && report.levelBreakdown.length > 0) {
           const levelSvg = buildLevelBreakdownSvg(report.levelBreakdown);
           const levelHeight = Math.round(
             (report.levelBreakdown.length * 34 + 4) * CHART_SCALE
@@ -288,6 +288,32 @@ export async function buildStudentReportDocx(
         children.push(
           await chartImage(buildTrendChartSvg(report.trend), TREND_DISPLAY)
         );
+
+        // Only utterances collected within the report's date range — the
+        // log is a record of what happened in this period, not the goal's
+        // whole history.
+        const utterancesInRange = report.isLanguageSample
+          ? report.utteranceLog.filter(
+              (u) => u.date >= data.startDate && u.date <= data.endDate
+            )
+          : [];
+        if (utterancesInRange.length > 0) {
+          const appropriateInRange = utterancesInRange.filter((u) => u.appropriate).length;
+          children.push(
+            chartCaption(
+              `Utterance log (${appropriateInRange} of ${utterancesInRange.length} appropriate in context)`
+            )
+          );
+          for (const entry of utterancesInRange) {
+            const meaning = entry.meaning ? ` — ${entry.meaning}` : "";
+            const appropriate = entry.appropriate ? "appropriate" : "not appropriate";
+            children.push(
+              bulletLine(
+                `${formatDate(entry.date)}: "${entry.utterance}"${meaning} (${appropriate}, ${entry.level})`
+              )
+            );
+          }
+        }
       }
 
       children.push(
