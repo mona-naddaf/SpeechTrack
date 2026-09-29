@@ -1,5 +1,6 @@
 import { NotebookText } from "lucide-react";
 import { formatDate } from "@/lib/date";
+import LinkifyText from "@/components/linkify-text";
 
 export type ParentSessionNote = {
   id: string;
@@ -31,7 +32,9 @@ export default function SessionNotesSection({ notes }: Props) {
             className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
           >
             <p className="font-medium text-stone-900">{formatDate(entry.date)}</p>
-            <p className="mt-1 text-sm text-stone-600">{entry.note}</p>
+            <p className="mt-1 text-sm text-stone-600">
+              <LinkifyText text={entry.note} />
+            </p>
           </div>
         ))}
       </div>

@@ -8,6 +8,7 @@ import { SEVERITY_CLASSES, SEVERITY_LABELS } from "@/lib/behavior";
 import type { BehaviorSeverity, BehaviorType } from "@/lib/types";
 import SectionHeader from "@/components/section-header";
 import { useSectionPreferences } from "@/components/section-preferences";
+import LinkifyText from "@/components/linkify-text";
 
 /** Structurally identical between the SLP (SlpBehaviorLogWithType) and
  *  Teacher (BehaviorLogWithType) shapes — see src/lib/types.ts — so one
@@ -136,7 +137,9 @@ export default function BehaviorView({ logs, error, behaviorTypes }: Props) {
                       )}
                     </div>
                     {log.note && (
-                      <p className="mt-1 text-sm text-stone-600">{log.note}</p>
+                      <p className="mt-1 text-sm text-stone-600">
+                        <LinkifyText text={log.note} />
+                      </p>
                     )}
                   </li>
                 );

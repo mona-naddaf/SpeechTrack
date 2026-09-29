@@ -17,6 +17,7 @@ import {
 } from "@/lib/materials";
 import MaterialFormModal, { type MaterialFormValues } from "./material-form-modal";
 import DeleteMaterialConfirmModal from "./delete-material-confirm-modal";
+import LinkifyText from "@/components/linkify-text";
 
 const MATERIAL_SELECT_COLUMNS =
   "id, title, url, description, subject_id, visibility, created_at, subject:teacher_subjects(id, name), teacher_material_goals(goal_id)";
@@ -284,7 +285,7 @@ export default function MaterialsList({
 
               {material.description && (
                 <p className="mt-1 text-sm text-stone-600">
-                  {material.description}
+                  <LinkifyText text={material.description} />
                 </p>
               )}
 

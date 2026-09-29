@@ -17,6 +17,7 @@ import {
 } from "@/lib/assessment";
 import { downloadXlsxTemplate, parseXlsxFile, type ImportSkip } from "@/lib/xlsx-import";
 import { parseQuestionImportRows } from "@/lib/question-import";
+import LinkifyText from "@/components/linkify-text";
 import QuestionFormModal, { type QuestionFormValues } from "./question-form-modal";
 import DeleteQuestionConfirmModal from "./delete-question-confirm-modal";
 
@@ -536,7 +537,7 @@ export default function AssessmentEditor({
                   )}
                 {question.notes && (
                   <p className="mt-1 text-sm text-stone-400">
-                    {question.notes}
+                    <LinkifyText text={question.notes} />
                   </p>
                 )}
               </div>

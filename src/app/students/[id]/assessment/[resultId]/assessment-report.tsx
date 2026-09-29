@@ -11,6 +11,7 @@ import type {
   AssessmentQuestionResponseType,
 } from "@/lib/types";
 import CopyReportButton from "./copy-report-button";
+import LinkifyText from "@/components/linkify-text";
 
 type Props = {
   studentName: string;
@@ -105,7 +106,9 @@ export default function AssessmentReport({
                 </p>
               )}
               {question.notes && (
-                <p className="mt-1 text-xs text-stone-400">{question.notes}</p>
+                <p className="mt-1 text-xs text-stone-400">
+                  <LinkifyText text={question.notes} />
+                </p>
               )}
             </li>
           );

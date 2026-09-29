@@ -33,6 +33,7 @@ import GoalFormModal, { type GoalFormValues } from "./goal-form-modal";
 import DeleteGoalConfirmModal from "./delete-goal-confirm-modal";
 import DeleteTrackConfirmModal from "./delete-track-confirm-modal";
 import RenameTrackModal from "./rename-track-modal";
+import LinkifyText from "@/components/linkify-text";
 
 const GOAL_SELECT_COLUMNS =
   "id, student_id, area_id, text, response_format_id, baseline, target_percent, status, visible_to_parent, track_id, step_order, created_at, area:areas(id, name), response_format:response_formats(id, name), track:goal_tracks(id, name)";
@@ -789,7 +790,7 @@ export default function GoalsSection({
                       className="flex items-start justify-between gap-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2"
                     >
                       <span className="flex-1 text-sm text-stone-700">
-                        {note.text}
+                        <LinkifyText text={note.text} />
                       </span>
                       <div className="flex shrink-0 gap-1">
                         <button

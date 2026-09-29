@@ -7,6 +7,7 @@ import { formatDate } from "@/lib/date";
 import type { ClassroomStrategy } from "@/lib/types";
 import SectionHeader from "@/components/section-header";
 import { useSectionPreferences } from "@/components/section-preferences";
+import LinkifyText from "@/components/linkify-text";
 import ClassroomStrategyFormModal from "./classroom-strategy-form-modal";
 import DeleteClassroomStrategyModal from "./delete-classroom-strategy-modal";
 import CopyCodeButton from "./copy-code-button";
@@ -194,11 +195,11 @@ export default function ClassroomStrategiesSection({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-stone-900">
-                    {item.what_to_do}
+                    <LinkifyText text={item.what_to_do} />
                   </p>
                   {item.how_to_do_it && (
                     <p className="mt-1 text-sm text-stone-600">
-                      {item.how_to_do_it}
+                      <LinkifyText text={item.how_to_do_it} />
                     </p>
                   )}
                   {item.last_used_date && (

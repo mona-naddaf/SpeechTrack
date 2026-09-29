@@ -8,6 +8,7 @@ import type { SessionRecord } from "@/lib/types";
 import SectionHeader from "./section-header";
 import { useSectionPreferences } from "./section-preferences";
 import EditSessionModal from "./edit-session-modal";
+import LinkifyText from "./linkify-text";
 
 type Props = {
   sessions: SessionRecord[];
@@ -108,7 +109,9 @@ export default function SessionsSection({
                       )}
                     </div>
                     {session.note ? (
-                      <p className="mt-1 text-sm text-stone-600">{session.note}</p>
+                      <p className="mt-1 text-sm text-stone-600">
+                        <LinkifyText text={session.note} />
+                      </p>
                     ) : (
                       <p className="mt-1 text-sm text-stone-400">No note</p>
                     )}

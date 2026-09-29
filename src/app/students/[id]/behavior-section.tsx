@@ -9,6 +9,7 @@ import { SEVERITY_CLASSES, SEVERITY_LABELS } from "@/lib/behavior";
 import type { BehaviorType, SlpBehaviorLogWithType } from "@/lib/types";
 import SectionHeader from "@/components/section-header";
 import { useSectionPreferences } from "@/components/section-preferences";
+import LinkifyText from "@/components/linkify-text";
 import LogBehaviorModal, { type LogBehaviorValues } from "./log-behavior-modal";
 import ShareBehaviorToggle from "./share-behavior-toggle";
 
@@ -198,7 +199,9 @@ export default function BehaviorSection({
                   </div>
                 </div>
                 {log.note && (
-                  <p className="mt-1 text-sm text-stone-600">{log.note}</p>
+                  <p className="mt-1 text-sm text-stone-600">
+                    <LinkifyText text={log.note} />
+                  </p>
                 )}
               </li>
             );

@@ -5,6 +5,7 @@ import { formatDate } from "@/lib/date";
 import type { HomePracticeItem } from "@/lib/types";
 import SectionHeader from "@/components/section-header";
 import { useSectionPreferences } from "@/components/section-preferences";
+import LinkifyText from "@/components/linkify-text";
 
 type Props = {
   items: HomePracticeItem[];
@@ -60,11 +61,11 @@ export default function HomePracticeView({ items, error }: Props) {
               {items.map((item) => (
                 <li key={item.id} className="px-4 py-3 sm:px-5">
                   <p className="font-medium text-stone-900">
-                    {item.what_to_practice}
+                    <LinkifyText text={item.what_to_practice} />
                   </p>
                   {item.how_to_practice && (
                     <p className="mt-1 text-sm text-stone-600">
-                      {item.how_to_practice}
+                      <LinkifyText text={item.how_to_practice} />
                     </p>
                   )}
                   {item.last_worked_date && (

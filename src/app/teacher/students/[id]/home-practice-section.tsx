@@ -7,6 +7,7 @@ import { formatDate } from "@/lib/date";
 import type { HomePracticeItem } from "@/lib/types";
 import SectionHeader from "@/components/section-header";
 import { useSectionPreferences } from "@/components/section-preferences";
+import LinkifyText from "@/components/linkify-text";
 import HomePracticeItemFormModal from "./home-practice-item-form-modal";
 import DeleteHomePracticeItemModal from "./delete-home-practice-item-modal";
 import CopyCodeButton from "./copy-code-button";
@@ -194,11 +195,11 @@ export default function HomePracticeSection({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-stone-900">
-                    {item.what_to_practice}
+                    <LinkifyText text={item.what_to_practice} />
                   </p>
                   {item.how_to_practice && (
                     <p className="mt-1 text-sm text-stone-600">
-                      {item.how_to_practice}
+                      <LinkifyText text={item.how_to_practice} />
                     </p>
                   )}
                   {item.last_worked_date && (

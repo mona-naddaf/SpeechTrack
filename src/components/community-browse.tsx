@@ -7,6 +7,7 @@ import type { CommunityItemType, CommunityRatingRow, ResponseFormatType } from "
 import { RESPONSE_FORMAT_TYPE_LABELS } from "@/lib/response-format-types";
 import { matchesSearch } from "@/lib/search";
 import SearchInput from "@/components/search-input";
+import LinkifyText from "@/components/linkify-text";
 
 type Category = { id: string; name: string };
 
@@ -1010,7 +1011,9 @@ function MaterialsTab({
                   {material.title}
                 </a>
                 {material.description && (
-                  <p className="mt-1 text-sm text-stone-500">{material.description}</p>
+                  <p className="mt-1 text-sm text-stone-500">
+                    <LinkifyText text={material.description} />
+                  </p>
                 )}
                 {material.linkedGoals.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
@@ -1063,7 +1066,9 @@ function MaterialsTab({
                   {material.title}
                 </p>
                 {material.description && (
-                  <p className="mt-1 text-sm text-stone-500">{material.description}</p>
+                  <p className="mt-1 text-sm text-stone-500">
+                    <LinkifyText text={material.description} />
+                  </p>
                 )}
                 {material.linkedGoals.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">

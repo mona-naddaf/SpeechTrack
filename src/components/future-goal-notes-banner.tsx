@@ -1,4 +1,5 @@
 import { Lightbulb } from "lucide-react";
+import LinkifyText from "./linkify-text";
 
 type Props = {
   notes: { id: string; text: string }[];
@@ -21,7 +22,9 @@ export default function FutureGoalNotesBanner({ notes }: Props) {
       </p>
       <ul className="mt-1.5 list-disc space-y-1 pl-9 text-sm text-amber-900">
         {notes.map((note) => (
-          <li key={note.id}>{note.text}</li>
+          <li key={note.id}>
+            <LinkifyText text={note.text} />
+          </li>
         ))}
       </ul>
     </div>

@@ -10,6 +10,7 @@ import type {
   AssessmentQuestionResponseType,
 } from "@/lib/types";
 import { isAssessmentAnswered } from "@/lib/assessment";
+import LinkifyText from "@/components/linkify-text";
 
 type Props = {
   resultId: string;
@@ -233,7 +234,7 @@ export default function AssessmentAdminister({
                     )}
                     {question.notes && (
                       <p className="mt-1 text-xs text-stone-400">
-                        {question.notes}
+                        <LinkifyText text={question.notes} />
                       </p>
                     )}
                   </div>

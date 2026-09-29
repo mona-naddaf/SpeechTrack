@@ -5,6 +5,7 @@ import { formatDate } from "@/lib/date";
 import type { SessionRecord } from "@/lib/types";
 import SectionHeader from "@/components/section-header";
 import { useSectionPreferences } from "@/components/section-preferences";
+import LinkifyText from "@/components/linkify-text";
 
 type Props = {
   sessions: SessionRecord[];
@@ -67,7 +68,7 @@ export default function SessionsView({ sessions, error }: Props) {
                   </p>
                   {session.note ? (
                     <p className="mt-1 text-sm text-stone-600">
-                      {session.note}
+                      <LinkifyText text={session.note} />
                     </p>
                   ) : (
                     <p className="mt-1 text-sm text-stone-400">No note</p>

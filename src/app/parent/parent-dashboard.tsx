@@ -9,6 +9,7 @@ import { getHowItWentOption } from "@/lib/practice";
 import type { GoalProgressReport } from "@/lib/progress";
 import type { HomePracticeItem, HowItWent, PracticeLogWithPraise } from "@/lib/types";
 import StreakBadge from "@/components/streak-badge";
+import LinkifyText from "@/components/linkify-text";
 import LogPracticeForm from "./log-practice-form";
 import LogoutButton from "./logout-button";
 import ProgressSection from "./progress-section";
@@ -117,11 +118,11 @@ export default function ParentDashboard({
                 className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
               >
                 <p className="font-medium text-stone-900">
-                  {item.what_to_practice}
+                  <LinkifyText text={item.what_to_practice} />
                 </p>
                 {item.how_to_practice && (
                   <p className="mt-1 text-sm text-stone-600">
-                    {item.how_to_practice}
+                    <LinkifyText text={item.how_to_practice} />
                   </p>
                 )}
                 {item.last_worked_date && (
@@ -194,12 +195,19 @@ export default function ParentDashboard({
 
                   {log.activities.length > 0 && (
                     <p className="mt-2 text-sm text-stone-600">
-                      {log.activities.map((a) => a.text).join(", ")}
+                      {log.activities.map((a, i) => (
+                        <span key={a.id}>
+                          {i > 0 && ", "}
+                          <LinkifyText text={a.text} />
+                        </span>
+                      ))}
                     </p>
                   )}
 
                   {log.note && (
-                    <p className="mt-2 text-sm text-stone-600">{log.note}</p>
+                    <p className="mt-2 text-sm text-stone-600">
+                      <LinkifyText text={log.note} />
+                    </p>
                   )}
 
                   {log.praise.length > 0 && (
@@ -210,7 +218,7 @@ export default function ParentDashboard({
                           className="flex items-start gap-2 rounded-xl bg-gradient-to-r from-amber-50 to-brand-50 px-3 py-2.5 text-sm font-medium text-amber-900"
                         >
                           <PartyPopper className="h-4 w-4 shrink-0 text-amber-500" />
-                          {p.message}
+                          <LinkifyText text={p.message} />
                         </p>
                       ))}
                     </div>

@@ -8,6 +8,7 @@ import { getHowItWentOption } from "@/lib/practice";
 import type { ClassroomStrategyLogWithPraise } from "@/lib/types";
 import SectionHeader from "@/components/section-header";
 import { useSectionPreferences } from "@/components/section-preferences";
+import LinkifyText from "@/components/linkify-text";
 
 type Props = {
   initialLogs: ClassroomStrategyLogWithPraise[];
@@ -122,12 +123,19 @@ export default function ClassroomStrategyLogSection({
 
                 {log.activities.length > 0 && (
                   <p className="mt-2 text-sm text-stone-600">
-                    {log.activities.map((a) => a.text).join(", ")}
+                    {log.activities.map((a, i) => (
+                      <span key={a.id}>
+                        {i > 0 && ", "}
+                        <LinkifyText text={a.text} />
+                      </span>
+                    ))}
                   </p>
                 )}
 
                 {log.note && (
-                  <p className="mt-2 text-sm text-stone-600">{log.note}</p>
+                  <p className="mt-2 text-sm text-stone-600">
+                    <LinkifyText text={log.note} />
+                  </p>
                 )}
 
                 {log.praise.length > 0 && (
@@ -137,7 +145,7 @@ export default function ClassroomStrategyLogSection({
                         key={p.id}
                         className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900"
                       >
-                        🌟 {p.message}
+                        🌟 <LinkifyText text={p.message} />
                       </p>
                     ))}
                   </div>
