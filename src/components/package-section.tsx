@@ -17,6 +17,7 @@ import { useSectionPreferences } from "./section-preferences";
 import PackageFormModal, { type PackageFormValues } from "./package-form-modal";
 import ManualEntryModal, { type ManualEntryValues } from "./manual-entry-modal";
 import DeleteManualEntryModal from "./delete-manual-entry-modal";
+import CancelPackageConfirmModal from "./cancel-package-confirm-modal";
 
 type Props = {
   studentId: string;
@@ -54,7 +55,9 @@ export default function PackageSection(props: Props) {
   const { studentId, packages, items } = props;
   const router = useRouter();
   const [isRefreshing, startTransition] = useTransition();
-  const [modal, setModal] = useState<"setup" | "renew" | "manual" | null>(null);
+  const [modal, setModal] = useState<
+    "setup" | "renew" | "manual" | "edit" | "cancel" | null
+  >(null);
   const [deletingEntry, setDeletingEntry] = useState<PackageItem | null>(null);
   const [listOpen, setListOpen] = useState(false);
   const {
@@ -117,6 +120,71 @@ export default function PackageSection(props: Props) {
         .eq("id", state.current.id);
       return insertError.message;
     }
+    setModal(null);
+    refresh();
+    return null;
+  }
+
+  // Only the package row's two editable fields change — the circles
+  // re-derive from them on refresh like after any other change.
+  async function handleEdit(values: PackageFormValues) {
+    if (props.readOnly || !state) return null;
+    const { data, error } = await createClient()
+      .from("student_packages")
+      .update({ total_sessions: values.totalSessions, start_date: values.startDate })
+      .eq("id", state.current.id)
+      .is("ended_at", null)
+      .select("id");
+    if (error) return error.message;
+    if (!data || data.length === 0) {
+      return "This package is no longer active — reload the page to see the current one.";
+    }
+    setModal(null);
+    refresh();
+    return null;
+  }
+
+  // Deletes the package row outright (an ended row would keep consuming
+  // items) along with its manual entries — the ones no ended package
+  // consumed (state.ownedManualEntries), so earlier packages are never
+  // touched. Manual entries go first; if the package delete then fails
+  // they're re-inserted as they were, same manual-rollback approach as
+  // handleRenew.
+  async function handleCancelPackage() {
+    if (props.readOnly || !state) return null;
+    const supabase = createClient();
+    const owned = state.ownedManualEntries;
+
+    if (owned.length > 0) {
+      const { error } = await supabase
+        .from("package_manual_entries")
+        .delete()
+        .in("id", owned.map((e) => e.id));
+      if (error) return error.message;
+    }
+
+    const { data, error } = await supabase
+      .from("student_packages")
+      .delete()
+      .eq("id", state.current.id)
+      .is("ended_at", null)
+      .select("id");
+    if (error || !data || data.length === 0) {
+      if (owned.length > 0) {
+        await supabase.from("package_manual_entries").insert(
+          owned.map((e) => ({
+            id: e.id,
+            [props.ownerField]: props.ownerId,
+            student_id: studentId,
+            date: e.date,
+            note: e.note,
+            created_at: e.created_at,
+          }))
+        );
+      }
+      return error?.message ?? "Couldn't cancel this package — reload the page and try again.";
+    }
+
     setModal(null);
     refresh();
     return null;
@@ -313,6 +381,27 @@ export default function PackageSection(props: Props) {
               )}
             </div>
           )}
+
+          {!props.readOnly && (
+            <div className="mt-4 flex flex-wrap justify-end gap-1 border-t border-stone-100 pt-3">
+              <button
+                type="button"
+                onClick={() => setModal("edit")}
+                disabled={isRefreshing}
+                className="rounded-lg px-3 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-100 disabled:opacity-50"
+              >
+                Edit package
+              </button>
+              <button
+                type="button"
+                onClick={() => setModal("cancel")}
+                disabled={isRefreshing}
+                className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
+              >
+                Cancel package
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -331,6 +420,28 @@ export default function PackageSection(props: Props) {
           carryOverCount={state.extras.length}
           onCancel={() => setModal(null)}
           onSubmit={handleRenew}
+        />
+      )}
+      {modal === "edit" && state && (
+        <PackageFormModal
+          mode="edit"
+          defaultTotalSessions={state.current.total_sessions}
+          defaultStartDate={state.current.start_date}
+          countDroppedBefore={(startDate) =>
+            [...state.counted, ...state.extras].filter(
+              (item) => item.date < startDate
+            ).length
+          }
+          onCancel={() => setModal(null)}
+          onSubmit={handleEdit}
+        />
+      )}
+      {modal === "cancel" && state && (
+        <CancelPackageConfirmModal
+          totalSessions={state.current.total_sessions}
+          manualEntryCount={state.ownedManualEntries.length}
+          onCancel={() => setModal(null)}
+          onConfirm={handleCancelPackage}
         />
       )}
       {modal === "manual" && (

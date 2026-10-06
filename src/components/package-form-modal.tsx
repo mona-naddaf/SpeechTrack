@@ -15,6 +15,16 @@ type Props =
       onSubmit: (values: PackageFormValues) => Promise<string | null>;
     }
   | {
+      mode: "edit";
+      defaultTotalSessions: number;
+      defaultStartDate: string;
+      /** How many currently-counted/carry-over items a given start date
+       *  would push out, for the live warning under the date field. */
+      countDroppedBefore: (startDate: string) => number;
+      onCancel: () => void;
+      onSubmit: (values: PackageFormValues) => Promise<string | null>;
+    }
+  | {
       mode: "renew";
       /** Pre-fills the session count with the ending package's size. */
       defaultTotalSessions: number;
@@ -26,15 +36,28 @@ type Props =
       onSubmit: (values: PackageFormValues) => Promise<string | null>;
     };
 
-/** "Set up package" (session count + start date) and "Renew package"
- *  (session count only, pre-filled with the ending package's). */
+/** "Set up package" (session count + start date), "Edit package" (the
+ *  same two fields, pre-filled) and "Renew package" (session count only,
+ *  pre-filled with the ending package's). */
 export default function PackageFormModal(props: Props) {
   const [totalSessions, setTotalSessions] = useState(
-    props.mode === "renew" ? String(props.defaultTotalSessions) : "6"
+    props.mode === "setup" ? "6" : String(props.defaultTotalSessions)
   );
   const [startDate, setStartDate] = useState(
-    props.mode === "renew" ? props.startDate : getTodayLocalDateString()
+    props.mode === "renew"
+      ? props.startDate
+      : props.mode === "edit"
+        ? props.defaultStartDate
+        : getTodayLocalDateString()
   );
+  const droppedCount =
+    props.mode === "edit" && startDate ? props.countDroppedBefore(startDate) : 0;
+  const title =
+    props.mode === "renew"
+      ? "Renew package"
+      : props.mode === "edit"
+        ? "Edit package"
+        : "Set up package";
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,9 +85,7 @@ export default function PackageFormModal(props: Props) {
     <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/50">
       <div className="flex min-h-full items-center justify-center px-4 py-8">
         <div className="max-h-[85vh] w-full max-w-sm overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
-          <h2 className="text-lg font-bold text-stone-900">
-            {props.mode === "renew" ? "Renew package" : "Set up package"}
-          </h2>
+          <h2 className="text-lg font-bold text-stone-900">{title}</h2>
           {props.mode === "renew" && (
             <p className="mt-1 text-sm text-stone-500">
               This ends the current package and starts a new one.
@@ -95,7 +116,7 @@ export default function PackageFormModal(props: Props) {
               />
             </div>
 
-            {props.mode === "setup" ? (
+            {props.mode !== "renew" ? (
               <div>
                 <label
                   htmlFor="package-start-date"
@@ -114,6 +135,13 @@ export default function PackageFormModal(props: Props) {
                   Sessions, counted absences and manual entries on or after
                   this date fill the package.
                 </p>
+                {droppedCount > 0 && (
+                  <p className="mt-1 text-xs font-medium text-amber-700">
+                    {droppedCount} {droppedCount === 1 ? "item" : "items"} dated
+                    before this will stop counting. Nothing is deleted —
+                    moving the date back counts {droppedCount === 1 ? "it" : "them"} again.
+                  </p>
+                )}
               </div>
             ) : (
               <p className="text-xs text-stone-400">
@@ -137,11 +165,7 @@ export default function PackageFormModal(props: Props) {
                 disabled={loading}
                 className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
               >
-                {loading
-                  ? "Saving…"
-                  : props.mode === "renew"
-                    ? "Renew package"
-                    : "Set up package"}
+                {loading ? "Saving…" : props.mode === "edit" ? "Save changes" : title}
               </button>
             </div>
           </form>

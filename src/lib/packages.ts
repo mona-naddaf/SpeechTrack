@@ -65,10 +65,30 @@ export type PackageState = {
   /** Items logged after the current package filled up — nothing has
    *  consumed them yet, so they'll fill the renewed package. */
   extras: PackageItem[];
+  /** Manual entries no ended package consumed — the ones that belong to
+   *  the current package and get deleted if it's cancelled. Includes
+   *  any dated before the current start_date (e.g. after an edit moved
+   *  it later): they don't count, but nothing else could ever use them. */
+  ownedManualEntries: PackageItem[];
 };
 
+/** Chronological order for PostgREST timestamptz strings. Not
+ *  localeCompare: locale collation sorts "+" after ".", so a timestamp on
+ *  an exact second ("…:05+00:00") would land after "…:05.3+00:00".
+ *  Date.parse only has millisecond precision, so sub-millisecond ties
+ *  fall back to plain code-unit order — chronological for this fixed
+ *  "+00:00" format, since PostgREST only trims trailing fraction zeros
+ *  and "+" < "." < "0"-"9". */
+function compareTimestamps(a: string, b: string) {
+  const diff = Date.parse(a) - Date.parse(b);
+  if (diff !== 0) return diff;
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
 function compareItems(a: PackageItem, b: PackageItem) {
-  return a.date.localeCompare(b.date) || a.created_at.localeCompare(b.created_at);
+  // YYYY-MM-DD strings compare chronologically as plain strings.
+  if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+  return compareTimestamps(a.created_at, b.created_at);
 }
 
 /** Derives which items fill which package — nothing about this is stored.
@@ -85,7 +105,14 @@ function compareItems(a: PackageItem, b: PackageItem) {
  *  Because it's recomputed from the current rows every time, deleting
  *  any item un-fills a circle automatically: if it was in an ended
  *  package, that package takes the next item along, and so on down the
- *  chain.
+ *  chain. Editing the current package's start_date or total_sessions
+ *  works the same way — items before a later start just stop being
+ *  eligible (manual entries included, exactly like logged sessions),
+ *  and a smaller total fills sooner, leaving the rest as extras.
+ *
+ *  Ended packages only ever see items before later packages do, so
+ *  editing, cancelling (deleting) the current package, or deleting an
+ *  item no ended package consumed, can never change an ended package.
  *
  *  Returns null when the student has no current (un-ended) package. */
 export function derivePackageState(
@@ -97,12 +124,18 @@ export function derivePackageState(
 
   const sortedItems = [...items].sort(compareItems);
   const sortedPackages = [...packages].sort((a, b) =>
-    a.created_at.localeCompare(b.created_at)
+    compareTimestamps(a.created_at, b.created_at)
   );
   const consumed = new Set<string>();
 
   let counted: PackageItem[] = [];
+  let ownedManualEntries: PackageItem[] = [];
   for (const pkg of sortedPackages) {
+    if (pkg.id === current.id) {
+      ownedManualEntries = sortedItems.filter(
+        (item) => item.kind === "manual" && !consumed.has(item.id)
+      );
+    }
     const taken = sortedItems
       .filter((item) => !consumed.has(item.id) && item.date >= pkg.start_date)
       .slice(0, pkg.total_sessions);
@@ -117,7 +150,7 @@ export function derivePackageState(
       )
     : [];
 
-  return { current, counted, isFull, extras };
+  return { current, counted, isFull, extras, ownedManualEntries };
 }
 
 /** start_date for the package that replaces a full one: today, or the
