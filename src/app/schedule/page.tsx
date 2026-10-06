@@ -24,7 +24,13 @@ export default async function SchedulePage() {
 
   const { data, error } = await supabase
     .from("students")
-    .select("id, name, avatar, scheduled_days, schedule_end_date");
+    .select("id, name, avatar, scheduled_days, schedule_end_date")
+    // Stopped and Archived students are no longer being seen, so they
+    // leave the calendar (their past sessions stay in history); Trial
+    // students stay on it. Archived implies Stopped (DB CHECK), but both
+    // conditions are spelled out so neither depends on the other.
+    .neq("status", "stopped")
+    .is("archived_at", null);
 
   const students: CommonScheduleStudent[] = (data ?? []).map((row) => ({
     id: row.id,

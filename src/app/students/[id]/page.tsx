@@ -15,6 +15,7 @@ import type {
   HomePracticeItem,
   PracticeLogWithPraise,
   StudentPackage,
+  StudentTag,
   SlpBehaviorLogWithType,
   StudentCustomField,
   TrackTemplateWithSteps,
@@ -39,6 +40,7 @@ import AttendanceSection from "@/components/attendance-section";
 import GenerateReportButton from "@/components/generate-report-button";
 import SessionsSection from "@/components/sessions-section";
 import PackageSection from "@/components/package-section";
+import StudentStatusHeader from "@/components/student-status-header";
 import SectionPreferencesProvider from "@/components/section-preferences";
 import StudentTour from "@/components/student-tour";
 import StudentInfoSection from "./student-info-section";
@@ -73,7 +75,7 @@ export default async function StudentDetailPage({
   const { data: student } = await supabase
     .from("students")
     .select(
-      "id, name, class, parent_access_code, classroom_contact_access_code, share_behavior_with_parent, expected_frequency, avatar, scheduled_days, schedule_end_date, created_at, date_of_birth, mother_email, father_email, homeroom_teacher, custom_fields:student_custom_fields(id, student_id, label, value, created_at)"
+      "id, name, class, parent_access_code, classroom_contact_access_code, share_behavior_with_parent, expected_frequency, avatar, scheduled_days, schedule_end_date, created_at, date_of_birth, mother_email, father_email, homeroom_teacher, status, archived_at, custom_fields:student_custom_fields(id, student_id, label, value, created_at)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -103,6 +105,7 @@ export default async function StudentDetailPage({
     holidaysResult,
     packagesResult,
     manualEntriesResult,
+    tagLinksResult,
   ] = await Promise.all([
     supabase
       .from("goals")
@@ -232,7 +235,18 @@ export default async function StudentDetailPage({
       .select("id, student_id, date, note, created_at")
       .eq("slp_id", user.id)
       .eq("student_id", id),
+    supabase
+      .from("student_tag_links")
+      .select("tag:student_tags(id, name, color)")
+      .eq("student_id", id),
   ]);
+
+  const studentTags = (
+    (tagLinksResult.data ?? []) as unknown as { tag: StudentTag | null }[]
+  )
+    .map((l) => l.tag)
+    .filter((t): t is StudentTag => Boolean(t))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   // Materials linked to any of this student's goals, for the chips shown
   // on each goal card — a follow-up query since it depends on the goal
@@ -391,6 +405,13 @@ export default async function StudentDetailPage({
                   )}
                 </p>
               )}
+              <StudentStatusHeader
+                studentId={student.id}
+                status={student.status}
+                archivedAt={student.archived_at}
+                tags={studentTags}
+                studentsTable="students"
+              />
             </div>
           </div>
           <StreakBadge

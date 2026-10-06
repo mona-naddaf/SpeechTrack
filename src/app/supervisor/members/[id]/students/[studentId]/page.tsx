@@ -15,6 +15,7 @@ import type {
   SessionRecord,
   StudentCustomField,
   StudentPackage,
+  StudentTag,
   TeacherGoalWithRelations,
   TeacherStudentCustomField,
 } from "@/lib/types";
@@ -32,6 +33,7 @@ import StreakBadge from "@/components/streak-badge";
 import AvatarBadge from "@/components/avatar-badge";
 import SectionPreferencesProvider from "@/components/section-preferences";
 import PackageSection from "@/components/package-section";
+import StudentStatusHeader from "@/components/student-status-header";
 import SupervisorViewingBanner from "@/components/supervisor-viewing-banner";
 import StudentInfoView from "./student-info-view";
 import GoalsView, { type SupervisorGoalDisplay } from "./goals-view";
@@ -78,7 +80,7 @@ export default async function SupervisorStudentDetailPage({
     const { data: student } = await supabase
       .from("teacher_students")
       .select(
-        "id, teacher_id, name, class, expected_frequency, avatar, scheduled_days, schedule_end_date, date_of_birth, mother_email, father_email, homeroom_teacher, custom_fields:teacher_student_custom_fields(id, student_id, label, value, created_at)"
+        "id, teacher_id, name, class, expected_frequency, avatar, scheduled_days, schedule_end_date, date_of_birth, mother_email, father_email, homeroom_teacher, status, archived_at, custom_fields:teacher_student_custom_fields(id, student_id, label, value, created_at)"
       )
       .eq("id", studentId)
       .maybeSingle();
@@ -103,6 +105,7 @@ export default async function SupervisorStudentDetailPage({
       holidaysResult,
       packagesResult,
       manualEntriesResult,
+      tagLinksResult,
     ] = await Promise.all([
       supabase
         .from("teacher_goals")
@@ -175,7 +178,17 @@ export default async function SupervisorStudentDetailPage({
         .select("id, student_id, date, note, created_at")
         .eq("teacher_id", id)
         .eq("student_id", studentId),
+      supabase
+        .from("teacher_student_tag_links")
+        .select("tag:teacher_student_tags(id, name, color)")
+        .eq("student_id", studentId),
     ]);
+    const studentTags = (
+      (tagLinksResult.data ?? []) as unknown as { tag: StudentTag | null }[]
+    )
+      .map((l) => l.tag)
+      .filter((t): t is StudentTag => Boolean(t))
+      .sort((a, b) => a.name.localeCompare(b.name));
 
     const rawGoals = (goalsResult.data ?? []) as unknown as TeacherGoalWithRelations[];
     const goalsForMaterials = (goalsResult.data ?? []) as unknown as {
@@ -254,6 +267,12 @@ export default async function SupervisorStudentDetailPage({
                     )}
                   </p>
                 )}
+                <StudentStatusHeader
+                  studentId={student.id}
+                  status={student.status}
+                  archivedAt={student.archived_at}
+                  tags={studentTags}
+                />
               </div>
             </div>
             <StreakBadge
@@ -371,7 +390,7 @@ export default async function SupervisorStudentDetailPage({
   const { data: student } = await supabase
     .from("students")
     .select(
-      "id, slp_id, name, class, expected_frequency, avatar, scheduled_days, schedule_end_date, date_of_birth, mother_email, father_email, homeroom_teacher, custom_fields:student_custom_fields(id, student_id, label, value, created_at)"
+      "id, slp_id, name, class, expected_frequency, avatar, scheduled_days, schedule_end_date, date_of_birth, mother_email, father_email, homeroom_teacher, status, archived_at, custom_fields:student_custom_fields(id, student_id, label, value, created_at)"
     )
     .eq("id", studentId)
     .maybeSingle();
@@ -392,6 +411,7 @@ export default async function SupervisorStudentDetailPage({
     holidaysResult,
     packagesResult,
     manualEntriesResult,
+    tagLinksResult,
   ] = await Promise.all([
     supabase
       .from("goals")
@@ -471,7 +491,17 @@ export default async function SupervisorStudentDetailPage({
       .select("id, student_id, date, note, created_at")
       .eq("slp_id", id)
       .eq("student_id", studentId),
+    supabase
+      .from("student_tag_links")
+      .select("tag:student_tags(id, name, color)")
+      .eq("student_id", studentId),
   ]);
+  const studentTags = (
+    (tagLinksResult.data ?? []) as unknown as { tag: StudentTag | null }[]
+  )
+    .map((l) => l.tag)
+    .filter((t): t is StudentTag => Boolean(t))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const rawGoals = (goalsResult.data ?? []) as unknown as GoalWithRelations[];
   const goalsForMaterials = (goalsResult.data ?? []) as unknown as {
@@ -619,6 +649,12 @@ export default async function SupervisorStudentDetailPage({
                   )}
                 </p>
               )}
+              <StudentStatusHeader
+                studentId={student.id}
+                status={student.status}
+                archivedAt={student.archived_at}
+                tags={studentTags}
+              />
             </div>
           </div>
           <StreakBadge

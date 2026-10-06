@@ -28,6 +28,17 @@ export type ScheduledDayTime = {
   duration_minutes: number;
 };
 
+export type StudentStatus = "active" | "trial" | "stopped";
+
+/** One entry in an SLP's (student_tags) or Teacher's
+ *  (teacher_student_tags) own tag palette — same shape on both sides. */
+export type StudentTag = {
+  id: string;
+  name: string;
+  /** A src/lib/colors.ts palette value, same as behavior types. */
+  color: string;
+};
+
 export type Student = {
   id: string;
   name: string;
@@ -43,6 +54,13 @@ export type Student = {
    *  means no end date set. */
   schedule_end_date: string | null;
   created_at: string;
+  /** See 0042_student_tags_status_archive.sql. Internal only — never
+   *  shown in the parent or classroom-contact views. */
+  status: StudentStatus;
+  /** Set when a Stopped student is archived; null otherwise. */
+  archived_at: string | null;
+  /** Optional YYYY-MM-DD: when the student started with her. */
+  started_on: string | null;
 };
 
 /** A student's extended info — date of birth, homeroom teacher, parent
@@ -530,6 +548,10 @@ export type TeacherStudent = {
    *  means no end date set. */
   schedule_end_date: string | null;
   created_at: string;
+  /** Same three internal fields as Student — see there. */
+  status: StudentStatus;
+  archived_at: string | null;
+  started_on: string | null;
 };
 
 /** Teacher-side mirror of StudentCustomField above — same "not part of

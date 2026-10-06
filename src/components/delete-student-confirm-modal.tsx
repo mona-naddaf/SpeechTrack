@@ -2,15 +2,14 @@
 
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
-import type { Student } from "@/lib/types";
-
 type Props = {
-  student: Student;
+  /** Student or TeacherStudent — only the name is shown. */
+  student: { name: string };
   onCancel: () => void;
   onConfirm: () => Promise<string | null>;
 };
 
-export default function DeleteConfirmModal({
+export default function DeleteStudentConfirmModal({
   student,
   onCancel,
   onConfirm,

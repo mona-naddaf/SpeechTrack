@@ -4,24 +4,38 @@ import { useState, type FormEvent } from "react";
 import type {
   ExpectedFrequency,
   ScheduledDayTime,
+  Student,
+  StudentStatus,
+  StudentTag,
   TeacherStudent,
 } from "@/lib/types";
 import { EXPECTED_FREQUENCY_LABELS } from "@/lib/streaks";
+import { STUDENT_STATUSES, STUDENT_STATUS_LABELS } from "@/lib/student-list";
+import { getColorOption } from "@/lib/colors";
 import AvatarPicker from "@/components/avatar-picker";
 import SchedulePicker from "@/components/schedule-picker";
 
+export type StudentFormValues = {
+  name: string;
+  className: string;
+  expectedFrequency: ExpectedFrequency;
+  avatar: string | null;
+  scheduledDays: ScheduledDayTime[];
+  scheduleEndDate: string | null;
+  status: StudentStatus;
+  startedOn: string | null;
+  tagIds: string[];
+};
+
 type Props = {
   mode: "add" | "edit";
-  initialStudent?: TeacherStudent | null;
+  initialStudent?: Student | TeacherStudent | null;
+  /** The student's current tag ids (edit mode). */
+  initialTagIds?: string[];
+  /** Her whole tag palette, for the picker. */
+  availableTags: StudentTag[];
   onCancel: () => void;
-  onSubmit: (values: {
-    name: string;
-    className: string;
-    expectedFrequency: ExpectedFrequency;
-    avatar: string | null;
-    scheduledDays: ScheduledDayTime[];
-    scheduleEndDate: string | null;
-  }) => Promise<string | null>;
+  onSubmit: (values: StudentFormValues) => Promise<string | null>;
 };
 
 const FREQUENCY_OPTIONS: ExpectedFrequency[] = [
@@ -30,9 +44,13 @@ const FREQUENCY_OPTIONS: ExpectedFrequency[] = [
   "weekly",
 ];
 
+/** Add/edit student — shared by the SLP and Teacher dashboards
+ *  (students and teacher_students have the same editable shape). */
 export default function StudentFormModal({
   mode,
   initialStudent,
+  initialTagIds,
+  availableTags,
   onCancel,
   onSubmit,
 }: Props) {
@@ -49,8 +67,19 @@ export default function StudentFormModal({
   const [scheduleEndDate, setScheduleEndDate] = useState<string | null>(
     initialStudent?.schedule_end_date ?? null
   );
+  const [status, setStatus] = useState<StudentStatus>(
+    initialStudent?.status ?? "active"
+  );
+  const [startedOn, setStartedOn] = useState(initialStudent?.started_on ?? "");
+  const [tagIds, setTagIds] = useState<string[]>(initialTagIds ?? []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function toggleTag(id: string) {
+    setTagIds((prev) =>
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
+    );
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -69,6 +98,9 @@ export default function StudentFormModal({
       avatar,
       scheduledDays,
       scheduleEndDate,
+      status,
+      startedOn: startedOn || null,
+      tagIds,
     });
     setLoading(false);
     if (result) {
@@ -117,6 +149,83 @@ export default function StudentFormModal({
                 onChange={(e) => setClassName(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label
+                  htmlFor="student-status"
+                  className="block text-sm font-medium text-stone-700"
+                >
+                  Status
+                </label>
+                <select
+                  id="student-status"
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as StudentStatus)}
+                  disabled={Boolean(initialStudent?.archived_at)}
+                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:bg-stone-50"
+                >
+                  {STUDENT_STATUSES.map((s) => (
+                    <option key={s} value={s}>
+                      {STUDENT_STATUS_LABELS[s]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label
+                  htmlFor="student-started-on"
+                  className="block text-sm font-medium text-stone-700"
+                >
+                  Started on <span className="text-stone-400">(optional)</span>
+                </label>
+                <input
+                  id="student-started-on"
+                  type="date"
+                  value={startedOn}
+                  onChange={(e) => setStartedOn(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                />
+              </div>
+            </div>
+            {initialStudent?.archived_at && (
+              <p className="-mt-2 text-xs text-stone-500">
+                Archived students stay Stopped — restore the student to change
+                their status.
+              </p>
+            )}
+
+            <div>
+              <span className="block text-sm font-medium text-stone-700">
+                Tags <span className="text-stone-400">(optional)</span>
+              </span>
+              {availableTags.length === 0 ? (
+                <p className="mt-1 text-xs text-stone-500">
+                  No tags yet — create them under Student tags in the toolkit.
+                </p>
+              ) : (
+                <div className="mt-2 flex flex-wrap gap-2" data-testid="student-form-tags">
+                  {availableTags.map((tag) => {
+                    const selected = tagIds.includes(tag.id);
+                    return (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => toggleTag(tag.id)}
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium transition-all ${
+                          selected
+                            ? `${getColorOption(tag.color).badgeClass} ring-2 ring-stone-900 ring-offset-1`
+                            : "bg-white text-stone-600 ring-1 ring-stone-300 hover:bg-stone-50"
+                        }`}
+                      >
+                        {tag.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             <div>

@@ -9,6 +9,7 @@ import {
   Settings,
   Sliders,
   Smile,
+  Tags,
   Target,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -27,12 +28,14 @@ import {
 } from "@/lib/caseload";
 import { buildSlpDashboardSteps } from "@/lib/onboarding-tour";
 import CaseloadWinsCard from "@/components/caseload-wins-card";
+import StudentsListSection from "@/components/students-list-section";
+import { isStillBeingSeen } from "@/lib/student-list";
+import type { Student, StudentTag } from "@/lib/types";
 import StreakRiskNudges from "@/components/streak-risk-nudges";
 import CountdownsWidget from "@/components/countdowns-widget";
 import DashboardTour from "@/components/dashboard-tour";
 import LinkSupervisorButton from "@/components/link-supervisor-button";
 import SignOutButton from "./sign-out-button";
-import StudentsSection from "./students-section";
 import NamePromptModal from "./name-prompt-modal";
 
 export default async function DashboardPage() {
@@ -56,7 +59,7 @@ export default async function DashboardPage() {
   const { data: students, error } = await supabase
     .from("students")
     .select(
-      "id, name, class, expected_frequency, avatar, scheduled_days, schedule_end_date, created_at"
+      "id, name, class, expected_frequency, avatar, scheduled_days, schedule_end_date, created_at, status, archived_at, started_on"
     )
     .order("created_at", { ascending: false });
 
@@ -81,8 +84,15 @@ export default async function DashboardPage() {
   // holidays — one shared date list, not per-student like attendance —
   // get folded in for every student alike).
   const today = getTodayLocalDateString();
-  const [sessionsResult, attendanceResult, holidaysResult, countdownsResult, masteredCountResult] =
-    await Promise.all([
+  const [
+    sessionsResult,
+    attendanceResult,
+    holidaysResult,
+    countdownsResult,
+    masteredGoalsResult,
+    tagsResult,
+    tagLinksResult,
+  ] = await Promise.all([
       supabase.from("sessions").select("student_id, date"),
       supabase.from("attendance_records").select("student_id, date"),
       supabase
@@ -94,33 +104,55 @@ export default async function DashboardPage() {
         .order("target_date", { ascending: true }),
       supabase
         .from("goals")
-        .select("id", { count: "exact", head: true })
+        .select("student_id")
         .eq("slp_id", user.id)
         .eq("status", "mastered")
         .gte("mastered_at", daysAgoLocalDateString(30)),
+      // Explicit owner filter on her own tags, same defensive habit as
+      // the goals query above. Links are reached through her students.
+      supabase
+        .from("student_tags")
+        .select("id, name, color")
+        .eq("slp_id", user.id)
+        .order("name", { ascending: true }),
+      supabase.from("student_tag_links").select("student_id, tag_id"),
     ]);
 
-  const sessionDatesByStudentId = groupDatesByStudent(
-    sessionsResult.data ?? []
+  // Stopped and Archived students are no longer being seen, so they drop
+  // out of caseload wins and streak nudges; Trial students stay.
+  const seenStudents = (students ?? []).filter(isStillBeingSeen);
+  const seenStudentIds = new Set(seenStudents.map((s) => s.id));
+  const seenSessions = (sessionsResult.data ?? []).filter((s) =>
+    seenStudentIds.has(s.student_id)
   );
+  const masteredCount = (masteredGoalsResult.data ?? []).filter((g) =>
+    seenStudentIds.has(g.student_id)
+  ).length;
+  const sessionCountByStudentId: Record<string, number> = {};
+  for (const s of sessionsResult.data ?? []) {
+    sessionCountByStudentId[s.student_id] =
+      (sessionCountByStudentId[s.student_id] ?? 0) + 1;
+  }
+
+  const sessionDatesByStudentId = groupDatesByStudent(seenSessions);
   const absentDatesByStudentId = addSharedDatesToEveryStudent(
     groupDatesByStudent(attendanceResult.data ?? []),
-    (students ?? []).map((s) => s.id),
+    seenStudents.map((s) => s.id),
     (holidaysResult.data ?? []).flatMap((h) =>
       eachDateInRange(h.start_date, h.end_date)
     )
   );
   const caseloadStreaks = computeCaseloadStreaks(
-    students ?? [],
+    seenStudents,
     sessionDatesByStudentId,
     today,
     absentDatesByStudentId
   );
-  const sessionsThisWeek = (sessionsResult.data ?? []).filter(
+  const sessionsThisWeek = seenSessions.filter(
     (s) => weekStartOf(s.date) === weekStartOf(today)
   ).length;
   const atRiskStudents = findAtRiskStreaks(
-    students ?? [],
+    seenStudents,
     sessionDatesByStudentId,
     today,
     absentDatesByStudentId
@@ -171,6 +203,13 @@ export default async function DashboardPage() {
               Behavior types
             </Link>
             <Link
+              href="/toolkit/student-tags"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
+            >
+              <Tags className="h-4 w-4" />
+              Student tags
+            </Link>
+            <Link
               href="/toolkit/materials"
               className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-brand-800"
             >
@@ -211,7 +250,7 @@ export default async function DashboardPage() {
 
         <div className="mt-6 space-y-3">
           <CaseloadWinsCard
-            masteredCount={masteredCountResult.count ?? 0}
+            masteredCount={masteredCount}
             longestStreak={caseloadStreaks[0] ?? null}
             sessionsThisWeek={sessionsThisWeek}
           />
@@ -227,10 +266,18 @@ export default async function DashboardPage() {
         </div>
 
         <div className="mt-8">
-          <StudentsSection
-            userId={user.id}
-            initialStudents={students ?? []}
+          <StudentsListSection
+            ownerId={user.id}
+            ownerField="slp_id"
+            studentsTable="students"
+            tagLinksTable="student_tag_links"
+            studentBasePath="/students"
+            prefsStorageKey="bloomtrack:student-list:slp"
+            initialStudents={(students ?? []) as unknown as Student[]}
             initialError={error?.message ?? null}
+            tags={(tagsResult.data ?? []) as StudentTag[]}
+            tagLinks={tagLinksResult.data ?? []}
+            sessionCountByStudentId={sessionCountByStudentId}
           />
         </div>
       </div>
