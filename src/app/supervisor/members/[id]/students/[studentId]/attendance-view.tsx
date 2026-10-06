@@ -67,6 +67,11 @@ export default function AttendanceView({ records, error }: Props) {
                         {ATTENDANCE_REASON_LABELS[record.reason]}
                       </span>
                     )}
+                    {record.counts_toward_package && (
+                      <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">
+                        Counts toward package
+                      </span>
+                    )}
                   </div>
                   {record.reason_note && (
                     <p className="mt-1 text-sm text-stone-600">

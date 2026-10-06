@@ -558,6 +558,36 @@ export type AttendanceRecord = {
   date: string;
   reason: AttendanceReason | null;
   reason_note: string | null;
+  /** Bills this absence against the student's session package anyway
+   *  (see 0041_session_packages.sql). */
+  counts_toward_package: boolean;
+  created_at: string;
+};
+
+// ============================================================
+// Session packages (0041_session_packages.sql) — same shared-table,
+// one-of-slp_id/teacher_id shape as AttendanceRecord, so the owner
+// columns are likewise left out of these app-facing types. Which items
+// fill a package is derived, never stored — see src/lib/packages.ts.
+// ============================================================
+
+export type StudentPackage = {
+  id: string;
+  student_id: string;
+  total_sessions: number;
+  /** YYYY-MM-DD */
+  start_date: string;
+  /** Set on renewal; null on the student's one current package. */
+  ended_at: string | null;
+  created_at: string;
+};
+
+export type PackageManualEntry = {
+  id: string;
+  student_id: string;
+  /** YYYY-MM-DD */
+  date: string;
+  note: string | null;
   created_at: string;
 };
 

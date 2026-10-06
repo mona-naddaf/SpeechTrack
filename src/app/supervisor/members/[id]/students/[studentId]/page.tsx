@@ -10,9 +10,11 @@ import type {
   AttendanceRecord,
   GoalWithRelations,
   HomePracticeItem,
+  PackageManualEntry,
   PracticeLogWithPraise,
   SessionRecord,
   StudentCustomField,
+  StudentPackage,
   TeacherGoalWithRelations,
   TeacherStudentCustomField,
 } from "@/lib/types";
@@ -25,9 +27,11 @@ import { eachDateInRange, getTodayLocalDateString } from "@/lib/date";
 import { computeAssessmentScore } from "@/lib/assessment";
 import { computeCadenceStreak, formatCadenceStreakLabel } from "@/lib/streaks";
 import { formatSchedule } from "@/lib/schedule";
+import { buildPackageItems } from "@/lib/packages";
 import StreakBadge from "@/components/streak-badge";
 import AvatarBadge from "@/components/avatar-badge";
 import SectionPreferencesProvider from "@/components/section-preferences";
+import PackageSection from "@/components/package-section";
 import SupervisorViewingBanner from "@/components/supervisor-viewing-banner";
 import StudentInfoView from "./student-info-view";
 import GoalsView, { type SupervisorGoalDisplay } from "./goals-view";
@@ -97,6 +101,8 @@ export default async function SupervisorStudentDetailPage({
       practiceLogsResult,
       attendanceResult,
       holidaysResult,
+      packagesResult,
+      manualEntriesResult,
     ] = await Promise.all([
       supabase
         .from("teacher_goals")
@@ -149,7 +155,7 @@ export default async function SupervisorStudentDetailPage({
         .order("created_at", { ascending: false }),
       supabase
         .from("attendance_records")
-        .select("id, student_id, date, reason, reason_note, created_at")
+        .select("id, student_id, date, reason, reason_note, counts_toward_package, created_at")
         .eq("student_id", studentId)
         .order("date", { ascending: false })
         .order("created_at", { ascending: false }),
@@ -159,6 +165,16 @@ export default async function SupervisorStudentDetailPage({
       // member's holidays specifically, in case the supervisor is linked
       // to more than one member.
       supabase.from("holidays").select("start_date, end_date").eq("teacher_id", id),
+      supabase
+        .from("student_packages")
+        .select("id, student_id, total_sessions, start_date, ended_at, created_at")
+        .eq("teacher_id", id)
+        .eq("student_id", studentId),
+      supabase
+        .from("package_manual_entries")
+        .select("id, student_id, date, note, created_at")
+        .eq("teacher_id", id)
+        .eq("student_id", studentId),
     ]);
 
     const rawGoals = (goalsResult.data ?? []) as unknown as TeacherGoalWithRelations[];
@@ -319,6 +335,22 @@ export default async function SupervisorStudentDetailPage({
                 ),
               },
               {
+                key: "package",
+                defaultCollapsed: false,
+                node: (
+                  <PackageSection
+                    readOnly
+                    studentId={student.id}
+                    packages={(packagesResult.data ?? []) as unknown as StudentPackage[]}
+                    items={buildPackageItems(
+                      sessions,
+                      attendance,
+                      (manualEntriesResult.data ?? []) as unknown as PackageManualEntry[]
+                    )}
+                  />
+                ),
+              },
+              {
                 key: "attendance",
                 defaultCollapsed: true,
                 node: <AttendanceView records={attendance} error={attendanceResult.error?.message ?? null} />,
@@ -358,6 +390,8 @@ export default async function SupervisorStudentDetailPage({
     behaviorTypesResult,
     attendanceResult,
     holidaysResult,
+    packagesResult,
+    manualEntriesResult,
   ] = await Promise.all([
     supabase
       .from("goals")
@@ -417,7 +451,7 @@ export default async function SupervisorStudentDetailPage({
       .order("name", { ascending: true }),
     supabase
       .from("attendance_records")
-      .select("id, student_id, date, reason, reason_note, created_at")
+      .select("id, student_id, date, reason, reason_note, counts_toward_package, created_at")
       .eq("student_id", studentId)
       .order("date", { ascending: false })
       .order("created_at", { ascending: false }),
@@ -427,6 +461,16 @@ export default async function SupervisorStudentDetailPage({
     // member's holidays specifically, in case the supervisor is linked
     // to more than one member.
     supabase.from("holidays").select("start_date, end_date").eq("slp_id", id),
+    supabase
+      .from("student_packages")
+      .select("id, student_id, total_sessions, start_date, ended_at, created_at")
+      .eq("slp_id", id)
+      .eq("student_id", studentId),
+    supabase
+      .from("package_manual_entries")
+      .select("id, student_id, date, note, created_at")
+      .eq("slp_id", id)
+      .eq("student_id", studentId),
   ]);
 
   const rawGoals = (goalsResult.data ?? []) as unknown as GoalWithRelations[];
@@ -661,6 +705,22 @@ export default async function SupervisorStudentDetailPage({
                   logs={(behaviorLogsResult.data ?? []) as unknown as SupervisorBehaviorLogDisplay[]}
                   error={behaviorLogsResult.error?.message ?? null}
                   behaviorTypes={behaviorTypesResult.data ?? []}
+                />
+              ),
+            },
+            {
+              key: "package",
+              defaultCollapsed: false,
+              node: (
+                <PackageSection
+                  readOnly
+                  studentId={student.id}
+                  packages={(packagesResult.data ?? []) as unknown as StudentPackage[]}
+                  items={buildPackageItems(
+                    sessions,
+                    attendance,
+                    (manualEntriesResult.data ?? []) as unknown as PackageManualEntry[]
+                  )}
                 />
               ),
             },

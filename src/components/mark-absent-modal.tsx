@@ -9,17 +9,24 @@ export type MarkAbsentValues = {
   date: string;
   reason: AttendanceReason;
   reasonNote: string;
+  countsTowardPackage: boolean;
 };
 
 type Props = {
+  /** Present when editing an existing absence; omitted for "Mark absent". */
+  initialValues?: MarkAbsentValues;
   onCancel: () => void;
   onSubmit: (values: MarkAbsentValues) => Promise<string | null>;
 };
 
-export default function MarkAbsentModal({ onCancel, onSubmit }: Props) {
-  const [date, setDate] = useState(getTodayLocalDateString());
-  const [reason, setReason] = useState<AttendanceReason>("sick");
-  const [reasonNote, setReasonNote] = useState("");
+export default function MarkAbsentModal({ initialValues, onCancel, onSubmit }: Props) {
+  const isEdit = Boolean(initialValues);
+  const [date, setDate] = useState(initialValues?.date ?? getTodayLocalDateString());
+  const [reason, setReason] = useState<AttendanceReason>(initialValues?.reason ?? "sick");
+  const [reasonNote, setReasonNote] = useState(initialValues?.reasonNote ?? "");
+  const [countsTowardPackage, setCountsTowardPackage] = useState(
+    initialValues?.countsTowardPackage ?? false
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,7 +34,12 @@ export default function MarkAbsentModal({ onCancel, onSubmit }: Props) {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const result = await onSubmit({ date, reason, reasonNote: reasonNote.trim() });
+    const result = await onSubmit({
+      date,
+      reason,
+      reasonNote: reasonNote.trim(),
+      countsTowardPackage,
+    });
     setLoading(false);
     if (result) {
       setError(result);
@@ -38,7 +50,9 @@ export default function MarkAbsentModal({ onCancel, onSubmit }: Props) {
     <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/50">
       <div className="flex min-h-full items-center justify-center px-4 py-8">
         <div className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
-          <h2 className="text-lg font-bold text-stone-900">Mark absent</h2>
+          <h2 className="text-lg font-bold text-stone-900">
+            {isEdit ? "Edit absence" : "Mark absent"}
+          </h2>
 
           <form onSubmit={handleSubmit} className="mt-4 space-y-4">
             <div>
@@ -99,6 +113,16 @@ export default function MarkAbsentModal({ onCancel, onSubmit }: Props) {
               />
             </div>
 
+            <label className="flex items-center gap-2 text-sm font-medium text-stone-700">
+              <input
+                type="checkbox"
+                checked={countsTowardPackage}
+                onChange={(e) => setCountsTowardPackage(e.target.checked)}
+                className="h-4 w-4 rounded border-stone-300 text-brand-600 focus:ring-brand-500"
+              />
+              Counts toward package
+            </label>
+
             {error && <p className="text-sm text-red-600">{error}</p>}
 
             <div className="flex justify-end gap-2 pt-2">
@@ -115,7 +139,7 @@ export default function MarkAbsentModal({ onCancel, onSubmit }: Props) {
                 disabled={loading}
                 className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
               >
-                {loading ? "Saving…" : "Mark absent"}
+                {loading ? "Saving…" : isEdit ? "Save changes" : "Mark absent"}
               </button>
             </div>
           </form>

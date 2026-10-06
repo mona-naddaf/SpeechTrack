@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CalendarClock, PlayCircle } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import { formatDate } from "@/lib/date";
 import type { SessionRecord } from "@/lib/types";
 import SectionHeader from "./section-header";
 import { useSectionPreferences } from "./section-preferences";
 import EditSessionModal from "./edit-session-modal";
+import DeleteSessionConfirmModal from "./delete-session-confirm-modal";
 import LinkifyText from "./linkify-text";
 
 type Props = {
@@ -17,7 +20,7 @@ type Props = {
    *  on the Teacher side — same list/empty-state markup otherwise. */
   newSessionHref: string;
   /** "sessions" for the SLP side, "teacher_sessions" for Teacher — needed
-   *  for the per-row "Edit" modal's update call. */
+   *  for the per-row "Edit" modal's update call and "Delete" call. */
   sessionsTable: "sessions" | "teacher_sessions";
 };
 
@@ -25,7 +28,9 @@ type Props = {
  *  have the identical shape, so only the "Start session" link and table
  *  name differ. Editing here is deliberately limited to a past session's
  *  note + parent-sharing toggle (via EditSessionModal) — not the trial
- *  data itself, which stays a session/new-only, log-as-you-go flow. */
+ *  data itself, which stays a session/new-only, log-as-you-go flow.
+ *  "Delete" removes the whole session; its trials go with it via the
+ *  trials/teacher_trials ON DELETE CASCADE foreign key. */
 export default function SessionsSection({
   sessions: initialSessions,
   error,
@@ -34,6 +39,8 @@ export default function SessionsSection({
 }: Props) {
   const [sessions, setSessions] = useState<SessionRecord[]>(initialSessions);
   const [editingSession, setEditingSession] = useState<SessionRecord | null>(null);
+  const [deletingSession, setDeletingSession] = useState<SessionRecord | null>(null);
+  const router = useRouter();
   const {
     collapsed,
     onToggleCollapse,
@@ -46,6 +53,24 @@ export default function SessionsSection({
   function handleSaved(updated: SessionRecord) {
     setSessions((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
     setEditingSession(null);
+  }
+
+  async function handleDelete() {
+    if (!deletingSession) return null;
+    const { data, error } = await createClient()
+      .from(sessionsTable)
+      .delete()
+      .eq("id", deletingSession.id)
+      .select("id");
+    if (error) return error.message;
+    // RLS turns a not-allowed delete into a silent zero-row no-op.
+    if (!data || data.length === 0) return "Couldn't delete this session.";
+    setSessions((prev) => prev.filter((s) => s.id !== deletingSession.id));
+    setDeletingSession(null);
+    // Re-fetch the page so everything else derived from sessions — the
+    // streak badge and the session package circles — reflects it too.
+    router.refresh();
+    return null;
   }
 
   return (
@@ -116,13 +141,22 @@ export default function SessionsSection({
                       <p className="mt-1 text-sm text-stone-400">No note</p>
                     )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setEditingSession(session)}
-                    className="shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-100"
-                  >
-                    Edit
-                  </button>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setEditingSession(session)}
+                      className="rounded-lg px-3 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-100"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeletingSession(session)}
+                      className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+                    >
+                      Delete session
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -136,6 +170,15 @@ export default function SessionsSection({
           sessionsTable={sessionsTable}
           onCancel={() => setEditingSession(null)}
           onSaved={handleSaved}
+        />
+      )}
+
+      {deletingSession && (
+        <DeleteSessionConfirmModal
+          session={deletingSession}
+          trialsTable={sessionsTable === "sessions" ? "trials" : "teacher_trials"}
+          onCancel={() => setDeletingSession(null)}
+          onConfirm={handleDelete}
         />
       )}
     </div>

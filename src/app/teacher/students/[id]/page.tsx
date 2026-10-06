@@ -10,8 +10,10 @@ import type {
   ClassroomStrategy,
   ClassroomStrategyLogWithPraise,
   FutureGoalNote,
+  PackageManualEntry,
   HomePracticeItem,
   PracticeLogWithPraise,
+  StudentPackage,
   TeacherGoalTrack,
   TeacherGoalWithRelations,
   TeacherStudentCustomField,
@@ -23,12 +25,14 @@ import {
 } from "@/lib/materials";
 import { computeCadenceStreak, formatCadenceStreakLabel } from "@/lib/streaks";
 import { formatSchedule } from "@/lib/schedule";
+import { buildPackageItems } from "@/lib/packages";
 import { TEACHER_STUDENT_TOUR_STEPS } from "@/lib/onboarding-tour";
 import StreakBadge from "@/components/streak-badge";
 import AvatarBadge from "@/components/avatar-badge";
 import AttendanceSection from "@/components/attendance-section";
 import GenerateReportButton from "@/components/generate-report-button";
 import SessionsSection from "@/components/sessions-section";
+import PackageSection from "@/components/package-section";
 import SectionPreferencesProvider from "@/components/section-preferences";
 import StudentTour from "@/components/student-tour";
 import StudentInfoSection from "./student-info-section";
@@ -91,6 +95,8 @@ export default async function TeacherStudentDetailPage({
     classroomStrategyLogsResult,
     attendanceResult,
     holidaysResult,
+    packagesResult,
+    manualEntriesResult,
   ] = await Promise.all([
     supabase
       .from("teacher_goals")
@@ -188,7 +194,7 @@ export default async function TeacherStudentDetailPage({
       .order("created_at", { ascending: false }),
     supabase
       .from("attendance_records")
-      .select("id, student_id, date, reason, reason_note, created_at")
+      .select("id, student_id, date, reason, reason_note, counts_toward_package, created_at")
       .eq("student_id", id)
       .order("date", { ascending: false })
       .order("created_at", { ascending: false }),
@@ -197,6 +203,16 @@ export default async function TeacherStudentDetailPage({
     // same as attendance_records' excused absences do, just shared
     // rather than per-student. See computeCadenceStreak below.
     supabase.from("holidays").select("start_date, end_date"),
+    supabase
+      .from("student_packages")
+      .select("id, student_id, total_sessions, start_date, ended_at, created_at")
+      .eq("teacher_id", user.id)
+      .eq("student_id", id),
+    supabase
+      .from("package_manual_entries")
+      .select("id, student_id, date, note, created_at")
+      .eq("teacher_id", user.id)
+      .eq("student_id", id),
   ]);
 
   // Materials linked to any of this student's goals, for the chips shown
@@ -425,6 +441,27 @@ export default async function TeacherStudentDetailPage({
                   initialLogsError={behaviorLogsResult.error?.message ?? null}
                   behaviorTypes={behaviorTypesResult.data ?? []}
                   shareBehaviorWithParent={student.share_behavior_with_parent}
+                />
+              ),
+            },
+            {
+              key: "package",
+              defaultCollapsed: false,
+              node: (
+                <PackageSection
+                  studentId={student.id}
+                  ownerId={user.id}
+                  ownerField="teacher_id"
+                  packages={
+                    (packagesResult.data ?? []) as unknown as StudentPackage[]
+                  }
+                  items={buildPackageItems(
+                    sessionsResult.data ?? [],
+                    (attendanceResult.data ??
+                      []) as unknown as AttendanceRecord[],
+                    (manualEntriesResult.data ??
+                      []) as unknown as PackageManualEntry[]
+                  )}
                 />
               ),
             },
