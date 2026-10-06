@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import type { Area, ResponseFormatOption, ShareVisibility } from "@/lib/types";
+import type { ResponseFormatOption, ShareVisibility } from "@/lib/types";
 import VisibilityField from "@/components/visibility-field";
-import type { BankGoalWithRelations } from "./goal-bank-section";
+import type { BankGoalRow } from "./goal-bank-section";
 
 const VISIBILITY_OPTIONS = [
   { value: "private" as const, label: "Private" },
@@ -11,7 +11,7 @@ const VISIBILITY_OPTIONS = [
 ];
 
 export type BankGoalFormValues = {
-  areaId: string;
+  categoryId: string;
   text: string;
   responseFormatId: string | null;
   targetPercent: number | null;
@@ -20,27 +20,41 @@ export type BankGoalFormValues = {
 
 type Props = {
   mode: "add" | "edit";
-  areas: Area[];
+  /** "Area" (SLP) or "Subject" (Teacher). */
+  categoryLabel: "Area" | "Subject";
+  categories: { id: string; name: string }[];
   responseFormats: ResponseFormatOption[];
-  initialGoal?: BankGoalWithRelations | null;
+  /** Account-wide default format — pre-selected on add only; an edited
+   *  goal always shows its own format. */
+  defaultFormatId: string | null;
+  initialGoal?: BankGoalRow | null;
   onCancel: () => void;
   onSubmit: (values: BankGoalFormValues) => Promise<string | null>;
 };
 
+const PLACEHOLDERS: Record<"Area" | "Subject", string> = {
+  Area: "e.g. Will produce /r/ in initial position of words with 80% accuracy",
+  Subject: "e.g. Will complete addition worksheets with 80% accuracy",
+};
+
+/** Add/edit a bank goal — shared by the SLP and Teacher goal banks. */
 export default function BankGoalFormModal({
   mode,
-  areas,
+  categoryLabel,
+  categories,
   responseFormats,
+  defaultFormatId,
   initialGoal,
   onCancel,
   onSubmit,
 }: Props) {
-  const [areaId, setAreaId] = useState(
-    initialGoal?.area_id ?? areas[0]?.id ?? ""
+  const lower = categoryLabel.toLowerCase();
+  const [categoryId, setCategoryId] = useState(
+    initialGoal?.category_id ?? categories[0]?.id ?? ""
   );
   const [text, setText] = useState(initialGoal?.text ?? "");
   const [responseFormatId, setResponseFormatId] = useState(
-    initialGoal?.response_format_id ?? ""
+    mode === "edit" ? initialGoal?.response_format_id ?? "" : defaultFormatId ?? ""
   );
   const [targetPercent, setTargetPercent] = useState(
     initialGoal?.target_percent !== undefined &&
@@ -57,8 +71,8 @@ export default function BankGoalFormModal({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
 
-    if (!areaId) {
-      setError("Please choose an area.");
+    if (!categoryId) {
+      setError(`Please choose ${categoryLabel === "Area" ? "an" : "a"} ${lower}.`);
       return;
     }
     if (!text.trim()) {
@@ -79,7 +93,7 @@ export default function BankGoalFormModal({
     setLoading(true);
     setError(null);
     const result = await onSubmit({
-      areaId,
+      categoryId,
       text: text.trim(),
       responseFormatId: responseFormatId || null,
       targetPercent: targetValue,
@@ -102,21 +116,21 @@ export default function BankGoalFormModal({
           <form onSubmit={handleSubmit} className="mt-4 space-y-4">
             <div>
               <label
-                htmlFor="bank-goal-area"
+                htmlFor="bank-goal-category"
                 className="block text-sm font-medium text-stone-700"
               >
-                Area
+                {categoryLabel}
               </label>
               <select
-                id="bank-goal-area"
-                value={areaId}
-                onChange={(e) => setAreaId(e.target.value)}
+                id="bank-goal-category"
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
               >
-                {areas.length === 0 && <option value="">No areas yet</option>}
-                {areas.map((area) => (
-                  <option key={area.id} value={area.id}>
-                    {area.name}
+                {categories.length === 0 && <option value="">No {lower}s yet</option>}
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
                   </option>
                 ))}
               </select>
@@ -135,7 +149,7 @@ export default function BankGoalFormModal({
                 onChange={(e) => setText(e.target.value)}
                 rows={3}
                 className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                placeholder="e.g. Will produce /r/ in initial position of words with 80% accuracy"
+                placeholder={PLACEHOLDERS[categoryLabel]}
               />
             </div>
 

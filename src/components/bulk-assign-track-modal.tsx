@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { matchesSearch } from "@/lib/search";
 import SearchInput from "@/components/search-input";
+import type { ResponseFormatOption } from "@/lib/types";
 
 type CategoryOption = { id: string; name: string };
 
@@ -38,6 +39,10 @@ type Props = {
   categories: CategoryOption[];
   bankGoals: BulkAssignBankGoal[];
   existingTracks: BulkAssignTrackOption[];
+  responseFormats: ResponseFormatOption[];
+  /** Account-wide default — pre-selected as the format for picked bank
+   *  goals that have no default format of their own. */
+  defaultFormatId: string | null;
   goalsTable: "goals" | "teacher_goals";
   tracksTable: "goal_tracks" | "teacher_goal_tracks";
   categoryTable: "areas" | "teacher_subjects";
@@ -76,6 +81,8 @@ export default function BulkAssignTrackModal({
   categories,
   bankGoals,
   existingTracks,
+  responseFormats,
+  defaultFormatId,
   goalsTable,
   tracksTable,
   categoryTable,
@@ -93,6 +100,9 @@ export default function BulkAssignTrackModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  // Used only for picks whose bank goal has no format of its own — a bank
+  // goal's own format always wins.
+  const [fallbackFormatId, setFallbackFormatId] = useState(defaultFormatId ?? "");
 
   // Filtered first, then grouped — a search matches across every
   // area/subject at once instead of needing one picked first. Anything
@@ -236,7 +246,7 @@ export default function BulkAssignTrackModal({
         student_id: studentId,
         [categoryIdColumn]: bankGoal.categoryId,
         text: bankGoal.text,
-        response_format_id: bankGoal.response_format_id,
+        response_format_id: bankGoal.response_format_id ?? (fallbackFormatId || null),
         target_percent: bankGoal.target_percent,
         status,
         track_id: inTrack ? trackId : null,
@@ -397,6 +407,37 @@ export default function BulkAssignTrackModal({
               )}
             </div>
           )}
+
+          {(() => {
+            const withoutOwnFormat = [...selected.keys()].filter(
+              (id) => !bankGoals.find((g) => g.id === id)?.response_format_id
+            ).length;
+            if (withoutOwnFormat === 0 || responseFormats.length === 0) return null;
+            return (
+              <div className="mt-3">
+                <label htmlFor="bulk-assign-fallback-format" className="block text-sm font-medium text-stone-700">
+                  Response format for {withoutOwnFormat} {withoutOwnFormat === 1 ? "goal" : "goals"} without
+                  their own
+                </label>
+                <select
+                  id="bulk-assign-fallback-format"
+                  value={fallbackFormatId}
+                  onChange={(e) => setFallbackFormatId(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                >
+                  <option value="">None</option>
+                  {responseFormats.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-stone-400">
+                  Bank goals that have their own format keep it.
+                </p>
+              </div>
+            );
+          })()}
 
           {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
 

@@ -3,10 +3,10 @@ import { ArrowLeft, Gamepad2, Library, ListTree, Sliders, Smile, Users } from "l
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/role";
-import type { ResponseFormatOption, TeacherSubject } from "@/lib/types";
-import GoalBankSection, {
-  type TeacherBankGoalWithRelations,
-} from "./goal-bank-section";
+import type { ResponseFormatOption } from "@/lib/types";
+import { resolveDefaultFormatId } from "@/lib/default-format";
+import { TEACHER_GOAL_BANK } from "@/lib/goal-bank-config";
+import GoalBankSection, { type BankGoalRow } from "@/components/goal-bank-section";
 
 export default async function TeacherGoalBankPage() {
   const supabase = await createClient();
@@ -30,7 +30,7 @@ export default async function TeacherGoalBankPage() {
     supabase
       .from("teacher_goals")
       .select(
-        "id, student_id, subject_id, text, response_format_id, target_percent, visibility, created_at, subject:teacher_subjects(id, name), response_format:teacher_response_formats(id, name)"
+        "id, category_id:subject_id, text, response_format_id, target_percent, visibility, created_at, category:teacher_subjects(id, name), response_format:teacher_response_formats(id, name)"
       )
       .eq("teacher_id", user.id)
       .is("student_id", null)
@@ -119,14 +119,12 @@ export default async function TeacherGoalBankPage() {
 
         <div className="mt-6">
           <GoalBankSection
-            initialGoals={
-              (bankGoalsResult.data ??
-                []) as unknown as TeacherBankGoalWithRelations[]
-            }
-            subjects={(subjectsResult.data ?? []) as TeacherSubject[]}
-            responseFormats={
-              (formatsResult.data ?? []) as ResponseFormatOption[]
-            }
+            config={TEACHER_GOAL_BANK}
+            ownerId={user.id}
+            initialGoals={(bankGoalsResult.data ?? []) as unknown as BankGoalRow[]}
+            categories={subjectsResult.data ?? []}
+            responseFormats={(formatsResult.data ?? []) as ResponseFormatOption[]}
+            defaultFormatId={resolveDefaultFormatId(user, formatsResult.data ?? [])}
           />
         </div>
       </div>

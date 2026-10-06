@@ -12,6 +12,8 @@ export type StepFormValues = {
 type Props = {
   mode: "add" | "edit";
   responseFormats: ResponseFormatOption[];
+  /** Account-wide default format — pre-selected for new steps only. */
+  defaultFormatId: string | null;
   initialStep?: TrackTemplateStepWithRelations | null;
   onCancel: () => void;
   onSubmit: (values: StepFormValues) => Promise<string | null>;
@@ -20,13 +22,14 @@ type Props = {
 export default function StepFormModal({
   mode,
   responseFormats,
+  defaultFormatId,
   initialStep,
   onCancel,
   onSubmit,
 }: Props) {
   const [goalText, setGoalText] = useState(initialStep?.goal_text ?? "");
   const [responseFormatId, setResponseFormatId] = useState(
-    initialStep?.response_format_id ?? ""
+    mode === "edit" ? initialStep?.response_format_id ?? "" : defaultFormatId ?? ""
   );
   const [targetPercent, setTargetPercent] = useState(
     initialStep?.target_percent !== undefined && initialStep?.target_percent !== null

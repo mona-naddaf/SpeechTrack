@@ -27,6 +27,7 @@ import {
 import { computeCadenceStreak, formatCadenceStreakLabel } from "@/lib/streaks";
 import { formatSchedule } from "@/lib/schedule";
 import { buildPackageItems } from "@/lib/packages";
+import { resolveDefaultFormatId } from "@/lib/default-format";
 import { TEACHER_STUDENT_TOUR_STEPS } from "@/lib/onboarding-tour";
 import StreakBadge from "@/components/streak-badge";
 import AvatarBadge from "@/components/avatar-badge";
@@ -380,6 +381,7 @@ export default async function TeacherStudentDetailPage({
                   initialGoalsError={goalsResult.error?.message ?? null}
                   subjects={subjectsResult.data ?? []}
                   responseFormats={formatsResult.data ?? []}
+                  defaultFormatId={resolveDefaultFormatId(user, formatsResult.data ?? [])}
                   bankGoals={bankGoalsResult.data ?? []}
                   initialGoalTracks={
                     (goalTracksResult.data ?? []) as unknown as TeacherGoalTrack[]

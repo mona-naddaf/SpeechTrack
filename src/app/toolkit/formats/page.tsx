@@ -3,6 +3,7 @@ import { ArrowLeft, ClipboardList, Gamepad2, Library, ListTree, Smile, Target, U
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import FormatsList from "./formats-list";
+import { resolveDefaultFormatId } from "@/lib/default-format";
 
 export default async function ResponseFormatsPage() {
   const supabase = await createClient();
@@ -105,7 +106,10 @@ export default async function ResponseFormatsPage() {
         )}
 
         <div className="mt-6">
-          <FormatsList initialFormats={formats ?? []} />
+          <FormatsList
+            initialFormats={formats ?? []}
+            initialDefaultFormatId={resolveDefaultFormatId(user, formats ?? [])}
+          />
         </div>
       </div>
     </main>

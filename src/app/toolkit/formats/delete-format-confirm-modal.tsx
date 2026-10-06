@@ -6,12 +6,15 @@ import type { ResponseFormat } from "@/lib/types";
 
 type Props = {
   format: ResponseFormat;
+  /** It's her account-wide default — deleting it clears the default. */
+  isDefault?: boolean;
   onCancel: () => void;
   onConfirm: () => Promise<string | null>;
 };
 
 export default function DeleteFormatConfirmModal({
   format,
+  isDefault = false,
   onCancel,
   onConfirm,
 }: Props) {
@@ -43,6 +46,13 @@ export default function DeleteFormatConfirmModal({
           <p className="mt-2 rounded-md bg-cream-50 p-3 text-sm text-stone-700">
             {format.name}
           </p>
+          {isDefault && (
+            <p className="mt-2 text-sm text-amber-800" data-testid="delete-default-note">
+              This is your default response format. Deleting it clears your
+              default, so new goals won&apos;t have a format pre-selected until
+              you choose another default.
+            </p>
+          )}
 
           {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
 

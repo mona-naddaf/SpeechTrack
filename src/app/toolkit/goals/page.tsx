@@ -2,8 +2,10 @@ import Link from "next/link";
 import { ArrowLeft, ClipboardList, Gamepad2, Library, ListTree, Sliders, Smile, Users } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { Area, ResponseFormatOption } from "@/lib/types";
-import GoalBankSection, { type BankGoalWithRelations } from "./goal-bank-section";
+import type { ResponseFormatOption } from "@/lib/types";
+import { resolveDefaultFormatId } from "@/lib/default-format";
+import { SLP_GOAL_BANK } from "@/lib/goal-bank-config";
+import GoalBankSection, { type BankGoalRow } from "@/components/goal-bank-section";
 
 export default async function GoalBankPage() {
   const supabase = await createClient();
@@ -23,7 +25,7 @@ export default async function GoalBankPage() {
     supabase
       .from("goals")
       .select(
-        "id, student_id, area_id, text, response_format_id, target_percent, visibility, created_at, area:areas(id, name), response_format:response_formats(id, name)"
+        "id, category_id:area_id, text, response_format_id, target_percent, visibility, created_at, category:areas(id, name), response_format:response_formats(id, name)"
       )
       .eq("slp_id", user.id)
       .is("student_id", null)
@@ -118,11 +120,12 @@ export default async function GoalBankPage() {
 
         <div className="mt-6">
           <GoalBankSection
-            initialGoals={
-              (bankGoalsResult.data ?? []) as unknown as BankGoalWithRelations[]
-            }
-            areas={(areasResult.data ?? []) as Area[]}
+            config={SLP_GOAL_BANK}
+            ownerId={user.id}
+            initialGoals={(bankGoalsResult.data ?? []) as unknown as BankGoalRow[]}
+            categories={areasResult.data ?? []}
             responseFormats={(formatsResult.data ?? []) as ResponseFormatOption[]}
+            defaultFormatId={resolveDefaultFormatId(user, formatsResult.data ?? [])}
           />
         </div>
       </div>

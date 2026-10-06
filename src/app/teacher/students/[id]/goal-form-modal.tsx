@@ -39,6 +39,9 @@ type Props = {
   mode: "add" | "edit";
   subjects: TeacherSubject[];
   responseFormats: ResponseFormatOption[];
+  /** Account-wide default response format (validated server-side), or
+   *  null. Pre-selected for NEW goals only — see src/lib/default-format.ts. */
+  defaultFormatId: string | null;
   bankGoals: TeacherBankGoal[];
   /** This student's full current goal list (every status, tracked or
    *  not) — used only to build the "queued behind a single goal" picker's
@@ -65,6 +68,7 @@ export default function GoalFormModal({
   mode,
   subjects,
   responseFormats,
+  defaultFormatId,
   bankGoals,
   studentGoals,
   studentTracks,
@@ -93,8 +97,10 @@ export default function GoalFormModal({
       ? String(initialGoal.target_percent)
       : ""
   );
+  // A new goal starts from the account default; an edited goal always
+  // shows its own format (the default never changes existing goals).
   const [responseFormatId, setResponseFormatId] = useState(
-    initialGoal?.response_format_id ?? ""
+    mode === "edit" ? initialGoal?.response_format_id ?? "" : defaultFormatId ?? ""
   );
   const [status, setStatus] = useState<GoalStatus>(
     initialGoal?.status ?? "active"
@@ -193,7 +199,8 @@ export default function GoalFormModal({
       // Bank goals can carry a default response format / target % — load
       // them in as a starting point; she can still change either before
       // saving.
-      setResponseFormatId(found.response_format_id ?? "");
+      // Precedence: the bank goal's own format, then the account default.
+      setResponseFormatId(found.response_format_id ?? defaultFormatId ?? "");
       setTargetPercent(
         found.target_percent !== null ? String(found.target_percent) : ""
       );

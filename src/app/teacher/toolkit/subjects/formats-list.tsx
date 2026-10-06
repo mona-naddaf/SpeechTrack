@@ -12,6 +12,7 @@ import type {
 import { RESPONSE_FORMAT_TYPE_LABELS } from "@/lib/response-format-types";
 import { getColorOption } from "@/lib/colors";
 import VisibilityField from "@/components/visibility-field";
+import { DEFAULT_FORMAT_METADATA_KEY } from "@/lib/default-format";
 import CueingHierarchyEditorModal from "./cueing-hierarchy-editor-modal";
 import CorrectIncorrectEditorModal from "./correct-incorrect-editor-modal";
 import RatingScaleEditorModal from "./rating-scale-editor-modal";
@@ -36,9 +37,36 @@ const CREATABLE_TYPES: ResponseFormatType[] = [
 
 type Props = {
   initialFormats: ResponseFormat[];
+  /** Her account-wide default format id (validated against her formats
+   *  server-side), or null. */
+  initialDefaultFormatId: string | null;
 };
 
-export default function FormatsList({ initialFormats }: Props) {
+export default function FormatsList({ initialFormats, initialDefaultFormatId }: Props) {
+  const [defaultFormatId, setDefaultFormatId] = useState<string | null>(initialDefaultFormatId);
+  const [defaultSaving, setDefaultSaving] = useState(false);
+  const [defaultNotice, setDefaultNotice] = useState<string | null>(null);
+
+  /** Saves (or clears, with null) the account-wide default in
+   *  user_metadata — one default at a time by construction. */
+  async function saveDefault(id: string | null): Promise<string | null> {
+    setDefaultSaving(true);
+    const { error } = await createClient().auth.updateUser({
+      data: { [DEFAULT_FORMAT_METADATA_KEY]: id },
+    });
+    setDefaultSaving(false);
+    if (error) return error.message;
+    setDefaultFormatId(id);
+    return null;
+  }
+
+  async function handleSetDefault(format: ResponseFormat | null) {
+    setDefaultNotice(null);
+    const err = await saveDefault(format?.id ?? null);
+    setDefaultNotice(
+      err ?? (format ? `"${format.name}" is now your default response format.` : "Default response format cleared.")
+    );
+  }
   const [formats, setFormats] = useState<ResponseFormat[]>(initialFormats);
   const [editingFormat, setEditingFormat] = useState<ResponseFormat | null>(
     null
@@ -124,6 +152,14 @@ export default function FormatsList({ initialFormats }: Props) {
     }
 
     setFormats((prev) => prev.filter((f) => f.id !== deletingFormat.id));
+    if (deletingFormat.id === defaultFormatId) {
+      const err = await saveDefault(null);
+      setDefaultNotice(
+        err
+          ? `Deleted, but your default couldn't be cleared: ${err}`
+          : `Deleted "${deletingFormat.name}" — it was your default, so your default response format is now cleared.`
+      );
+    }
     setDeletingFormat(null);
     return null;
   }
@@ -144,6 +180,12 @@ export default function FormatsList({ initialFormats }: Props) {
         </button>
       </div>
 
+      {defaultNotice && (
+        <p className="mt-4 rounded-md bg-accent-50 px-4 py-3 text-sm text-accent-800" data-testid="default-format-notice">
+          {defaultNotice}
+        </p>
+      )}
+
       {inUseMessage && (
         <p className="mt-4 rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-800">
           {inUseMessage}
@@ -158,13 +200,40 @@ export default function FormatsList({ initialFormats }: Props) {
           >
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h3 className="font-semibold text-stone-900">{format.name}</h3>
+                <h3 className="flex items-center gap-2 font-semibold text-stone-900">
+                  {format.name}
+                  {format.id === defaultFormatId && (
+                    <span
+                      data-testid="default-format-badge"
+                      className="rounded-full bg-brand-100 px-2 py-0.5 text-xs font-semibold text-brand-800"
+                    >
+                      Default
+                    </span>
+                  )}
+                </h3>
                 <p className="text-xs text-stone-400">
                   {RESPONSE_FORMAT_TYPE_LABELS.find((t) => t.type === format.type)
                     ?.label ?? format.type}
                 </p>
               </div>
-              <div className="flex shrink-0 gap-1">
+              <div className="flex shrink-0 flex-wrap justify-end gap-1">
+                {format.id === defaultFormatId ? (
+                  <button
+                    onClick={() => handleSetDefault(null)}
+                    disabled={defaultSaving}
+                    className="rounded-lg px-3 py-1.5 text-sm font-medium text-stone-500 transition-colors hover:bg-stone-100 disabled:opacity-50"
+                  >
+                    Clear default
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleSetDefault(format)}
+                    disabled={defaultSaving}
+                    className="rounded-lg px-3 py-1.5 text-sm font-medium text-brand-700 transition-colors hover:bg-brand-50 disabled:opacity-50"
+                  >
+                    Set as default
+                  </button>
+                )}
                 <button
                   onClick={() => setEditingFormat(format)}
                   className="rounded-lg px-3 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-100"
@@ -343,6 +412,7 @@ export default function FormatsList({ initialFormats }: Props) {
       {deletingFormat && (
         <DeleteFormatConfirmModal
           format={deletingFormat}
+          isDefault={deletingFormat.id === defaultFormatId}
           onCancel={() => setDeletingFormat(null)}
           onConfirm={handleDeleteConfirm}
         />

@@ -37,6 +37,8 @@ type Props = {
   studentId: string;
   templates: ApplyTemplateOption[];
   responseFormats: ResponseFormatOption[];
+  /** Account-wide default — pre-selected for steps without their own format. */
+  defaultFormatId: string | null;
   goalsTable: "goals" | "teacher_goals";
   tracksTable: "goal_tracks" | "teacher_goal_tracks";
   categoryTable: "areas" | "teacher_subjects";
@@ -63,6 +65,7 @@ export default function ApplyTrackTemplateModal({
   studentId,
   templates,
   responseFormats,
+  defaultFormatId,
   goalsTable,
   tracksTable,
   categoryTable,
@@ -97,7 +100,8 @@ export default function ApplyTrackTemplateModal({
   function overrideFor(step: ApplyTemplateStep): StepOverride {
     return (
       overrides[step.id] ?? {
-        responseFormatId: step.response_format_id ?? "",
+        // A step's own format wins; otherwise the account default.
+        responseFormatId: step.response_format_id ?? defaultFormatId ?? "",
         targetPercent:
           step.target_percent !== null ? String(step.target_percent) : "",
       }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { resolveDefaultFormatId } from "@/lib/default-format";
 import type { GoalWithRelations, SessionGoal } from "@/lib/types";
 import {
   resolveMaterialChipsByGoal,
@@ -165,6 +166,7 @@ export default async function NewSessionPage({
             lastUsedByGoalId={lastUsedByGoalId}
             areas={areasData ?? []}
             responseFormats={responseFormatsData ?? []}
+            defaultFormatId={resolveDefaultFormatId(user, responseFormatsData ?? [])}
             bankGoals={bankGoalsData ?? []}
             initialStudentGoals={
               (allGoalsData ?? []) as unknown as GoalWithRelations[]

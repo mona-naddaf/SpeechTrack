@@ -6,6 +6,7 @@ import { getUserRole } from "@/lib/role";
 import type { ResponseFormat, TeacherSubject } from "@/lib/types";
 import SubjectsSection from "./subjects-section";
 import FormatsList from "./formats-list";
+import { resolveDefaultFormatId } from "@/lib/default-format";
 
 export default async function TeacherSubjectsPage() {
   const supabase = await createClient();
@@ -126,6 +127,7 @@ export default async function TeacherSubjectsPage() {
         <div className="mt-8">
           <FormatsList
             initialFormats={(formatsResult.data ?? []) as ResponseFormat[]}
+            initialDefaultFormatId={resolveDefaultFormatId(user, formatsResult.data ?? [])}
           />
         </div>
       </div>

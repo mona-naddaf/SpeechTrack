@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { resolveDefaultFormatId } from "@/lib/default-format";
 import type { Area, ResponseFormatOption, TrackTemplateStepWithRelations, TrackTemplateWithArea } from "@/lib/types";
 import TrackTemplateEditor from "./track-template-editor";
 
@@ -76,6 +77,7 @@ export default async function TrackTemplateEditorPage({
             initialSteps={(steps ?? []) as unknown as TrackTemplateStepWithRelations[]}
             areas={(areasResult.data ?? []) as Area[]}
             responseFormats={(formatsResult.data ?? []) as ResponseFormatOption[]}
+            defaultFormatId={resolveDefaultFormatId(user, formatsResult.data ?? [])}
           />
         </div>
       </div>

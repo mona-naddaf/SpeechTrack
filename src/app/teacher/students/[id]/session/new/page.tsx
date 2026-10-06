@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { resolveDefaultFormatId } from "@/lib/default-format";
 import { getUserRole } from "@/lib/role";
 import type { TeacherGoalWithRelations, TeacherSessionGoal } from "@/lib/types";
 import {
@@ -186,6 +187,7 @@ export default async function NewTeacherSessionPage({
             lastUsedByGoalId={lastUsedByGoalId}
             subjects={subjectsData ?? []}
             responseFormats={responseFormatsData ?? []}
+            defaultFormatId={resolveDefaultFormatId(user, responseFormatsData ?? [])}
             bankGoals={bankGoalsData ?? []}
             initialStudentGoals={
               (allGoalsData ?? []) as unknown as TeacherGoalWithRelations[]

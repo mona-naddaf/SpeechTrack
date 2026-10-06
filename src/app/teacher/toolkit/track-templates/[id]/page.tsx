@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { resolveDefaultFormatId } from "@/lib/default-format";
 import { getUserRole } from "@/lib/role";
 import type {
   ResponseFormatOption,
@@ -88,6 +89,7 @@ export default async function TeacherTrackTemplateEditorPage({
             }
             subjects={(subjectsResult.data ?? []) as TeacherSubject[]}
             responseFormats={(formatsResult.data ?? []) as ResponseFormatOption[]}
+            defaultFormatId={resolveDefaultFormatId(user, formatsResult.data ?? [])}
           />
         </div>
       </div>

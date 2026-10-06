@@ -44,6 +44,9 @@ type Props = {
   initialGoalsError: string | null;
   subjects: TeacherSubject[];
   responseFormats: ResponseFormatOption[];
+  /** Account-wide default response format (validated server-side), or
+   *  null. Pre-selected for NEW goals only — see src/lib/default-format.ts. */
+  defaultFormatId: string | null;
   bankGoals: TeacherBankGoal[];
   initialGoalTracks: TeacherGoalTrack[];
   /** Her saved track templates (either origin — saved from a track, or
@@ -65,6 +68,7 @@ export default function GoalsSection({
   initialGoalsError,
   subjects,
   responseFormats,
+  defaultFormatId,
   bankGoals,
   initialGoalTracks,
   trackTemplates,
@@ -829,6 +833,7 @@ export default function GoalsSection({
           mode="add"
           subjects={subjects}
           responseFormats={responseFormats}
+          defaultFormatId={defaultFormatId}
           bankGoals={bankGoals}
           studentGoals={goals}
           studentTracks={tracks}
@@ -843,6 +848,7 @@ export default function GoalsSection({
           mode="add"
           subjects={subjects}
           responseFormats={responseFormats}
+          defaultFormatId={defaultFormatId}
           bankGoals={bankGoals}
           studentGoals={goals}
           studentTracks={tracks}
@@ -856,6 +862,7 @@ export default function GoalsSection({
           mode="edit"
           subjects={subjects}
           responseFormats={responseFormats}
+          defaultFormatId={defaultFormatId}
           bankGoals={bankGoals}
           studentGoals={goals}
           studentTracks={tracks}
@@ -888,6 +895,8 @@ export default function GoalsSection({
             })
           )}
           existingTracks={goalTracks}
+          responseFormats={responseFormats}
+          defaultFormatId={defaultFormatId}
           goalsTable="teacher_goals"
           tracksTable="teacher_goal_tracks"
           categoryTable="teacher_subjects"
@@ -917,6 +926,7 @@ export default function GoalsSection({
             })
           )}
           responseFormats={responseFormats}
+          defaultFormatId={defaultFormatId}
           goalsTable="teacher_goals"
           tracksTable="teacher_goal_tracks"
           categoryTable="teacher_subjects"

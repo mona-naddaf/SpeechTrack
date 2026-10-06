@@ -5,15 +5,13 @@ import { Download, Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { downloadXlsxTemplate, parseXlsxFile, type ImportSkip } from "@/lib/xlsx-import";
 import { parseGoalImportRows } from "@/lib/goal-import";
+import { normalizeGoalText } from "@/lib/goal-duplicates";
 
 type Category = { id: string; name: string };
 
-/** A freshly-inserted bank goal row, already joined with its category and
- *  (always-null-here) response format — same shape the two goal-bank
- *  pages' own insert/refetch queries produce, but genuinely typed as
- *  `unknown` on this generic component's side since it doesn't know
- *  whether it's dealing with `area`/`response_format` or
- *  `subject`/`response_format`. */
+/** A freshly-inserted bank goal row in the goal bank's normalized shape
+ *  (category_id/category aliases — see bankGoalSelect in
+ *  goal-bank-section.tsx), typed loosely on this generic component's side. */
 export type ImportedBankGoal = Record<string, unknown>;
 
 type Props = {
@@ -24,11 +22,23 @@ type Props = {
   goalsTable: "goals" | "teacher_goals";
   categoryTable: "areas" | "teacher_subjects";
   categoryIdColumn: "area_id" | "subject_id";
+  formatsTable: "response_formats" | "teacher_response_formats";
   ownerColumn: "slp_id" | "teacher_id";
+  /** Her current bank goals, to flag imported rows that duplicate one. */
+  existingGoals: { text: string; categoryName: string }[];
+  /** The account default format, used for every imported goal (the
+   *  spreadsheet has no format column); null = none, as before. */
+  defaultFormat: { id: string; name: string } | null;
   onImported: (newGoals: ImportedBankGoal[], newCategories: Category[]) => void;
 };
 
-type ImportSummary = { addedCount: number; skipped: ImportSkip[] };
+type ImportSummary = {
+  addedCount: number;
+  skipped: ImportSkip[];
+  /** Imported anyway, but matching a goal already in the bank. */
+  duplicates: { rowNumber: number; text: string; existingIn: string }[];
+  formatName: string | null;
+};
 
 const EXAMPLES: Record<"Area" | "Subject", (string | number)[]> = {
   Area: [
@@ -56,7 +66,10 @@ export default function GoalExcelImport({
   goalsTable,
   categoryTable,
   categoryIdColumn,
+  formatsTable,
   ownerColumn,
+  existingGoals,
+  defaultFormat,
   onImported,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -100,6 +113,12 @@ export default function GoalExcelImport({
       const newCategories: Category[] = [];
       const finalSkipped = [...skipped];
       const insertRows: Record<string, unknown>[] = [];
+      const existingByKey = new Map<string, string>();
+      for (const g of existingGoals) {
+        const key = normalizeGoalText(g.text);
+        if (key && !existingByKey.has(key)) existingByKey.set(key, g.categoryName);
+      }
+      const duplicates: ImportSummary["duplicates"] = [];
 
       for (const row of valid) {
         const key = row.categoryName.trim().toLowerCase();
@@ -131,6 +150,9 @@ export default function GoalExcelImport({
           newCategories.push({ id: created.id, name: created.name });
         }
 
+        const existingIn = existingByKey.get(normalizeGoalText(row.text));
+        if (existingIn) duplicates.push({ rowNumber: row.rowNumber, text: row.text, existingIn });
+
         insertRows.push({
           [ownerColumn]: user.id,
           student_id: null,
@@ -138,15 +160,12 @@ export default function GoalExcelImport({
           text: row.text,
           target_percent: row.targetPercent,
           baseline: row.baseline,
+          response_format_id: defaultFormat?.id ?? null,
         });
       }
 
       let insertedGoals: ImportedBankGoal[] = [];
       if (insertRows.length > 0) {
-        const categoryAlias = categoryLabel.toLowerCase();
-        const responseFormatTable =
-          goalsTable === "goals" ? "response_formats" : "teacher_response_formats";
-
         // `goalsTable`/`categoryIdColumn`/etc. are variables, not literals,
         // so postgrest-js's compile-time select-string parser can't verify
         // this query — cast away the generic like the rest of this
@@ -154,7 +173,7 @@ export default function GoalExcelImport({
         const { data, error: goalsError } = await (supabase.from(goalsTable) as any)
           .insert(insertRows)
           .select(
-            `id, student_id, ${categoryIdColumn}, text, response_format_id, target_percent, visibility, created_at, ${categoryAlias}:${categoryTable}(id, name), response_format:${responseFormatTable}(id, name)`
+            `id, category_id:${categoryIdColumn}, text, response_format_id, target_percent, visibility, created_at, category:${categoryTable}(id, name), response_format:${formatsTable}(id, name)`
           );
 
         if (goalsError) {
@@ -165,7 +184,12 @@ export default function GoalExcelImport({
       }
 
       onImported(insertedGoals, newCategories);
-      setSummary({ addedCount: insertedGoals.length, skipped: finalSkipped });
+      setSummary({
+        addedCount: insertedGoals.length,
+        skipped: finalSkipped,
+        duplicates: insertedGoals.length > 0 ? duplicates : [],
+        formatName: insertedGoals.length > 0 ? defaultFormat?.name ?? null : null,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not read that file.");
     } finally {
@@ -212,6 +236,27 @@ export default function GoalExcelImport({
           <p className="font-medium">
             {summary.addedCount} goal{summary.addedCount === 1 ? "" : "s"} added
           </p>
+          {summary.formatName && (
+            <p className="mt-0.5 text-stone-500" data-testid="import-format-note">
+              Response format: {summary.formatName} (your default)
+            </p>
+          )}
+          {summary.duplicates.length > 0 && (
+            <div className="mt-2 rounded-md bg-amber-50 p-2 text-amber-900" data-testid="import-duplicates">
+              <p className="font-medium">
+                {summary.duplicates.length} imported{" "}
+                {summary.duplicates.length === 1 ? "row duplicates a goal" : "rows duplicate goals"} already in
+                your bank — imported anyway, so nothing was lost:
+              </p>
+              <ul className="mt-1 list-inside list-disc">
+                {summary.duplicates.map((d) => (
+                  <li key={d.rowNumber}>
+                    Row {d.rowNumber}: &ldquo;{d.text}&rdquo; (already in {d.existingIn})
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {summary.skipped.length > 0 && (
             <ul className="mt-1 list-inside list-disc text-stone-500">
               {summary.skipped.map((s, i) => (

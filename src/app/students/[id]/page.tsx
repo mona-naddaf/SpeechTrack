@@ -33,6 +33,7 @@ import {
 import { computeCadenceStreak, formatCadenceStreakLabel } from "@/lib/streaks";
 import { formatSchedule } from "@/lib/schedule";
 import { buildPackageItems } from "@/lib/packages";
+import { resolveDefaultFormatId } from "@/lib/default-format";
 import { SLP_STUDENT_TOUR_STEPS } from "@/lib/onboarding-tour";
 import StreakBadge from "@/components/streak-badge";
 import AvatarBadge from "@/components/avatar-badge";
@@ -472,6 +473,7 @@ export default async function StudentDetailPage({
                   initialGoalsError={goalsResult.error?.message ?? null}
                   areas={areasResult.data ?? []}
                   responseFormats={formatsResult.data ?? []}
+                  defaultFormatId={resolveDefaultFormatId(user, formatsResult.data ?? [])}
                   bankGoals={bankGoalsResult.data ?? []}
                   initialGoalTracks={
                     (goalTracksResult.data ?? []) as unknown as GoalTrack[]

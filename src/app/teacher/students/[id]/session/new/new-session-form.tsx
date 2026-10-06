@@ -39,6 +39,9 @@ type Props = {
   lastUsedByGoalId: Record<string, Record<string, MaterialUsageSummary>>;
   subjects: TeacherSubject[];
   responseFormats: ResponseFormatOption[];
+  /** Account-wide default response format (validated server-side), or
+   *  null. Pre-selected for NEW goals only — see src/lib/default-format.ts. */
+  defaultFormatId: string | null;
   bankGoals: TeacherBankGoal[];
   /** This student's full goal list (every status, tracked or not) — used
    *  only to power the "+ Add goal" modal's queue-behind picker, same as
@@ -54,6 +57,7 @@ export default function NewSessionForm({
   lastUsedByGoalId,
   subjects,
   responseFormats,
+  defaultFormatId,
   bankGoals,
   initialStudentGoals,
 }: Props) {
@@ -517,6 +521,7 @@ export default function NewSessionForm({
           mode="add"
           subjects={subjects}
           responseFormats={responseFormats}
+          defaultFormatId={defaultFormatId}
           bankGoals={bankGoals}
           studentGoals={allGoals}
           studentTracks={studentTracks}

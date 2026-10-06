@@ -15,6 +15,8 @@ type Props = {
   initialSteps: TrackTemplateStepWithRelations[];
   areas: Area[];
   responseFormats: ResponseFormatOption[];
+  /** Account-wide default format — pre-selected for new steps only. */
+  defaultFormatId: string | null;
 };
 
 /** Builds/edits one track template's steps directly — PATH B when
@@ -26,6 +28,7 @@ export default function TrackTemplateEditor({
   initialSteps,
   areas,
   responseFormats,
+  defaultFormatId,
 }: Props) {
   const [name, setName] = useState(template.name);
   const [areaId, setAreaId] = useState(template.area_id);
@@ -304,6 +307,7 @@ export default function TrackTemplateEditor({
         <StepFormModal
           mode="add"
           responseFormats={responseFormats}
+          defaultFormatId={defaultFormatId}
           onCancel={() => setShowAddModal(false)}
           onSubmit={handleAddStep}
         />
@@ -313,6 +317,7 @@ export default function TrackTemplateEditor({
         <StepFormModal
           mode="edit"
           responseFormats={responseFormats}
+          defaultFormatId={defaultFormatId}
           initialStep={editingStep}
           onCancel={() => setEditingStep(null)}
           onSubmit={handleEditStep}

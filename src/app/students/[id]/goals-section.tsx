@@ -44,6 +44,9 @@ type Props = {
   initialGoalsError: string | null;
   areas: Area[];
   responseFormats: ResponseFormatOption[];
+  /** Account-wide default response format (validated server-side), or
+   *  null. Pre-selected for NEW goals only — see src/lib/default-format.ts. */
+  defaultFormatId: string | null;
   bankGoals: BankGoal[];
   initialGoalTracks: GoalTrack[];
   /** Her saved track templates (either origin — saved from a track, or
@@ -65,6 +68,7 @@ export default function GoalsSection({
   initialGoalsError,
   areas,
   responseFormats,
+  defaultFormatId,
   bankGoals,
   initialGoalTracks,
   trackTemplates,
@@ -822,6 +826,7 @@ export default function GoalsSection({
           mode="add"
           areas={areas}
           responseFormats={responseFormats}
+          defaultFormatId={defaultFormatId}
           bankGoals={bankGoals}
           studentGoals={goals}
           studentTracks={tracks}
@@ -836,6 +841,7 @@ export default function GoalsSection({
           mode="add"
           areas={areas}
           responseFormats={responseFormats}
+          defaultFormatId={defaultFormatId}
           bankGoals={bankGoals}
           studentGoals={goals}
           studentTracks={tracks}
@@ -849,6 +855,7 @@ export default function GoalsSection({
           mode="edit"
           areas={areas}
           responseFormats={responseFormats}
+          defaultFormatId={defaultFormatId}
           bankGoals={bankGoals}
           studentGoals={goals}
           studentTracks={tracks}
@@ -881,6 +888,8 @@ export default function GoalsSection({
             })
           )}
           existingTracks={goalTracks}
+          responseFormats={responseFormats}
+          defaultFormatId={defaultFormatId}
           goalsTable="goals"
           tracksTable="goal_tracks"
           categoryTable="areas"
@@ -910,6 +919,7 @@ export default function GoalsSection({
             })
           )}
           responseFormats={responseFormats}
+          defaultFormatId={defaultFormatId}
           goalsTable="goals"
           tracksTable="goal_tracks"
           categoryTable="areas"
