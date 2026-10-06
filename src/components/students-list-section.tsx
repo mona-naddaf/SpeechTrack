@@ -1,9 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Archive, ChevronRight, RotateCcw, UserPlus, Users } from "lucide-react";
+import {
+  Archive,
+  ChevronRight,
+  RotateCcw,
+  SlidersHorizontal,
+  UserPlus,
+  Users,
+  X,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { DayOfWeek, Student, StudentStatus, StudentTag } from "@/lib/types";
 import { DAYS_OF_WEEK, DAY_LABELS } from "@/lib/schedule";
@@ -89,6 +97,26 @@ export default function StudentsListSection({
   const [editingStudent, setEditingStudent] = useState<ListStudent | null>(null);
   const [deletingStudent, setDeletingStudent] = useState<ListStudent | null>(null);
   const [rowError, setRowError] = useState<string | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+
+  // The filter panel behaves like a popover: it closes on Escape or a
+  // click anywhere outside the toolbar.
+  useEffect(() => {
+    if (!filtersOpen) return;
+    function onPointerDown(e: MouseEvent) {
+      if (!toolbarRef.current?.contains(e.target as Node)) setFiltersOpen(false);
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setFiltersOpen(false);
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [filtersOpen]);
 
   const tagsById = useMemo(() => new Map(tags.map((t) => [t.id, t])), [tags]);
 
@@ -127,6 +155,8 @@ export default function StudentsListSection({
   const counts = computeCounts(listable, filters, sessionCountByStudentId);
   const archivedTotal = students.filter((s) => s.archived_at).length;
   const filtersOn = hasActiveFilters(filters);
+  const activeFilterCount =
+    filters.tagIds.length + filters.days.length + filters.statuses.length;
 
   function setFilters(next: Partial<typeof filters>) {
     setPrefs((p) => ({ ...p, filters: { ...p.filters, ...next } }));
@@ -292,14 +322,16 @@ export default function StudentsListSection({
       </div>
 
       {students.length > 0 && (
-        <>
-          <div
+        <div className="mt-3 space-y-2">
+          {/* Count line: only Active students and their sessions count. */}
+          <p
             data-testid="student-counts"
-            className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-xl bg-accent-50 px-4 py-2.5 text-sm"
+            className="flex flex-wrap items-baseline gap-x-2 text-sm"
           >
             <span className="font-semibold text-accent-800" data-testid="count-active-students">
               {counts.activeStudents} active {counts.activeStudents === 1 ? "student" : "students"}
             </span>
+            <span aria-hidden className="text-stone-300">·</span>
             <span className="text-accent-800" data-testid="count-active-sessions">
               {counts.activeSessions} logged {counts.activeSessions === 1 ? "session" : "sessions"}
             </span>
@@ -308,18 +340,20 @@ export default function StudentsListSection({
                 {notCounted.join(", ")} (not counted)
               </span>
             )}
-          </div>
+          </p>
 
-          <div className="mt-3 space-y-2 rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm">
+          {/* One toolbar row: sort, Filters (with count badge), the active
+              filters as removable chips, and Clear filters. */}
+          <div ref={toolbarRef} className="relative">
             <div className="flex flex-wrap items-center gap-2">
-              <label htmlFor="student-sort" className="text-xs font-medium text-stone-500">
+              <label htmlFor="student-sort" className="sr-only">
                 Sort
               </label>
               <select
                 id="student-sort"
                 value={sort}
                 onChange={(e) => setPrefs((p) => ({ ...p, sort: e.target.value as StudentSort }))}
-                className="rounded-lg border border-stone-300 px-2 py-1 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                className="rounded-lg border border-stone-300 bg-white px-2 py-1 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
               >
                 {(Object.keys(STUDENT_SORT_LABELS) as StudentSort[]).map((key) => (
                   <option key={key} value={key}>
@@ -327,66 +361,133 @@ export default function StudentsListSection({
                   </option>
                 ))}
               </select>
+              <button
+                type="button"
+                onClick={() => setFiltersOpen((o) => !o)}
+                aria-expanded={filtersOpen}
+                aria-controls="student-filter-panel"
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-sm font-medium transition-colors ${
+                  filtersOpen || filtersOn
+                    ? "border-brand-300 bg-brand-50 text-brand-800"
+                    : "border-stone-300 bg-white text-stone-700 hover:bg-stone-50"
+                }`}
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                Filters
+                {activeFilterCount > 0 && (
+                  <span
+                    data-testid="filter-count-badge"
+                    className="rounded-full bg-brand-700 px-1.5 text-xs font-semibold leading-5 text-white"
+                  >
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+
+              {filters.tagIds.map((id) => {
+                const tag = tagsById.get(id);
+                if (!tag) return null;
+                return (
+                  <ActiveFilterChip
+                    key={id}
+                    label={tag.name}
+                    colorClass={getColorOption(tag.color).badgeClass}
+                    onRemove={() => setFilters({ tagIds: toggle(filters.tagIds, id) })}
+                  />
+                );
+              })}
+              {filters.days.map((day) => (
+                <ActiveFilterChip
+                  key={day}
+                  label={DAY_LABELS[day]}
+                  onRemove={() => setFilters({ days: toggle<DayOfWeek>(filters.days, day) })}
+                />
+              ))}
+              {filters.statuses.map((st) => (
+                <ActiveFilterChip
+                  key={st}
+                  label={STUDENT_STATUS_LABELS[st]}
+                  onRemove={() => setFilters({ statuses: toggle<StudentStatus>(filters.statuses, st) })}
+                />
+              ))}
+
               {filtersOn && (
                 <button
                   type="button"
                   onClick={() => setPrefs((p) => ({ ...p, filters: EMPTY_FILTERS }))}
-                  className="ml-auto rounded-lg px-2 py-1 text-xs font-medium text-brand-700 hover:bg-brand-50"
+                  className="rounded-lg px-2 py-1 text-xs font-medium text-brand-700 hover:bg-brand-50"
                 >
                   Clear filters
                 </button>
               )}
             </div>
-            {tags.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter by tag">
-                <span className="w-14 text-xs font-medium text-stone-500">Tags</span>
-                {tags.map((tag) => (
+
+            {filtersOpen && (
+              <div
+                id="student-filter-panel"
+                className="absolute left-0 right-0 top-full z-20 mt-2 space-y-2 rounded-xl border border-stone-200 bg-white p-3 text-sm shadow-lg sm:right-auto sm:w-[30rem]"
+              >
+                {tags.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter by tag">
+                    <span className="w-14 text-xs font-medium text-stone-500">Tags</span>
+                    {tags.map((tag) => (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        aria-pressed={filters.tagIds.includes(tag.id)}
+                        onClick={() => setFilters({ tagIds: toggle(filters.tagIds, tag.id) })}
+                        className={
+                          filters.tagIds.includes(tag.id)
+                            ? `rounded-full px-2.5 py-1 text-xs font-medium ring-2 ring-stone-900 ${getColorOption(tag.color).badgeClass}`
+                            : pill(false)
+                        }
+                      >
+                        {tag.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter by scheduled day">
+                  <span className="w-14 text-xs font-medium text-stone-500">Days</span>
+                  {DAYS_OF_WEEK.map((day) => (
+                    <button
+                      key={day}
+                      type="button"
+                      aria-pressed={filters.days.includes(day)}
+                      onClick={() => setFilters({ days: toggle<DayOfWeek>(filters.days, day) })}
+                      className={pill(filters.days.includes(day))}
+                    >
+                      {DAY_LABELS[day]}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter by status">
+                  <span className="w-14 text-xs font-medium text-stone-500">Status</span>
+                  {STUDENT_STATUSES.map((st) => (
+                    <button
+                      key={st}
+                      type="button"
+                      aria-pressed={filters.statuses.includes(st)}
+                      onClick={() => setFilters({ statuses: toggle<StudentStatus>(filters.statuses, st) })}
+                      className={pill(filters.statuses.includes(st))}
+                    >
+                      {STUDENT_STATUS_LABELS[st]}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex justify-end">
                   <button
-                    key={tag.id}
                     type="button"
-                    aria-pressed={filters.tagIds.includes(tag.id)}
-                    onClick={() => setFilters({ tagIds: toggle(filters.tagIds, tag.id) })}
-                    className={
-                      filters.tagIds.includes(tag.id)
-                        ? `rounded-full px-2.5 py-1 text-xs font-medium ring-2 ring-stone-900 ${getColorOption(tag.color).badgeClass}`
-                        : pill(false)
-                    }
+                    onClick={() => setFiltersOpen(false)}
+                    className="rounded-lg px-3 py-1 text-xs font-semibold text-stone-600 hover:bg-stone-100"
                   >
-                    {tag.name}
+                    Done
                   </button>
-                ))}
+                </div>
               </div>
             )}
-            <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter by scheduled day">
-              <span className="w-14 text-xs font-medium text-stone-500">Days</span>
-              {DAYS_OF_WEEK.map((day) => (
-                <button
-                  key={day}
-                  type="button"
-                  aria-pressed={filters.days.includes(day)}
-                  onClick={() => setFilters({ days: toggle<DayOfWeek>(filters.days, day) })}
-                  className={pill(filters.days.includes(day))}
-                >
-                  {DAY_LABELS[day]}
-                </button>
-              ))}
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter by status">
-              <span className="w-14 text-xs font-medium text-stone-500">Status</span>
-              {STUDENT_STATUSES.map((st) => (
-                <button
-                  key={st}
-                  type="button"
-                  aria-pressed={filters.statuses.includes(st)}
-                  onClick={() => setFilters({ statuses: toggle<StudentStatus>(filters.statuses, st) })}
-                  className={pill(filters.statuses.includes(st))}
-                >
-                  {STUDENT_STATUS_LABELS[st]}
-                </button>
-              ))}
-            </div>
           </div>
-        </>
+        </div>
       )}
 
       {initialError && (
@@ -420,7 +521,7 @@ export default function StudentsListSection({
       {visible.length > 0 && (
         <ul
           data-testid="student-list"
-          className="mt-4 divide-y divide-stone-200 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md"
+          className="mt-3 divide-y divide-stone-200 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md"
         >
           {visible.map((student) => {
             const stopped = student.status === "stopped";
@@ -437,28 +538,26 @@ export default function StudentsListSection({
               >
                 <Link
                   href={`${studentBasePath}/${student.id}`}
-                  className={`flex min-w-0 flex-1 items-center gap-3 py-3 ${
+                  className={`flex min-w-0 flex-1 basis-full items-center gap-3 py-2.5 sm:basis-auto ${
                     stopped ? "opacity-50" : ""
                   }`}
                 >
                   <AvatarBadge avatar={student.avatar} size="sm" />
                   <div className="min-w-0 flex-1">
-                    <p className="flex flex-wrap items-center gap-1.5">
+                    <p className="flex min-w-0 items-center gap-1.5">
                       <span className="truncate font-medium text-stone-900">{student.name}</span>
-                      <StudentStatusBadge status={student.status} archived={Boolean(student.archived_at)} />
+                      <span className="shrink-0">
+                        <StudentStatusBadge status={student.status} archived={Boolean(student.archived_at)} />
+                      </span>
                     </p>
-                    <p className="truncate text-sm text-stone-500">
-                      {student.class || "No class"}
+                    <p className="flex min-w-0 items-center gap-2 text-sm text-stone-500">
+                      <span className="shrink-0 truncate">{student.class || "No class"}</span>
+                      <StudentTagChips tags={studentTags} max={3} />
                     </p>
-                    {studentTags.length > 0 && (
-                      <div className="mt-1">
-                        <StudentTagChips tags={studentTags} />
-                      </div>
-                    )}
                   </div>
                   <ChevronRight className="h-4 w-4 shrink-0 text-stone-300" />
                 </Link>
-                <div className="flex shrink-0 items-center gap-1">
+                <div className="-mt-1 mb-1.5 ml-auto flex shrink-0 items-center gap-1 sm:my-0">
                   {student.archived_at ? (
                     <button
                       type="button"
@@ -546,5 +645,33 @@ export default function StudentsListSection({
         />
       )}
     </div>
+  );
+}
+
+/** One active filter on the toolbar row, removable with its ×. */
+function ActiveFilterChip({
+  label,
+  colorClass = "bg-stone-100 text-stone-700",
+  onRemove,
+}: {
+  label: string;
+  colorClass?: string;
+  onRemove: () => void;
+}) {
+  return (
+    <span
+      data-testid="active-filter-chip"
+      className={`inline-flex items-center gap-0.5 rounded-full py-0.5 pl-2 pr-1 text-xs font-medium ${colorClass}`}
+    >
+      {label}
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label={`Remove filter ${label}`}
+        className="rounded-full p-0.5 hover:bg-black/10"
+      >
+        <X className="h-3 w-3" />
+      </button>
+    </span>
   );
 }

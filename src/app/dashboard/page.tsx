@@ -248,7 +248,7 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <div className="mt-6 space-y-3">
+        <div className="mt-4 space-y-2">
           <CaseloadWinsCard
             masteredCount={masteredCount}
             longestStreak={caseloadStreaks[0] ?? null}
@@ -265,7 +265,7 @@ export default async function DashboardPage() {
           />
         </div>
 
-        <div className="mt-8">
+        <div className="mt-5">
           <StudentsListSection
             ownerId={user.id}
             ownerField="slp_id"

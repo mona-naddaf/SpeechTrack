@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarClock, ChevronRight, Plus } from "lucide-react";
+import { CalendarClock, Plus } from "lucide-react";
 import Link from "next/link";
 import type { Countdown } from "@/lib/types";
 import { daysUntil, formatDate } from "@/lib/date";
@@ -20,16 +20,14 @@ type Props = {
   onEdit?: (countdown: Countdown) => void;
 };
 
-/** "X days until [title]" — shared by the dashboard (a short read-only
- *  preview, `manageHref` set) and the Schedule page (the full,
- *  interactive list, `onAdd`/`onEdit` set). Upcoming countdowns
- *  (target_date >= today) always show first, soonest-first; passed ones
- *  are collapsed behind a "N passed" toggle rather than just gone, since
- *  a passed countdown still needs to be reachable to delete. Renders
- *  nothing in read-only mode with no countdowns at all — there's
- *  nothing worth a whole card for; the interactive mode still renders
- *  (with its own empty state) so "+ Add countdown" is always reachable
- *  from the Schedule page. */
+/** "X days until [title]" — shared by the dashboard (a one-line strip of
+ *  the next two upcoming countdowns, `manageHref` set) and the Schedule
+ *  page (the full, interactive list, `onAdd`/`onEdit` set). On the
+ *  Schedule page, upcoming countdowns (target_date >= today) show first,
+ *  soonest-first; passed ones are collapsed behind a "N passed" toggle
+ *  rather than just gone, since a passed countdown still needs to be
+ *  reachable to delete. That page always renders (with its own empty
+ *  state) so "+ Add countdown" is always reachable there. */
 export default function CountdownsWidget({
   countdowns,
   today,
@@ -47,13 +45,44 @@ export default function CountdownsWidget({
     .filter((c) => daysUntil(c.target_date, today) < 0)
     .sort((a, b) => b.target_date.localeCompare(a.target_date));
 
-  if (!interactive && countdowns.length === 0) {
-    return null;
+  // Dashboard (read-only) mode: one thin strip with at most the two
+  // soonest upcoming countdowns and "Manage" on the same line. Passed
+  // countdowns aren't mentioned here at all (they're still listed, and
+  // deletable, on the Schedule page). Nothing upcoming → no strip.
+  if (!interactive) {
+    const soonest = upcoming.slice(0, 2);
+    if (soonest.length === 0) return null;
+    return (
+      <div
+        data-testid="countdowns-strip"
+        className="flex items-center gap-2 rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm shadow-sm"
+      >
+        <CalendarClock className="h-4 w-4 shrink-0 text-stone-400" />
+        <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-0.5">
+          {soonest.map((c) => {
+            const days = daysUntil(c.target_date, today);
+            return (
+              <span key={c.id} className="min-w-0 truncate text-stone-700">
+                {c.title}
+                <span className={`ml-1.5 font-semibold ${days <= 7 ? "text-brand-700" : "text-stone-500"}`}>
+                  · {days === 0 ? "Today!" : days === 1 ? "1 day" : `${days} days`}
+                </span>
+              </span>
+            );
+          })}
+        </span>
+        {manageHref && (
+          <Link
+            href={manageHref}
+            className="shrink-0 text-xs font-medium text-stone-400 transition-colors hover:text-brand-700"
+          >
+            Manage
+          </Link>
+        )}
+      </div>
+    );
   }
 
-  const previewLimit = interactive ? Infinity : 3;
-  const visibleUpcoming = upcoming.slice(0, previewLimit);
-  const hiddenUpcomingCount = upcoming.length - visibleUpcoming.length;
 
   function row(countdown: Countdown, isPassed: boolean) {
     const days = daysUntil(countdown.target_date, today);
@@ -88,7 +117,7 @@ export default function CountdownsWidget({
       </>
     );
 
-    return interactive ? (
+    return (
       <button
         key={countdown.id}
         type="button"
@@ -97,30 +126,17 @@ export default function CountdownsWidget({
       >
         {content}
       </button>
-    ) : (
-      <div key={countdown.id} className="flex items-center gap-2 px-2 py-1">
-        {content}
-      </div>
     );
   }
 
   const cardBody = (
     <>
-      {visibleUpcoming.length === 0 && passed.length === 0 && (
+      {upcoming.length === 0 && passed.length === 0 && (
         <p className="px-2 py-1 text-sm text-stone-400">
           No countdowns yet.
         </p>
       )}
-      {visibleUpcoming.map((c) => row(c, false))}
-      {hiddenUpcomingCount > 0 && (
-        <Link
-          href={manageHref ?? "#"}
-          className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-brand-700 hover:underline"
-        >
-          +{hiddenUpcomingCount} more
-          <ChevronRight className="h-3 w-3" />
-        </Link>
-      )}
+      {upcoming.map((c) => row(c, false))}
       {passed.length > 0 && (
         <div className="mt-1 border-t border-stone-100 pt-1">
           <button
@@ -143,25 +159,14 @@ export default function CountdownsWidget({
           <CalendarClock className="h-3.5 w-3.5" />
           Countdowns
         </p>
-        {interactive ? (
-          <button
-            type="button"
-            onClick={onAdd}
-            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-brand-700 transition-colors hover:bg-brand-50"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Add countdown
-          </button>
-        ) : (
-          manageHref && (
-            <Link
-              href={manageHref}
-              className="text-xs font-medium text-stone-400 transition-colors hover:text-brand-700"
-            >
-              Manage
-            </Link>
-          )
-        )}
+        <button
+          type="button"
+          onClick={onAdd}
+          className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-brand-700 transition-colors hover:bg-brand-50"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Add countdown
+        </button>
       </div>
       <div className="mt-2 space-y-0.5">{cardBody}</div>
     </div>
